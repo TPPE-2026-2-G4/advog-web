@@ -3,10 +3,10 @@
 Resolve a issue: #<numero_da_issue>
 
 ### 🛠️ Tipo de Mudança
-- [ ] 🐛 Correção de Bug (UI/Lógica)
-- [ ] ✨ Nova Funcionalidade (Componente/Tela)
-- [ ] 💄 Ajuste Visual / Estilização (CSS)
-- [ ] ♻️ Refatoração de Código
+- [ ] Correção de Bug (UI/Lógica)
+- [ ] Nova Funcionalidade (Componente/Tela)
+- [ ] Ajuste Visual / Estilização (CSS)
+- [ ] Refatoração de Código
 
 ### 🖼️ Alterações Visuais (Antes vs Depois)
 <!-- Cole capturas de tela se este PR alterar a interface de usuário. -->
