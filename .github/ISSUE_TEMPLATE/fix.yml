@@ -1,0 +1,29 @@
+name: Bug de Interface (Frontend)
+description: Relate um problema visual, falha de layout ou erro de interação.
+title: "[UI Bug]: "
+labels: ["bug", "frontend"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Descrição do Problema
+      description: O que está quebrado na interface ou na interação?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Passos para Reproduzir
+      placeholder: |
+        1. Navegue até a rota '/dashboard'
+        2. Clique no botão de 'Filtro' no modo mobile
+        3. Observe que o modal sobrepõe o menu principal
+    validations:
+      required: true
+
+  - type: textarea
+    id: visual-proof
+    attributes:
+      label: Evidências Visuais (Screenshots ou Vídeos)
+      description: Arraste ou cole prints que mostrem o problema claramente.
