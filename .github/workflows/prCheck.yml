@@ -1,0 +1,54 @@
+name: Checks de Pull Request (Frontend)
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  security-audit:
+    name: Auditoria de Dependências
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Instalar dependências
+        run: npm ci
+      - name: Rodar npm audit
+        run: npm audit --audit-level=high
+
+#   code-quality:
+#     name: Lint e Formatação
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout do código
+#         uses: actions/checkout@v4
+#       - name: Configurar Node.js
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: '24'
+#       - name: Instalar dependências
+#         run: npm ci
+#       - name: Verificar formatação (Prettier)
+#         run: npx prettier --check .
+#       - name: Verificar erros (ESLint)
+#         run: npm run lint
+
+  build-test:
+    name: Validação de Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Instalar dependências
+        run: npm ci
+      - name: Simular Build do Next.js
+        run: npm run build
