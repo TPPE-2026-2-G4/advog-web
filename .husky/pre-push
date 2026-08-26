@@ -1,9 +1,9 @@
-echo "\n\n🏗️  Tentanto fazer build antes do push..."
+echo "\n\n🏗️  Tentando fazer build antes do push..."
 
 sleep 1
 
-npm run build || (echo "\n\n ❌  Erro de Build! Por favor, corrija os erros e tente novamente. \n\n" && exit 1)
+npm run build || (echo "\n\n ❌  Erro de Build!\n Por favor, corrija os erros e tente novamente. \n\n" && exit 1)
 
-echo "\n\n ✅ Build realizado!\n Continuando com o seu push...\n\n"
+echo "\n\n ✅ Build realizado!\nContinuando com o seu push...\n\n"
 
 sleep 1
