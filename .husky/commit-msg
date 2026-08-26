@@ -1,0 +1,9 @@
+echo "\nValidando mensagem de commit (Conventional Commits)..."
+
+sleep 1
+
+npx --no -- commitlint --edit ${1} || (echo "\n❌ Mensagem de commit inválida. Corrija os pontos indicados acima.\n" && exit 1)
+
+sleep 1
+
+echo "✅ Mensagem de commit validada.\n"

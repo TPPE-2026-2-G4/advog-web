@@ -1,0 +1,9 @@
+echo "\n🔍 Rodando lint e format nos arquivos staged..."
+
+sleep 1
+
+npx lint-staged || (echo "\n ❌ Lint/format encontrou problemas. Corrija os pontos acima antes de commitar.\n" && exit 1)
+
+echo "\n✅ Lint e format validados!\n"
+
+sleep 1
