@@ -1,4 +1,4 @@
-echo "\n\n🏗️  Rodando o build antes do push..."
+echo "\n\n🏗️  Tentanto fazer build antes do push..."
 
 sleep 1
 
