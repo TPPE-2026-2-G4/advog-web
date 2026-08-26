@@ -1,0 +1,13 @@
+COMMIT_SOURCE=$2
+
+if [ "$COMMIT_SOURCE" = "message" ]; then
+  echo "\n🚫 Commits com 'git commit -m \"...\"' não são permitidos neste projeto."
+  echo "   Rode 'git commit' (sem -m) para abrir o assistente do Commitizen.\n"
+  exit 1
+fi
+
+if [ -z "$COMMIT_SOURCE" ]; then
+  echo "\n📝 Abrindo o assistente do Commitizen para montar sua mensagem de commit...\n"
+  sleep 1
+  exec < /dev/tty && node_modules/.bin/cz --hook || true
+fi
