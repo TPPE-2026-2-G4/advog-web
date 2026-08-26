@@ -1,7 +1,7 @@
 name: Bug de Interface (Frontend)
 description: Relate um problema visual, falha de layout ou erro de interação.
-title: "[UI Bug]: "
-labels: ["bug", "frontend"]
+title: '[UI Bug]: '
+labels: ['bug', 'frontend']
 body:
   - type: textarea
     id: description
