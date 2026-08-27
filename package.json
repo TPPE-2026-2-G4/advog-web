@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint --fix .",
     "format": "prettier --write .",
     "commit": "cz",
@@ -34,6 +36,11 @@
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@vitejs/plugin-react": "^6.1.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "babel-plugin-react-compiler": "1.0.0",
     "commitizen": "^4.3.2",
     "cz-conventional-changelog": "^3.3.0",
@@ -41,8 +48,10 @@
     "eslint-config-next": "16.3.3",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
+    "jsdom": "^30.0.1",
     "lint-staged": "^17.3.0",
     "prettier": "^3.9.6",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "vitest": "^4.1.11"
   }
 }
