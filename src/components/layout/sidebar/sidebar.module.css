@@ -1,0 +1,136 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 80px;
+  background-color: #172133;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+  overflow-x: hidden;
+  z-index: 100;
+  border-right: 1px solid #111827;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebar:hover {
+    width: 260px;
+  }
+
+  .sidebar:hover .logoText {
+    opacity: 1;
+  }
+
+  .sidebar:hover .navText {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar,
+  .sidebar:hover {
+    width: 64px;
+  }
+
+  .logoArea {
+    padding: 20px 12px;
+    gap: 12px;
+  }
+
+  .nav {
+    padding: 0 8px;
+  }
+
+  .navItem {
+    justify-content: center;
+    padding: 12px 8px;
+  }
+
+  .navText,
+  .sidebar:hover .navText,
+  .sidebar:hover .logoText {
+    display: none;
+  }
+}
+
+.logoArea {
+  display: flex;
+  align-items: center;
+  padding: 24px 20px;
+  gap: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 16px;
+}
+
+.logoIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  background-color: #c1a077;
+  color: #172133;
+  border-radius: 50%;
+}
+
+.logoText {
+  color: #c1a077;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  font-family: var(--font-cormorant), serif;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  color: #9ca3af;
+  text-decoration: none;
+  border-radius: 8px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.navItem:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #e5e7eb;
+}
+
+.icon {
+  min-width: 24px;
+}
+
+.navText {
+  font-size: 15px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #c1a077;
+}
+
+.activeIndicator {
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 60%;
+  background-color: #c1a077;
+  border-radius: 0 4px 4px 0;
+}
