@@ -107,6 +107,24 @@
   border-color: #fef08a;
 }
 
+.badgeTeal {
+  background-color: #f0fdfa;
+  color: #0f766e;
+  border-color: #99f6e4;
+}
+
+.badgeOrange {
+  background-color: #fff7ed;
+  color: #c2410c;
+  border-color: #fed7aa;
+}
+
+.badgeRose {
+  background-color: #fff1f2;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
 .badgeRed {
   background-color: #fef2f2;
   color: #dc2626;

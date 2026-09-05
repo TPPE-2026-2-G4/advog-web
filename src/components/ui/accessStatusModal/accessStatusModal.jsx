@@ -1,6 +1,7 @@
 'use client';
 
-import { CheckCircle, Lock, Unlock, X } from 'lucide-react';
+import { Lock, Unlock, X } from 'lucide-react';
+import { useEffect } from 'react';
 import styles from './accessStatusModal.module.css';
 
 export default function AccessStatusModal({
@@ -11,6 +12,19 @@ export default function AccessStatusModal({
   onClose,
   onConfirm,
 }) {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && !isUpdating) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isUpdating, onClose]);
+
   if (!isOpen || !member) return null;
 
   const isRevoking = member.status === 'Ativo';

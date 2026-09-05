@@ -1,11 +1,24 @@
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './addUserModal.module.css';
 
 export default function AddUserModal({ isOpen, onClose, onCreated }) {
   const [formData, setFormData] = useState({ nome: '', email: '' });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && !isSubmitting) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isSubmitting, onClose]);
 
   if (!isOpen) return null;
 
@@ -42,7 +55,12 @@ export default function AddUserModal({ isOpen, onClose, onCreated }) {
       <form className={styles.modal} onSubmit={handleSubmit}>
         <div className={styles.header}>
           <h2 className={styles.title}>Adicionar Novo Usuário</h2>
-          <button onClick={onClose} className={styles.closeButton}>
+          <button
+            type="button"
+            onClick={onClose}
+            className={styles.closeButton}
+            aria-label="Fechar"
+          >
             <X size={20} />
           </button>
         </div>

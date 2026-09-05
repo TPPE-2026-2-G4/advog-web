@@ -6,7 +6,11 @@ export default function Navbar() {
   return (
     <header className={styles.header}>
       <div className={styles.actions}>
-        <button className={styles.notificationBtn}>
+        <button
+          className={styles.notificationBtn}
+          aria-label="Notificações"
+          type="button"
+        >
           <Bell size={20} />
           <span className={styles.badge}>2</span>
         </button>

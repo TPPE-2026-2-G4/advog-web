@@ -1,10 +1,23 @@
 import { CircleCheck, CircleSlash, Pencil, Trash2 } from 'lucide-react';
 import styles from './teamTable.module.css';
 
+const roleBadgePalette = [
+  styles.badgeBlue,
+  styles.badgeGreen,
+  styles.badgeYellow,
+  styles.badgeTeal,
+  styles.badgeOrange,
+  styles.badgeRose,
+];
+
 const getRoleBadgeStyle = (role) => {
-  if (role === 'Admin') return styles.badgeBlue;
-  if (role === 'Advogado') return styles.badgeGreen;
-  return styles.badgeYellow;
+  const roleName = role || 'Não informado';
+  const roleHash = [...roleName].reduce(
+    (hash, character) => hash + character.charCodeAt(0),
+    0
+  );
+
+  return roleBadgePalette[roleHash % roleBadgePalette.length];
 };
 
 const getStatusBadgeStyle = (status) => {

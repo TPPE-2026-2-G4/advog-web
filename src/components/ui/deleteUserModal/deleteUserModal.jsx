@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle, X } from 'lucide-react';
+import { useEffect } from 'react';
 import styles from './deleteUserModal.module.css';
 
 export default function DeleteUserModal({
@@ -11,6 +12,19 @@ export default function DeleteUserModal({
   onClose,
   onConfirm,
 }) {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && !isDeleting) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isDeleting, onClose]);
+
   if (!isOpen || !member) return null;
 
   const handleOverlayClick = (event) => {
