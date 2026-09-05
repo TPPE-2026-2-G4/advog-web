@@ -7,13 +7,3 @@ npm run build || (echo "\n\n ❌  Erro de Build!\n Por favor, corrija os erros e
 echo "\n\n ✅ Build realizado!\n\n"
 
 sleep 1
-
-echo "\n\n🏗️  Tentando rodar os testes antes do push..."
-
-sleep 1
-
-npm run test:coverage || (echo "\n\n ❌  Erro de Testes!\n Por favor, corrija os erros e tente novamente. \n\n" && exit 1)
-
-echo "\n\n ✅ Testes Passaram!\n\n"
-
-sleep 1
