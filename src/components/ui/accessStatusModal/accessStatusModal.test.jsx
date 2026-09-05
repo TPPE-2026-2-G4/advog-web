@@ -95,9 +95,10 @@ describe('AccessStatusModal', () => {
   it('mostra estado de carregamento e desabilita as ações', () => {
     renderModal('Ativo', { isUpdating: true });
 
-    expect(
-      screen.getByRole('button', { name: 'Atualizando...' })
-    ).toBeDisabled();
+    const loadingIndicator = screen.getByRole('status', {
+      name: 'Carregando',
+    });
+    expect(loadingIndicator.closest('button')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Fechar' })).toBeDisabled();
   });

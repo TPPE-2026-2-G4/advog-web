@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import LoadingDots from '@/components/ui/loadingDots/loadingDots';
 import styles from './addUserModal.module.css';
 
 export default function AddUserModal({ isOpen, onClose, onCreated }) {
@@ -110,7 +111,7 @@ export default function AddUserModal({ isOpen, onClose, onCreated }) {
             className={styles.addBtn}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Adicionando...' : 'Adicionar'}
+            {isSubmitting ? <LoadingDots /> : 'Adicionar'}
           </button>
         </div>
       </form>

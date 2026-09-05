@@ -2,6 +2,7 @@
 
 import { Lock, Unlock, X } from 'lucide-react';
 import { useEffect } from 'react';
+import LoadingDots from '@/components/ui/loadingDots/loadingDots';
 import styles from './accessStatusModal.module.css';
 
 export default function AccessStatusModal({
@@ -78,7 +79,7 @@ export default function AccessStatusModal({
             className={styles.confirmButton}
             disabled={isUpdating}
           >
-            {isUpdating ? 'Atualizando...' : actionLabel}
+            {isUpdating ? <LoadingDots /> : actionLabel}
           </button>
         </div>
       </div>

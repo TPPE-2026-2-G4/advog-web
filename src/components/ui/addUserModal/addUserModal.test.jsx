@@ -127,9 +127,10 @@ describe('AddUserModal', () => {
     });
     fireEvent.submit(screen.getByRole('button', { name: 'Adicionar' }));
 
-    expect(
-      await screen.findByRole('button', { name: 'Adicionando...' })
-    ).toBeDisabled();
+    const loadingIndicator = await screen.findByRole('status', {
+      name: 'Carregando',
+    });
+    expect(loadingIndicator.closest('button')).toBeDisabled();
     resolver({ funcionario_id: 1 });
     await waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
   });

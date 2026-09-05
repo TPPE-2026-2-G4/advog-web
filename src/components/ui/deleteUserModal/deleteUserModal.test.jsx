@@ -83,7 +83,10 @@ describe('DeleteUserModal', () => {
   it('mostra estado de carregamento e desabilita as ações durante a exclusão', () => {
     renderModal({ isDeleting: true });
 
-    expect(screen.getByRole('button', { name: 'Excluindo...' })).toBeDisabled();
+    const loadingIndicator = screen.getByRole('status', {
+      name: 'Carregando',
+    });
+    expect(loadingIndicator.closest('button')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Fechar' })).toBeDisabled();
   });

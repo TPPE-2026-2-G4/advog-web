@@ -2,6 +2,7 @@
 
 import { AlertTriangle, X } from 'lucide-react';
 import { useEffect } from 'react';
+import LoadingDots from '@/components/ui/loadingDots/loadingDots';
 import styles from './deleteUserModal.module.css';
 
 export default function DeleteUserModal({
@@ -75,7 +76,7 @@ export default function DeleteUserModal({
             className={styles.deleteButton}
             disabled={isDeleting}
           >
-            {isDeleting ? 'Excluindo...' : 'Excluir funcionário'}
+            {isDeleting ? <LoadingDots /> : 'Excluir funcionário'}
           </button>
         </div>
       </div>

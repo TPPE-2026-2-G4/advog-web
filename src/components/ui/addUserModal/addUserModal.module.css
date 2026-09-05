@@ -127,6 +127,10 @@
 }
 
 .addBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 112px;
   padding: 10px 24px;
   background-color: #c1a077;
   border: none;

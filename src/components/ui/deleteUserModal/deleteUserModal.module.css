@@ -112,6 +112,10 @@
 }
 
 .deleteButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
   color: #ffffff;
   background-color: #b91c1c;
   border: 1px solid #b91c1c;

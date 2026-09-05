@@ -112,6 +112,10 @@
 }
 
 .confirmButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 136px;
   color: #172133;
   background-color: #c1a077;
   border: 1px solid #c1a077;
