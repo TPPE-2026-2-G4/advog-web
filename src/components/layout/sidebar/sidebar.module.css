@@ -13,8 +13,45 @@
   border-right: 1px solid #111827;
 }
 
-.sidebar:hover {
-  width: 260px;
+@media (hover: hover) and (pointer: fine) {
+  .sidebar:hover {
+    width: 260px;
+  }
+
+  .sidebar:hover .logoText {
+    opacity: 1;
+  }
+
+  .sidebar:hover .navText {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar,
+  .sidebar:hover {
+    width: 64px;
+  }
+
+  .logoArea {
+    padding: 20px 12px;
+    gap: 12px;
+  }
+
+  .nav {
+    padding: 0 8px;
+  }
+
+  .navItem {
+    justify-content: center;
+    padding: 12px 8px;
+  }
+
+  .navText,
+  .sidebar:hover .navText,
+  .sidebar:hover .logoText {
+    display: none;
+  }
 }
 
 .logoArea {
@@ -45,10 +82,6 @@
   opacity: 0;
   transition: opacity 0.3s ease;
   font-family: var(--font-cormorant), serif;
-}
-
-.sidebar:hover .logoText {
-  opacity: 1;
 }
 
 .nav {
@@ -84,10 +117,6 @@
   white-space: nowrap;
   opacity: 0;
   transition: opacity 0.3s ease;
-}
-
-.sidebar:hover .navText {
-  opacity: 1;
 }
 
 .active {

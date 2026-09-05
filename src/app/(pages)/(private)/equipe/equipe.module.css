@@ -22,7 +22,7 @@ body {
 }
 
 .title {
-  font-size: 32px;
+  font-size: clamp(26px, 4vw, 32px);
   color: #172133;
   font-family: var(--font-cormorant), serif;
   margin: 0;
@@ -54,13 +54,29 @@ body {
 }
 
 .statsGrid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
   margin-top: 24px;
 }
 
+@media (max-width: 1024px) and (min-width: 769px) {
+  .statsGrid {
+    gap: 16px;
+  }
+}
+
 @media (max-width: 768px) {
   .statsGrid {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+  }
+
+  .headerRow {
+    align-items: stretch;
+  }
+
+  .addButton {
+    justify-content: center;
+    width: 100%;
   }
 }

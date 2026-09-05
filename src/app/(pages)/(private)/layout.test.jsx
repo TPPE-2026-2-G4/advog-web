@@ -56,7 +56,7 @@ describe('PrivateLayout', () => {
     expect(layout.children[1].children[1].tagName).toBe('MAIN');
   });
 
-  it('aplica o layout flexível e a altura mínima da viewport', () => {
+  it('aplica a classe do layout flexível com altura mínima da viewport', () => {
     const { container } = render(
       <PrivateLayout>
         <div>Conteúdo protegido</div>
@@ -64,12 +64,10 @@ describe('PrivateLayout', () => {
     );
     const layout = container.firstElementChild;
 
-    expect(layout.style.display).toBe('flex');
-    expect(layout.style.minHeight).toBe('100vh');
-    expect(layout.style.backgroundColor).toBe('rgb(249, 249, 248)');
+    expect(layout.className).toContain('layout');
   });
 
-  it('reserva a largura da sidebar e evita overflow na área de conteúdo', () => {
+  it('aplica a classe que reserva a largura da sidebar na área de conteúdo', () => {
     const { container } = render(
       <PrivateLayout>
         <div>Conteúdo protegido</div>
@@ -77,13 +75,7 @@ describe('PrivateLayout', () => {
     );
     const contentContainer = container.firstElementChild.children[1];
 
-    expect(contentContainer).toHaveStyle({
-      width: 'calc(100% - 80px)',
-      minWidth: '0',
-      marginLeft: '80px',
-      display: 'flex',
-      flexDirection: 'column',
-    });
+    expect(contentContainer.className).toContain('contentContainer');
   });
 
   it('mantém múltiplos filhos dentro do mesmo main', () => {

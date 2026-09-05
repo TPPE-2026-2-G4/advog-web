@@ -3,12 +3,6 @@
   background-color: #f9f9f8;
 }
 
-.mainContent {
-  padding: 32px;
-  max-width: 1280px;
-  box-sizing: border-box;
-}
-
 .header {
   display: flex;
   align-items: center;
@@ -109,6 +103,17 @@
 @media (min-width: 768px) {
   .userInfo {
     display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    height: 56px;
+    padding: 0 16px;
+  }
+
+  .actions {
+    gap: 12px;
   }
 }
 

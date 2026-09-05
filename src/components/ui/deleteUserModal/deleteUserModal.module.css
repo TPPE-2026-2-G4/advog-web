@@ -12,7 +12,9 @@
 .modal {
   width: 100%;
   max-width: 460px;
-  overflow: hidden;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
   background-color: #ffffff;
   border-radius: 12px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
@@ -90,6 +92,23 @@
   gap: 16px;
   padding: 24px;
   border-top: 1px solid #f3f4f6;
+}
+
+@media (max-width: 480px) {
+  .header,
+  .body,
+  .footer {
+    padding: 18px 16px;
+  }
+
+  .footer {
+    flex-direction: column-reverse;
+  }
+
+  .cancelButton,
+  .deleteButton {
+    width: 100%;
+  }
 }
 
 .cancelButton,
