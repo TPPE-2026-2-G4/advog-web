@@ -10,3 +10,15 @@ h5,
 h6 {
   font-family: var(--font-cormorant), serif;
 }
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+}

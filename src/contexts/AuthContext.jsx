@@ -1,0 +1,3 @@
+{
+  (user, token, login(), logout());
+}
