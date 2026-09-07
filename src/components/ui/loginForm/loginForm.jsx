@@ -23,7 +23,7 @@ export default function LoginForm() {
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
-      <label>Email empresarial</label>
+      <label className={styles.label}>Email empresarial</label>
       <input
         className={styles.input}
         type="email"
@@ -32,15 +32,16 @@ export default function LoginForm() {
         onChange={(e) => setEmail(e.target.value)}
       />
 
-      <label>Senha</label>
+      <label className={styles.label}>Senha</label>
       <input
         className={styles.input}
         type="password"
+        placeholder="••••••••"
         value={senha}
         onChange={(e) => setSenha(e.target.value)}
       />
 
-      <a href="#" onClick={(e) => e.preventDefault()}>
+      <a className={styles.forgotPassword} href="/esqueci-senha">
         Esqueci minha senha
       </a>
 
@@ -48,7 +49,7 @@ export default function LoginForm() {
         Entrar
       </button>
 
-      {erro && <span>{erro}</span>}
+      {erro && <span className={styles.error}>{erro}</span>}
     </form>
   );
 }

@@ -4,7 +4,7 @@
 }
 
 .brand {
-  width: 50%;
+  width: 48%;
   background-color: #172133;
   display: flex;
   flex-direction: column;
@@ -25,7 +25,7 @@
 }
 
 .login {
-  width: 50%;
+  width: 52%;
   background-color: #f9f9f8;
   display: flex;
   flex-direction: column;
