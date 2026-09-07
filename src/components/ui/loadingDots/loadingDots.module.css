@@ -1,0 +1,42 @@
+.dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 38px;
+  height: 20px;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  background-color: currentColor;
+  border-radius: 50%;
+  animation: zigzag 0.8s ease-in-out infinite;
+}
+
+.delayOne {
+  animation-delay: 0.12s;
+}
+
+.delayTwo {
+  animation-delay: 0.24s;
+}
+
+@keyframes zigzag {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+
+  30% {
+    transform: translateY(-5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+}
