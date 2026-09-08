@@ -1,21 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { login } from '@/services/auth';
+import { useAuth } from '@/hooks/useAuth';
 import styles from './loginForm.module.css';
 
 export default function LoginForm() {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setErro('');
 
     try {
       await login(email, senha);
-
-      window.location.href = '/dashboard';
     } catch (error) {
       setErro(error.message);
     }
