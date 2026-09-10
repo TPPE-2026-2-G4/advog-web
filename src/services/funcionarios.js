@@ -1,11 +1,8 @@
-const apiUrl =
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.API_URL ||
-  'http://localhost:8000';
+import { API_URL } from './api';
 
 export async function listarFuncionarios() {
   try {
-    const response = await fetch(`${apiUrl}/funcionarios`, {
+    const response = await fetch(`${API_URL}/funcionarios`, {
       cache: 'no-store',
     });
 
@@ -18,7 +15,7 @@ export async function listarFuncionarios() {
 }
 
 export async function criarFuncionario(dados) {
-  const response = await fetch(`${apiUrl}/funcionarios`, {
+  const response = await fetch(`${API_URL}/funcionarios`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -35,7 +32,7 @@ export async function criarFuncionario(dados) {
 }
 
 export async function excluirFuncionario(funcionarioId) {
-  const response = await fetch(`${apiUrl}/funcionarios/${funcionarioId}`, {
+  const response = await fetch(`${API_URL}/funcionarios/${funcionarioId}`, {
     method: 'DELETE',
   });
 
@@ -47,7 +44,7 @@ export async function excluirFuncionario(funcionarioId) {
 
 export async function mudarAcessoFuncionario(funcionarioId) {
   const response = await fetch(
-    `${apiUrl}/funcionarios/${funcionarioId}/mudar-acesso`,
+    `${API_URL}/funcionarios/${funcionarioId}/mudar-acesso`,
     {
       method: 'PATCH',
     }
