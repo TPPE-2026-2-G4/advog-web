@@ -24,7 +24,7 @@
   margin: 16px 0 0;
 }
 
-.login {
+.auth {
   width: 52%;
   background-color: #f9f9f8;
   display: flex;
@@ -33,13 +33,13 @@
   align-items: center;
 }
 
-.titleLogin {
+.titleAuth {
   color: #172133;
   font-size: 32px;
   margin: 0;
 }
 
-.subtitle {
+.subtitleAuth {
   color: #6b7280;
   font-size: 16px;
   margin: 12px 0 36px;

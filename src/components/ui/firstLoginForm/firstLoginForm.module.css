@@ -1,0 +1,107 @@
+.form {
+  width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 450;
+  color: #172133;
+  margin-top: 8px;
+}
+
+.input {
+  height: 44px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 0 18px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 15px;
+  background-color: transparent;
+  outline: none;
+}
+
+.input::placeholder {
+  font: inherit;
+  color: rgba(107, 114, 128, 0.75);
+}
+
+.input:focus {
+  border-color: #c1a077;
+}
+
+.select {
+  color: #172133;
+  cursor: pointer;
+}
+
+.select option {
+  color: #172133;
+}
+
+.rowOab {
+  display: flex;
+  width: 100%;
+  gap: 18px;
+}
+
+.rowOab .label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.ufGroup {
+  flex: 0 0 30%;
+}
+
+.numeroGroup {
+  flex: 1;
+}
+
+.rowOab .input {
+  width: 100%;
+}
+
+.button {
+  height: 40px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: #172133;
+  color: white;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.button:hover {
+  background-color: #24334d;
+}
+
+.error {
+  color: #b91c1c;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.information {
+  align-self: center;
+  margin-top: 24px;
+  color: #6b7280;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.information a {
+  color: #c1a077;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.information a:hover {
+  text-decoration: underline;
+}

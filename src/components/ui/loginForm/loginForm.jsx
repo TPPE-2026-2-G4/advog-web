@@ -10,8 +10,8 @@ export default function LoginForm() {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
     setErro('');
 
     try {
@@ -29,7 +29,7 @@ export default function LoginForm() {
         type="email"
         placeholder="dr@carreiro.adv.br"
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(event) => setEmail(event.target.value)}
       />
 
       <label className={styles.label}>Senha</label>
@@ -38,7 +38,7 @@ export default function LoginForm() {
         type="password"
         placeholder="••••••••"
         value={senha}
-        onChange={(e) => setSenha(e.target.value)}
+        onChange={(event) => setSenha(event.target.value)}
       />
 
       <a className={styles.forgotPassword} href="/esqueci-senha">
