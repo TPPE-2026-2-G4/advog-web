@@ -1,5 +1,6 @@
 .form {
-  width: 450px;
+  width: 100%;
+  max-width: 450px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -67,4 +68,52 @@
   color: #b91c1c;
   font-size: 13px;
   margin-top: 4px;
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .form {
+    width: 380px;
+  }
+
+  .input {
+    height: 42px;
+    font-size: 14px;
+  }
+
+  .button {
+    height: 40px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .form {
+    width: 100%;
+    max-width: 450px;
+  }
+
+  .label {
+    font-size: 12px;
+  }
+
+  .input {
+    height: 42px;
+    padding: 0 16px;
+    font-size: 14px;
+    border-radius: 14px;
+  }
+
+  .forgotPassword {
+    font-size: 12px;
+  }
+
+  .button {
+    height: 42px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+
+  .error {
+    font-size: 12px;
+  }
 }

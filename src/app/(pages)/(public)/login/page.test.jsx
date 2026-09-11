@@ -3,25 +3,27 @@ import { render, screen } from '@testing-library/react';
 import LoginPage from './page';
 
 describe('LoginPage', () => {
-  it('renderiza a identidade visual da página', () => {
+  it('renderiza o título e subtítulo de autenticação', () => {
     render(<LoginPage />);
 
     expect(
-      screen.getByRole('heading', { name: 'Alexandre Carreiro' })
+      screen.getByRole('heading', {
+        name: 'Acesso ao Sistema',
+      })
     ).toBeInTheDocument();
+
     expect(
-      screen.getByText('Gestão Jurídica de Alta Performance')
+      screen.getByText('Insira suas credenciais para continuar')
     ).toBeInTheDocument();
   });
 
-  it('renderiza o acesso ao sistema', () => {
+  it('renderiza o formulário de login', () => {
     render(<LoginPage />);
 
     expect(
-      screen.getByRole('heading', { name: 'Acesso ao Sistema' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Insira suas credenciais para continuar')
+      screen.getByRole('button', {
+        name: 'Entrar',
+      })
     ).toBeInTheDocument();
   });
 });
