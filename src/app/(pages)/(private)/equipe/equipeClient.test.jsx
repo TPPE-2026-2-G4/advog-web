@@ -120,7 +120,6 @@ vi.mock('@/components/ui/editUserModal/editUserModal', () => ({
           onSave({
             nome: 'Nome Editado',
             email: 'editado@teste.local',
-            telefone: '',
             cargo: 'advogado',
           })
         }

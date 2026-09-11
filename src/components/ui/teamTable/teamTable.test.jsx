@@ -129,21 +129,18 @@ describe('TeamTable', () => {
   it('sempre renderiza as ações de editar e excluir', () => {
     render(<TeamTable members={[createMember({ status: 'Pendente' })]} />);
 
-    const editButton = screen.getByRole('button', { name: 'Editar' });
-    expect(editButton).toHaveAttribute('title', 'Editar usuário');
-    expect(editButton).toHaveClass(styles.editBtn);
+    expect(screen.getByTitle('Editar usuário')).toBeInTheDocument();
+    expect(screen.queryByText('Editar')).not.toBeInTheDocument();
     expect(screen.getByTitle('Excluir usuário')).toBeInTheDocument();
   });
 
   it('ordena editar, acesso e excluir nesta sequência', () => {
     render(<TeamTable members={[createMember({ status: 'Ativo' })]} />);
 
-    const actions = screen.getByRole('button', {
-      name: 'Editar',
-    }).parentElement;
+    const actions = screen.getByTitle('Editar usuário').parentElement;
     const buttons = within(actions).getAllByRole('button');
 
-    expect(buttons[0]).toHaveTextContent('Editar');
+    expect(buttons[0]).toHaveAttribute('title', 'Editar usuário');
     expect(buttons[1]).toHaveTextContent('Revogar acesso');
     expect(buttons[2]).toHaveAttribute('title', 'Excluir usuário');
   });

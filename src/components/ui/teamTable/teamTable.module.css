@@ -203,15 +203,6 @@
   color: #111827;
 }
 
-.editBtn {
-  color: #b79a63;
-}
-
-.editBtn:hover {
-  color: #957b49;
-  background-color: #fbf8f2;
-}
-
 .revokeAccessBtn {
   color: #dc2626;
 }

@@ -229,7 +229,7 @@ describe('integração da página de equipe', () => {
     expect(screen.getByText('Ativo')).toBeInTheDocument();
   });
 
-  it('edita os dados e o nível de acesso de um membro', async () => {
+  it('edita os dados e o nível de acesso sem oferecer telefone', async () => {
     const member = createMember({
       cargo_id: 3,
       cargo: 'Estagiário',
@@ -246,9 +246,7 @@ describe('integração da página de equipe', () => {
     fireEvent.change(screen.getByLabelText('E-mail'), {
       target: { value: 'maria.souza@teste.local' },
     });
-    fireEvent.change(screen.getByLabelText('Telefone'), {
-      target: { value: '(61) 98888-7777' },
-    });
+    expect(screen.queryByLabelText('Telefone')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Nível de Acesso'), {
       target: { value: '2' },
     });
@@ -261,7 +259,7 @@ describe('integração da página de equipe', () => {
     });
     const memberRow = screen.getByText('Maria Souza').closest('tr');
     expect(within(memberRow).getByText('Advogado')).toBeInTheDocument();
-    expect(within(memberRow).getByText('(61) 98888-7777')).toBeInTheDocument();
+    expect(within(memberRow).getByText('(61) 99999-9999')).toBeInTheDocument();
   });
 
   it('impede alterar o cargo do único administrador', () => {

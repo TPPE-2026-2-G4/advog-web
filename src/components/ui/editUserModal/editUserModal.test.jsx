@@ -43,7 +43,7 @@ describe('EditUserModal', () => {
     }
   );
 
-  it('renderiza um diálogo acessível com todos os dados do membro', () => {
+  it('renderiza um diálogo acessível sem permitir editar o telefone', () => {
     renderModal();
 
     expect(
@@ -51,8 +51,7 @@ describe('EditUserModal', () => {
     ).toHaveAttribute('aria-modal', 'true');
     expect(screen.getByLabelText('Nome Completo')).toHaveValue('Maria Silva');
     expect(screen.getByLabelText('E-mail')).toHaveValue('maria@teste.local');
-    expect(screen.getByLabelText('Telefone')).toHaveValue('(61) 99999-9999');
-    expect(screen.getByLabelText('Telefone')).not.toBeRequired();
+    expect(screen.queryByLabelText('Telefone')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Nível de Acesso')).toHaveValue('2');
 
     roles.forEach((role) => {
@@ -94,7 +93,7 @@ describe('EditUserModal', () => {
 
     expect(screen.getByLabelText('Nome Completo')).toHaveValue('João Santos');
     expect(screen.getByLabelText('E-mail')).toHaveValue('joao@teste.local');
-    expect(screen.getByLabelText('Telefone')).toHaveValue('(61) 98888-7777');
+    expect(screen.queryByLabelText('Telefone')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Nível de Acesso')).toHaveValue('3');
   });
 
@@ -120,9 +119,6 @@ describe('EditUserModal', () => {
     fireEvent.change(screen.getByLabelText('E-mail'), {
       target: { value: 'maria.souza@teste.local' },
     });
-    fireEvent.change(screen.getByLabelText('Telefone'), {
-      target: { value: '(61) 97777-6666' },
-    });
     fireEvent.change(screen.getByLabelText('Nível de Acesso'), {
       target: { value: '3' },
     });
@@ -132,7 +128,6 @@ describe('EditUserModal', () => {
       expect(onSave).toHaveBeenCalledWith({
         nome: 'Maria Souza',
         email: 'maria.souza@teste.local',
-        telefone: '(61) 97777-6666',
         cargo: 3,
       })
     );

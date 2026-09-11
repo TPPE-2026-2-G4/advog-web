@@ -1,4 +1,4 @@
-import { CircleCheck, CircleSlash, Settings, Trash2 } from 'lucide-react';
+import { CircleCheck, CircleSlash, Pencil, Trash2 } from 'lucide-react';
 import { createEmptyPermission } from '@/constants/permissions';
 import styles from './teamTable.module.css';
 
@@ -128,13 +128,12 @@ export default function TeamTable({
                   <td className={styles.td} data-label="Ações">
                     <div className={styles.actionsCell}>
                       <button
-                        className={`${styles.actionBtn} ${styles.editBtn}`}
+                        className={styles.actionBtn}
                         title="Editar usuário"
                         onClick={() => onEdit?.(member)}
                         type="button"
                       >
-                        <Settings size={17} aria-hidden="true" />
-                        <span>Editar</span>
+                        <Pencil size={18} />
                       </button>
                       {member.status !== 'Pendente' && (
                         <button

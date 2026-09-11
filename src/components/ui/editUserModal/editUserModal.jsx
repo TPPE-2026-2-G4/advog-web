@@ -8,7 +8,6 @@ import styles from './editUserModal.module.css';
 const emptyForm = {
   nome: '',
   email: '',
-  telefone: '',
   cargo: '',
 };
 
@@ -32,7 +31,6 @@ const findMemberRoleId = (member, roles) => {
 const toFormData = (member, roles) => ({
   nome: member?.nome_func ?? member?.nome ?? '',
   email: member?.email_func ?? member?.email ?? '',
-  telefone: member?.telefone ?? member?.telefone_func ?? '',
   cargo: findMemberRoleId(member, roles),
 });
 
@@ -136,7 +134,6 @@ function EditUserDialog({ member, roles, isRoleLocked, onClose, onSave }) {
       await onSave({
         nome: formData.nome,
         email: formData.email,
-        telefone: formData.telefone,
         cargo: selectedRole?.cargo_id ?? formData.cargo,
       });
       onClose();
@@ -206,22 +203,6 @@ function EditUserDialog({ member, roles, isRoleLocked, onClose, onSave }) {
               autoComplete="email"
               disabled={isSubmitting}
               required
-            />
-          </div>
-
-          <div className={styles.inputGroup}>
-            <label className={styles.label} htmlFor="edit-user-phone">
-              Telefone
-            </label>
-            <input
-              id="edit-user-phone"
-              name="telefone"
-              type="tel"
-              className={styles.input}
-              value={formData.telefone}
-              onChange={handleChange}
-              autoComplete="tel"
-              disabled={isSubmitting}
             />
           </div>
 

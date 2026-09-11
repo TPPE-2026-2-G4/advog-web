@@ -129,7 +129,7 @@ export function useEquipe(initialData, initialRoles = []) {
     setEditingMember(null);
   };
 
-  const handleUpdateUser = ({ nome, email, telefone, cargo }) => {
+  const handleUpdateUser = ({ nome, email, cargo }) => {
     if (!editingMember) return;
 
     const selectedRole = roles.find((role) => role.cargo_id === cargo);
@@ -137,7 +137,6 @@ export function useEquipe(initialData, initialRoles = []) {
       ...editingMember,
       nome_func: nome.trim(),
       email_func: email.trim(),
-      telefone: telefone.trim(),
       cargo_id: selectedRole?.cargo_id ?? cargo,
       cargo: selectedRole?.nome_cargo ?? editingMember.cargo,
       initials: getInitials(nome),

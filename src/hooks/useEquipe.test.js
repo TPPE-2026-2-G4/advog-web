@@ -427,6 +427,7 @@ describe('useEquipe', () => {
     const member = createMember({
       cargo_id: 3,
       cargo: 'Estagiário',
+      telefone: '(61) 99999-0000',
     });
     const otherMember = createMember({
       funcionario_id: 2,
@@ -443,7 +444,6 @@ describe('useEquipe', () => {
       result.current.handleUpdateUser({
         nome: '  Maria Souza  ',
         email: '  maria.souza@teste.local  ',
-        telefone: ' (61) 99999-0000 ',
         cargo: 2,
       })
     );
@@ -454,7 +454,6 @@ describe('useEquipe', () => {
         initials: 'MS',
         nome_func: 'Maria Souza',
         email_func: 'maria.souza@teste.local',
-        telefone: '(61) 99999-0000',
         cargo_id: 2,
         cargo: 'Advogado',
       },
@@ -474,7 +473,6 @@ describe('useEquipe', () => {
       result.current.handleUpdateUser({
         nome: 'Outro nome',
         email: 'outro@teste.local',
-        telefone: '',
         cargo: 'admin',
       })
     );
