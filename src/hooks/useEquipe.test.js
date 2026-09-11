@@ -5,7 +5,9 @@ import {
   excluirFuncionario,
   mudarAcessoFuncionario,
 } from '@/services/funcionarios';
-import { toTeamMember } from '@/utils/funcionario';
+import { atualizarCargo, criarCargo, excluirCargo } from '@/services/cargos';
+import { createEmptyPermission } from '@/constants/permissions';
+import { getInitials, toTeamMember } from '@/utils/funcionario';
 import { useEquipe } from './useEquipe';
 
 vi.mock('@/services/funcionarios', () => ({
@@ -14,7 +16,14 @@ vi.mock('@/services/funcionarios', () => ({
   mudarAcessoFuncionario: vi.fn(),
 }));
 
+vi.mock('@/services/cargos', () => ({
+  atualizarCargo: vi.fn(),
+  criarCargo: vi.fn(),
+  excluirCargo: vi.fn(),
+}));
+
 vi.mock('@/utils/funcionario', () => ({
+  getInitials: vi.fn(),
   toTeamMember: vi.fn(),
 }));
 
@@ -36,9 +45,44 @@ const createFuncionario = (overrides = {}) => ({
   ...overrides,
 });
 
+const withAllowedPermissions = (...permissionNames) => ({
+  ...createEmptyPermission(),
+  ...Object.fromEntries(permissionNames.map((name) => [name, true])),
+});
+
+const initialRoles = [
+  {
+    cargo_id: 1,
+    nome_cargo: 'Administrador',
+    permissao: withAllowedPermissions(...Object.keys(createEmptyPermission())),
+  },
+  {
+    cargo_id: 2,
+    nome_cargo: 'Advogado',
+    permissao: withAllowedPermissions(
+      'visualizar_processos',
+      'criar_processos'
+    ),
+  },
+  {
+    cargo_id: 3,
+    nome_cargo: 'Estagiário',
+    permissao: withAllowedPermissions('visualizar_processos'),
+  },
+];
+
 describe('useEquipe', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getInitials.mockImplementation((name) =>
+      name
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join('')
+        .toUpperCase()
+    );
     toTeamMember.mockImplementation((funcionario) => ({
       funcionario_id: funcionario.funcionario_id,
       initials: 'JS',
@@ -57,7 +101,7 @@ describe('useEquipe', () => {
       createMember({ funcionario_id: 4, status: 'Inativo' }),
     ];
 
-    const { result } = renderHook(() => useEquipe(initialData));
+    const { result } = renderHook(() => useEquipe(initialData, initialRoles));
 
     expect(result.current.members).toEqual(initialData);
     expect(result.current.totalUsers).toBe(4);
@@ -70,6 +114,13 @@ describe('useEquipe', () => {
     expect(result.current.isUpdatingAccess).toBe(false);
     expect(result.current.deleteError).toBe('');
     expect(result.current.accessError).toBe('');
+    expect(result.current.roles).toEqual(initialRoles);
+    expect(result.current.editingMember).toBeNull();
+    expect(result.current.permissionsRole).toBeNull();
+    expect(result.current.isNewRoleModalOpen).toBe(false);
+    expect(result.current.roleToDelete).toBeNull();
+    expect(result.current.isDeletingRole).toBe(false);
+    expect(result.current.deleteRoleError).toBe('');
   });
 
   it.each([
@@ -103,7 +154,9 @@ describe('useEquipe', () => {
     const updatedMember = { ...member, status: 'Inativo' };
     mudarAcessoFuncionario.mockResolvedValue(funcionario);
     toTeamMember.mockReturnValue(updatedMember);
-    const { result } = renderHook(() => useEquipe([member, otherMember]));
+    const { result } = renderHook(() =>
+      useEquipe([member, otherMember], initialRoles)
+    );
 
     act(() => result.current.handleOpenAccessModal(member));
     await act(async () => {
@@ -134,7 +187,11 @@ describe('useEquipe', () => {
     criarFuncionario.mockResolvedValue(funcionario);
     toTeamMember.mockReturnValue(newMember);
     const { result } = renderHook(() => useEquipe([]));
-    const dados = { nome: funcionario.nome, email: funcionario.email };
+    const dados = {
+      nome: funcionario.nome,
+      email: funcionario.email,
+      cargo_id: 2,
+    };
 
     await act(async () => {
       await result.current.handleCreateUser(dados);
@@ -157,6 +214,7 @@ describe('useEquipe', () => {
         await result.current.handleCreateUser({
           nome: 'Maria Silva',
           email: 'maria@teste.local',
+          cargo_id: 2,
         });
       })
     ).rejects.toThrow('E-mail já cadastrado');
@@ -363,5 +421,303 @@ describe('useEquipe', () => {
       resolveUpdate({ ...member, status: 'Inativo' });
       await updatePromise;
     });
+  });
+
+  it('abre, atualiza e fecha a edição de um membro', () => {
+    const member = createMember({
+      cargo_id: 3,
+      cargo: 'Estagiário',
+    });
+    const otherMember = createMember({
+      funcionario_id: 2,
+      nome_func: 'Outro Usuário',
+    });
+    const { result } = renderHook(() =>
+      useEquipe([member, otherMember], initialRoles)
+    );
+
+    act(() => result.current.handleOpenEditModal(member));
+    expect(result.current.editingMember).toEqual(member);
+
+    act(() =>
+      result.current.handleUpdateUser({
+        nome: '  Maria Souza  ',
+        email: '  maria.souza@teste.local  ',
+        telefone: ' (61) 99999-0000 ',
+        cargo: 2,
+      })
+    );
+
+    expect(result.current.members).toEqual([
+      {
+        ...member,
+        initials: 'MS',
+        nome_func: 'Maria Souza',
+        email_func: 'maria.souza@teste.local',
+        telefone: '(61) 99999-0000',
+        cargo_id: 2,
+        cargo: 'Advogado',
+      },
+      otherMember,
+    ]);
+    expect(getInitials).toHaveBeenCalledWith('  Maria Souza  ');
+
+    act(() => result.current.handleCloseEditModal());
+    expect(result.current.editingMember).toBeNull();
+  });
+
+  it('não altera membros quando não há uma edição selecionada', () => {
+    const member = createMember();
+    const { result } = renderHook(() => useEquipe([member]));
+
+    act(() =>
+      result.current.handleUpdateUser({
+        nome: 'Outro nome',
+        email: 'outro@teste.local',
+        telefone: '',
+        cargo: 'admin',
+      })
+    );
+
+    expect(result.current.members).toEqual([member]);
+  });
+
+  it('protege a troca de cargo apenas do único administrador', () => {
+    const admin = createMember({
+      cargo_id: 1,
+      cargo: 'Administrador',
+    });
+    const secondAdmin = createMember({
+      funcionario_id: 2,
+      cargo_id: 1,
+      cargo: 'Administrador',
+    });
+    const { result } = renderHook(() => useEquipe([admin], initialRoles));
+
+    act(() => result.current.handleOpenEditModal(admin));
+    expect(result.current.isEditingOnlyAdmin).toBe(true);
+
+    const { result: multipleAdminsResult } = renderHook(() =>
+      useEquipe([admin, secondAdmin], initialRoles)
+    );
+    act(() => multipleAdminsResult.current.handleOpenEditModal(admin));
+    expect(multipleAdminsResult.current.isEditingOnlyAdmin).toBe(false);
+  });
+
+  it('abre, persiste e fecha as permissões de um cargo', async () => {
+    const { result } = renderHook(() => useEquipe([], initialRoles));
+    const role = result.current.roles[1];
+    const permission = withAllowedPermissions(
+      'visualizar_processos',
+      'visualizar_equipe'
+    );
+    const cargo = {
+      cargo_id: role.cargo_id,
+      nome_cargo: role.nome_cargo,
+      descricao: role.descricao,
+      permissao: permission,
+    };
+    atualizarCargo.mockResolvedValue(cargo);
+
+    act(() => result.current.handleOpenPermissionsModal(role));
+    expect(result.current.permissionsRole).toEqual(role);
+
+    await act(async () => {
+      await result.current.handleUpdateRolePermissions({
+        cargo_id: role.cargo_id,
+        permissao: permission,
+      });
+    });
+
+    expect(atualizarCargo).toHaveBeenCalledWith(role.cargo_id, {
+      permissao: permission,
+    });
+    expect(result.current.roles[1]).toEqual(cargo);
+
+    act(() => result.current.handleClosePermissionsModal());
+    expect(result.current.permissionsRole).toBeNull();
+  });
+
+  it('abre e fecha o modal de novo cargo', () => {
+    const { result } = renderHook(() => useEquipe([]));
+
+    act(() => result.current.setIsNewRoleModalOpen(true));
+    expect(result.current.isNewRoleModalOpen).toBe(true);
+
+    act(() => result.current.setIsNewRoleModalOpen(false));
+    expect(result.current.isNewRoleModalOpen).toBe(false);
+  });
+
+  it('cria cargos pela API e usa o identificador retornado', async () => {
+    const { result } = renderHook(() => useEquipe([], initialRoles));
+    const permission = withAllowedPermissions('visualizar_processos');
+    const cargo = {
+      cargo_id: 17,
+      nome_cargo: 'Sócio Sênior',
+      descricao: 'Cargo personalizado.',
+      permissao: permission,
+    };
+    criarCargo.mockResolvedValue(cargo);
+
+    await act(async () => {
+      await result.current.handleCreateRole({
+        nome_cargo: '  Sócio Sênior  ',
+        permissao: permission,
+      });
+    });
+
+    expect(criarCargo).toHaveBeenCalledWith({
+      nome_cargo: 'Sócio Sênior',
+      descricao: 'Cargo personalizado.',
+      permissao: permission,
+    });
+    expect(result.current.roles.at(-1)).toMatchObject({
+      cargo_id: 17,
+      nome_cargo: 'Sócio Sênior',
+      permissao: permission,
+    });
+  });
+
+  it('normaliza a descrição informada ao criar um cargo', async () => {
+    const permission = createEmptyPermission();
+    const cargo = {
+      cargo_id: 18,
+      nome_cargo: 'Paralegal',
+      descricao: 'Apoio à equipe jurídica.',
+      permissao: permission,
+    };
+    criarCargo.mockResolvedValue(cargo);
+    const { result } = renderHook(() => useEquipe([], initialRoles));
+
+    await act(async () => {
+      await result.current.handleCreateRole({
+        nome_cargo: 'Paralegal',
+        descricao: '  Apoio à equipe jurídica.  ',
+        permissao: permission,
+      });
+    });
+
+    expect(criarCargo).toHaveBeenCalledWith({
+      nome_cargo: 'Paralegal',
+      descricao: 'Apoio à equipe jurídica.',
+      permissao: permission,
+    });
+  });
+
+  it('não faz nada ao confirmar a exclusão sem um cargo selecionado', async () => {
+    const { result } = renderHook(() => useEquipe([], initialRoles));
+
+    await act(async () => {
+      await result.current.handleDeleteRole();
+    });
+
+    expect(excluirCargo).not.toHaveBeenCalled();
+    expect(result.current.roles).toEqual(initialRoles);
+  });
+
+  it('exclui o cargo selecionado pela API e fecha o modal', async () => {
+    excluirCargo.mockResolvedValue(initialRoles[2]);
+    const { result } = renderHook(() => useEquipe([], initialRoles));
+
+    act(() => result.current.handleOpenDeleteRoleModal(initialRoles[2]));
+    await act(async () => {
+      await result.current.handleDeleteRole();
+    });
+
+    expect(excluirCargo).toHaveBeenCalledOnce();
+    expect(excluirCargo).toHaveBeenCalledWith(3);
+    expect(result.current.roles).toEqual(initialRoles.slice(0, 2));
+    expect(result.current.roleToDelete).toBeNull();
+    expect(result.current.isDeletingRole).toBe(false);
+  });
+
+  it('mantém o cargo e mostra a regra do backend quando a exclusão falha', async () => {
+    const message = 'Não é possível excluir um cargo associado a funcionários';
+    excluirCargo.mockRejectedValue(new Error(message));
+    const { result } = renderHook(() => useEquipe([], initialRoles));
+
+    act(() => result.current.handleOpenDeleteRoleModal(initialRoles[1]));
+    await act(async () => {
+      await result.current.handleDeleteRole();
+    });
+
+    expect(result.current.roles).toEqual(initialRoles);
+    expect(result.current.roleToDelete).toEqual(initialRoles[1]);
+    expect(result.current.deleteRoleError).toBe(message);
+    expect(result.current.isDeletingRole).toBe(false);
+  });
+
+  it('fecha o modal de cargo e limpa o erro ao abri-lo novamente', async () => {
+    excluirCargo.mockRejectedValueOnce(new Error('Falha ao excluir'));
+    const { result } = renderHook(() => useEquipe([], initialRoles));
+
+    act(() => result.current.handleOpenDeleteRoleModal(initialRoles[0]));
+    await act(async () => {
+      await result.current.handleDeleteRole();
+    });
+    expect(result.current.deleteRoleError).toBe('Falha ao excluir');
+
+    act(() => result.current.handleOpenDeleteRoleModal(initialRoles[1]));
+    expect(result.current.roleToDelete).toEqual(initialRoles[1]);
+    expect(result.current.deleteRoleError).toBe('');
+
+    act(() => result.current.handleCloseDeleteRoleModal());
+    expect(result.current.roleToDelete).toBeNull();
+  });
+
+  it('não fecha o modal de cargo enquanto a exclusão está em andamento', async () => {
+    let resolveDeletion;
+    excluirCargo.mockReturnValue(
+      new Promise((resolve) => {
+        resolveDeletion = resolve;
+      })
+    );
+    const { result } = renderHook(() => useEquipe([], initialRoles));
+
+    act(() => result.current.handleOpenDeleteRoleModal(initialRoles[2]));
+    let deletionPromise;
+    act(() => {
+      deletionPromise = result.current.handleDeleteRole();
+    });
+
+    await waitFor(() => expect(result.current.isDeletingRole).toBe(true));
+    act(() => result.current.handleCloseDeleteRoleModal());
+    expect(result.current.roleToDelete).toEqual(initialRoles[2]);
+
+    await act(async () => {
+      resolveDeletion(initialRoles[2]);
+      await deletionPromise;
+    });
+  });
+
+  it.each([
+    ['', 'Informe o nome do cargo.'],
+    ['  ADMINISTRADOR  ', 'Já existe um cargo com esse nome.'],
+  ])('rejeita o cargo inválido "%s"', async (nome_cargo, message) => {
+    const { result } = renderHook(() => useEquipe([], initialRoles));
+
+    await expect(
+      result.current.handleCreateRole({
+        nome_cargo,
+        permissao: createEmptyPermission(),
+      })
+    ).rejects.toThrow(message);
+    expect(criarCargo).not.toHaveBeenCalled();
+    expect(result.current.roles).toHaveLength(initialRoles.length);
+  });
+
+  it('inicializa os cargos com os dados fornecidos pela página', () => {
+    const rolesFromApi = [
+      {
+        cargo_id: 8,
+        nome_cargo: 'Paralegal',
+        descricao: null,
+        permissao: withAllowedPermissions('visualizar_processos'),
+      },
+    ];
+
+    const { result } = renderHook(() => useEquipe([], rolesFromApi));
+
+    expect(result.current.roles).toEqual(rolesFromApi);
   });
 });

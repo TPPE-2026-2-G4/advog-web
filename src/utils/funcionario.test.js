@@ -61,4 +61,67 @@ describe('toTeamMember', () => {
     expect(teamMember.status).toBe(funcionario.status);
     expect(teamMember.cargo).toBe('Não informado');
   });
+
+  it.each([
+    [{ cargo: 'Admin' }, 'Admin'],
+    [{ nome_cargo: 'Advogado' }, 'Advogado'],
+    [{ cargo: { nome_cargo: 'Estagiário' } }, 'Estagiário'],
+    [{ cargo: { nome: 'Paralegal' } }, 'Paralegal'],
+  ])('converte diferentes formatos de cargo da API', (cargoData, cargo) => {
+    const teamMember = toTeamMember({
+      funcionario_id: 1,
+      nome: 'Maria Silva',
+      email: 'maria@teste.local',
+      status: 'Ativo',
+      ...cargoData,
+    });
+
+    expect(teamMember.cargo).toBe(cargo);
+  });
+
+  it('inclui telefone e identificador do cargo quando informados', () => {
+    const teamMember = toTeamMember({
+      funcionario_id: 1,
+      nome: 'Maria Silva',
+      email: 'maria@teste.local',
+      telefone: '(61) 99999-0000',
+      status: 'Ativo',
+      cargo: { cargo_id: 'admin', nome_cargo: 'Admin' },
+    });
+
+    expect(teamMember).toMatchObject({
+      telefone: '(61) 99999-0000',
+      cargo_id: 'admin',
+      cargo: 'Admin',
+    });
+  });
+
+  it('mantém os booleanos do cargo aninhado retornado pela API', () => {
+    const permissao = {
+      visualizar_processos: true,
+      criar_processos: true,
+      editar_processos: false,
+      excluir_processos: false,
+      visualizar_financeiro: false,
+      gerenciar_financeiro: false,
+      visualizar_equipe: true,
+      gerenciar_equipe: false,
+      configuracoes_sistema: false,
+    };
+    const teamMember = toTeamMember({
+      funcionario_id: 1,
+      nome: 'Maria Silva',
+      email: 'maria@teste.local',
+      status: 'Ativo',
+      cargo_id: 2,
+      cargo: {
+        cargo_id: 2,
+        nome_cargo: 'Advogado',
+        permissao,
+      },
+    });
+
+    expect(teamMember.permissao).toEqual(permissao);
+    expect(teamMember.permissao).not.toBe(permissao);
+  });
 });
