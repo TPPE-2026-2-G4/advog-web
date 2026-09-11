@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { createEmptyPermission } from '@/constants/permissions';
 import TeamTable from './teamTable';
+import styles from './teamTable.module.css';
+
+const withAllowedPermissions = (...permissionNames) => ({
+  ...createEmptyPermission(),
+  ...Object.fromEntries(permissionNames.map((name) => [name, true])),
+});
 
 const createMember = (overrides = {}) => ({
   funcionario_id: 1,
@@ -33,6 +40,45 @@ describe('TeamTable', () => {
     expect(screen.getByText('maria@teste.local')).toBeInTheDocument();
     expect(screen.getByText('Analista')).toBeInTheDocument();
     expect(screen.getByText('Ativo')).toBeInTheDocument();
+    expect(screen.getByText('Permissões')).toBeInTheDocument();
+    expect(screen.getByText('0/9')).toBeInTheDocument();
+  });
+
+  it('exibe a contagem do cargo atual recebido pela API', () => {
+    const member = createMember({
+      cargo_id: 2,
+      permissao: withAllowedPermissions('visualizar_processos'),
+    });
+    const roles = [
+      {
+        cargo_id: 2,
+        nome_cargo: 'Analista',
+        permissao: withAllowedPermissions(
+          'visualizar_processos',
+          'criar_processos',
+          'visualizar_equipe'
+        ),
+      },
+    ];
+
+    render(<TeamTable members={[member]} roles={roles} />);
+
+    expect(screen.getByText('3/9')).toBeInTheDocument();
+    expect(screen.getByLabelText('3 de 9 permissões')).toBeInTheDocument();
+  });
+
+  it('usa as permissões aninhadas do funcionário se o cargo não foi listado', () => {
+    const member = createMember({
+      cargo_id: 99,
+      permissao: withAllowedPermissions(
+        'visualizar_processos',
+        'visualizar_equipe'
+      ),
+    });
+
+    render(<TeamTable members={[member]} roles={[]} />);
+
+    expect(screen.getByText('2/9')).toBeInTheDocument();
   });
 
   it('renderiza cada membro fornecido em uma linha separada', () => {
@@ -56,14 +102,18 @@ describe('TeamTable', () => {
   });
 
   it.each([
-    ['Ativo', 'Revogar acesso', 'badgeGreen'],
-    ['Inativo', 'Permitir acesso', 'badgeRed'],
+    ['Ativo', 'Revogar acesso', 'badgeGreen', 'revokeAccessBtn'],
+    ['Inativo', 'Permitir acesso', 'badgeRed', 'allowAccessBtn'],
   ])(
     'renderiza a ação e o badge corretos para membros %s',
-    (status, expectedActionTitle, expectedBadgeClass) => {
+    (status, expectedActionTitle, expectedBadgeClass, expectedActionClass) => {
       render(<TeamTable members={[createMember({ status })]} />);
 
-      expect(screen.getByTitle(expectedActionTitle)).toBeInTheDocument();
+      const accessButton = screen.getByRole('button', {
+        name: expectedActionTitle,
+      });
+      expect(accessButton).toBeInTheDocument();
+      expect(accessButton).toHaveClass(styles[expectedActionClass]);
       expect(screen.getByText(status).className).toContain(expectedBadgeClass);
     }
   );
@@ -80,7 +130,19 @@ describe('TeamTable', () => {
     render(<TeamTable members={[createMember({ status: 'Pendente' })]} />);
 
     expect(screen.getByTitle('Editar usuário')).toBeInTheDocument();
+    expect(screen.queryByText('Editar')).not.toBeInTheDocument();
     expect(screen.getByTitle('Excluir usuário')).toBeInTheDocument();
+  });
+
+  it('ordena editar, acesso e excluir nesta sequência', () => {
+    render(<TeamTable members={[createMember({ status: 'Ativo' })]} />);
+
+    const actions = screen.getByTitle('Editar usuário').parentElement;
+    const buttons = within(actions).getAllByRole('button');
+
+    expect(buttons[0]).toHaveAttribute('title', 'Editar usuário');
+    expect(buttons[1]).toHaveTextContent('Revogar acesso');
+    expect(buttons[2]).toHaveAttribute('title', 'Excluir usuário');
   });
 
   it('chama onDelete com o membro selecionado', () => {
@@ -92,6 +154,17 @@ describe('TeamTable', () => {
 
     expect(onDelete).toHaveBeenCalledOnce();
     expect(onDelete).toHaveBeenCalledWith(member);
+  });
+
+  it('chama onEdit com o membro selecionado', () => {
+    const onEdit = vi.fn();
+    const member = createMember();
+
+    render(<TeamTable members={[member]} onEdit={onEdit} />);
+    fireEvent.click(screen.getByTitle('Editar usuário'));
+
+    expect(onEdit).toHaveBeenCalledOnce();
+    expect(onEdit).toHaveBeenCalledWith(member);
   });
 
   it('chama onDelete somente com o membro correspondente ao botão clicado', () => {

@@ -3,8 +3,15 @@ import { useEffect, useState } from 'react';
 import LoadingDots from '@/components/ui/loadingDots/loadingDots';
 import styles from './addUserModal.module.css';
 
-export default function AddUserModal({ isOpen, onClose, onCreated }) {
-  const [formData, setFormData] = useState({ nome: '', email: '' });
+const emptyFormData = { nome: '', email: '', cargo_id: '' };
+
+export default function AddUserModal({
+  isOpen,
+  roles = [],
+  onClose,
+  onCreated,
+}) {
+  const [formData, setFormData] = useState(emptyFormData);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -31,7 +38,10 @@ export default function AddUserModal({ isOpen, onClose, onCreated }) {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormData((current) => ({ ...current, [name]: value }));
+    setFormData((current) => ({
+      ...current,
+      [name]: name === 'cargo_id' && value ? Number(value) : value,
+    }));
   };
 
   const handleSubmit = async (event) => {
@@ -41,7 +51,7 @@ export default function AddUserModal({ isOpen, onClose, onCreated }) {
 
     try {
       const funcionario = await onCreated(formData);
-      setFormData({ nome: '', email: '' });
+      setFormData(emptyFormData);
       onClose();
       return funcionario;
     } catch (submitError) {
@@ -99,6 +109,37 @@ export default function AddUserModal({ isOpen, onClose, onCreated }) {
             />
           </div>
 
+          <div className={styles.inputGroup}>
+            <label className={styles.label} htmlFor="cargo_id">
+              Cargo
+            </label>
+            <select
+              id="cargo_id"
+              name="cargo_id"
+              className={styles.select}
+              value={formData.cargo_id}
+              onChange={handleChange}
+              required
+              disabled={isSubmitting || roles.length === 0}
+            >
+              <option value="" disabled>
+                {roles.length === 0
+                  ? 'Nenhum cargo disponível'
+                  : 'Selecione um cargo'}
+              </option>
+              {roles.map((role) => (
+                <option key={role.cargo_id} value={role.cargo_id}>
+                  {role.nome_cargo}
+                </option>
+              ))}
+            </select>
+            {roles.length === 0 && (
+              <p className={styles.helperText}>
+                Crie um cargo antes de adicionar um usuário.
+              </p>
+            )}
+          </div>
+
           {error && <p className={styles.error}>{error}</p>}
         </div>
 
@@ -109,7 +150,7 @@ export default function AddUserModal({ isOpen, onClose, onCreated }) {
           <button
             type="submit"
             className={styles.addBtn}
-            disabled={isSubmitting}
+            disabled={isSubmitting || roles.length === 0}
           >
             {isSubmitting ? <LoadingDots /> : 'Adicionar'}
           </button>

@@ -7,12 +7,17 @@ import RoleTables from '@/components/ui/rolesTable/rolesTable';
 import AddUserModal from '@/components/ui/addUserModal/addUserModal';
 import DeleteUserModal from '@/components/ui/deleteUserModal/deleteUserModal';
 import AccessStatusModal from '@/components/ui/accessStatusModal/accessStatusModal';
+import EditUserModal from '@/components/ui/editUserModal/editUserModal';
+import RolePermissionsModal from '@/components/ui/rolePermissionsModal/rolePermissionsModal';
+import NewRoleModal from '@/components/ui/newRoleModal/newRoleModal';
+import DeleteRoleModal from '@/components/ui/deleteRoleModal/deleteRoleModal';
 import { useEquipe } from '@/hooks/useEquipe';
 import styles from './equipe.module.css';
 
-export default function EquipeClient({ initialData }) {
+export default function EquipeClient({ initialData, initialRoles = [] }) {
   const {
     members,
+    roles,
     isModalOpen,
     selectedMember,
     isDeleting,
@@ -31,7 +36,25 @@ export default function EquipeClient({ initialData }) {
     handleOpenAccessModal,
     handleCloseAccessModal,
     handleChangeAccess,
-  } = useEquipe(initialData);
+    editingMember,
+    isEditingOnlyAdmin,
+    handleOpenEditModal,
+    handleCloseEditModal,
+    handleUpdateUser,
+    permissionsRole,
+    handleOpenPermissionsModal,
+    handleClosePermissionsModal,
+    handleUpdateRolePermissions,
+    isNewRoleModalOpen,
+    setIsNewRoleModalOpen,
+    handleCreateRole,
+    roleToDelete,
+    isDeletingRole,
+    deleteRoleError,
+    handleOpenDeleteRoleModal,
+    handleCloseDeleteRoleModal,
+    handleDeleteRole,
+  } = useEquipe(initialData, initialRoles);
 
   return (
     <div className={styles.container}>
@@ -77,14 +100,22 @@ export default function EquipeClient({ initialData }) {
 
       <TeamTable
         members={members}
+        roles={roles}
         onDelete={handleOpenDeleteModal}
         onChangeAccess={handleOpenAccessModal}
+        onEdit={handleOpenEditModal}
       />
 
-      <RoleTables />
+      <RoleTables
+        roles={roles}
+        onCreateRole={() => setIsNewRoleModalOpen(true)}
+        onEditPermissions={handleOpenPermissionsModal}
+        onDeleteRole={handleOpenDeleteRoleModal}
+      />
 
       <AddUserModal
         isOpen={isModalOpen}
+        roles={roles}
         onClose={() => setIsModalOpen(false)}
         onCreated={handleCreateUser}
       />
@@ -105,6 +136,38 @@ export default function EquipeClient({ initialData }) {
         error={accessError}
         onClose={handleCloseAccessModal}
         onConfirm={handleChangeAccess}
+      />
+
+      <EditUserModal
+        member={editingMember}
+        isOpen={Boolean(editingMember)}
+        roles={roles}
+        isRoleLocked={isEditingOnlyAdmin}
+        onClose={handleCloseEditModal}
+        onSave={handleUpdateUser}
+      />
+
+      <RolePermissionsModal
+        role={permissionsRole}
+        isOpen={Boolean(permissionsRole)}
+        onClose={handleClosePermissionsModal}
+        onSave={handleUpdateRolePermissions}
+      />
+
+      <NewRoleModal
+        isOpen={isNewRoleModalOpen}
+        roles={roles}
+        onClose={() => setIsNewRoleModalOpen(false)}
+        onCreate={handleCreateRole}
+      />
+
+      <DeleteRoleModal
+        role={roleToDelete}
+        isOpen={Boolean(roleToDelete)}
+        isDeleting={isDeletingRole}
+        error={deleteRoleError}
+        onClose={handleCloseDeleteRoleModal}
+        onConfirm={handleDeleteRole}
       />
     </div>
   );

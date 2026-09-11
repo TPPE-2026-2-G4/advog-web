@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EquipePage from './page';
+import { listarCargos } from '@/services/cargos';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { toTeamMember } from '@/utils/funcionario';
+
+vi.mock('@/services/cargos', () => ({
+  listarCargos: vi.fn(),
+}));
 
 vi.mock('@/services/funcionarios', () => ({
   listarFuncionarios: vi.fn(),
@@ -33,6 +38,7 @@ const funcionarios = [
 describe('EquipePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listarCargos.mockResolvedValue([]);
   });
 
   it.each([
@@ -55,6 +61,7 @@ describe('EquipePage', () => {
       const elemento = await EquipePage();
 
       expect(listarFuncionarios).toHaveBeenCalledOnce();
+      expect(listarCargos).toHaveBeenCalledOnce();
       expect(toTeamMember).toHaveBeenCalledTimes(resposta.length);
       expect(elemento.props.initialData).toHaveLength(quantidadeEsperada);
       expect(elemento.props.initialData).toEqual(membros);
@@ -73,5 +80,18 @@ describe('EquipePage', () => {
     expect(
       elemento.props.initialData.map((membro) => membro.funcionario_id)
     ).toEqual([1, 2]);
+  });
+
+  it('busca e prepara os cargos para o cliente', async () => {
+    const cargos = [
+      { cargo_id: 1, nome_cargo: 'Administrador' },
+      { cargo_id: 2, nome_cargo: 'Advogado' },
+    ];
+    listarFuncionarios.mockResolvedValue([]);
+    listarCargos.mockResolvedValue(cargos);
+
+    const elemento = await EquipePage();
+
+    expect(elemento.props.initialRoles).toBe(cargos);
   });
 });
