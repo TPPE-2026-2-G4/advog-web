@@ -22,14 +22,14 @@
 
 .table {
   width: 100%;
-  min-width: 720px;
+  min-width: 920px;
   border-collapse: collapse;
   text-align: left;
 }
 
 @media (max-width: 1024px) and (min-width: 769px) {
   .table {
-    min-width: 620px;
+    min-width: 900px;
   }
 }
 
@@ -146,8 +146,38 @@
   border-color: #fecaca;
 }
 
+.permissionSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 116px;
+}
+
+.permissionTrack {
+  width: 80px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background-color: #e5e7eb;
+}
+
+.permissionFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-color: #172133;
+  transition: width 0.2s ease;
+}
+
+.permissionCount {
+  color: #6b7280;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .actionsCell {
   display: flex;
+  align-items: center;
   gap: 12px;
 }
 
@@ -155,7 +185,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
   background: transparent;
   border: none;
   border-radius: 6px;
@@ -167,6 +201,33 @@
 .actionBtn:hover {
   background-color: #f3f4f6;
   color: #111827;
+}
+
+.editBtn {
+  color: #b79a63;
+}
+
+.editBtn:hover {
+  color: #957b49;
+  background-color: #fbf8f2;
+}
+
+.revokeAccessBtn {
+  color: #dc2626;
+}
+
+.revokeAccessBtn:hover {
+  color: #b91c1c;
+  background-color: #fef2f2;
+}
+
+.allowAccessBtn {
+  color: #15803d;
+}
+
+.allowAccessBtn:hover {
+  color: #166534;
+  background-color: #f0fdf4;
 }
 
 .deleteBtn:hover {
@@ -248,6 +309,7 @@
 
   .actionsCell {
     justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 4px;
   }
 

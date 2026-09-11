@@ -1,0 +1,248 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background-color: rgba(17, 24, 39, 0.6);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: min(576px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+}
+
+.modal * {
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.title {
+  margin: 0;
+  color: #172133;
+  font-family: var(--font-cormorant), serif;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: #9ca3af;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+
+.closeButton:hover:not(:disabled) {
+  color: #374151;
+  background-color: #f3f4f6;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 0;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.input,
+.select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px 16px;
+  color: #111827;
+  font-family: inherit;
+  font-size: 15px;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #c1a077;
+  box-shadow: 0 0 0 2px rgba(193, 160, 119, 0.2);
+}
+
+.input:disabled,
+.select:disabled {
+  color: #6b7280;
+  cursor: not-allowed;
+  background-color: #f9fafb;
+  opacity: 0.75;
+}
+
+.roleHint {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.footer {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 24px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.cancelButton,
+.saveButton {
+  min-height: 40px;
+  padding: 10px 24px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background-color 0.2s,
+    border-color 0.2s;
+}
+
+.cancelButton {
+  color: #111827;
+  background-color: transparent;
+  border: 1px solid #374151;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background-color: #f9fafb;
+}
+
+.saveButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 104px;
+  color: #172133;
+  background-color: #c1a077;
+  border: 1px solid #c1a077;
+}
+
+.saveButton:hover:not(:disabled) {
+  background-color: #b08d60;
+  border-color: #b08d60;
+}
+
+.closeButton:focus-visible,
+.cancelButton:focus-visible,
+.saveButton:focus-visible {
+  outline: 2px solid #c1a077;
+  outline-offset: 2px;
+}
+
+.closeButton:disabled,
+.cancelButton:disabled,
+.saveButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 480px) {
+  .header,
+  .body,
+  .footer {
+    padding: 18px 16px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .footer {
+    flex-direction: column-reverse;
+  }
+
+  .cancelButton,
+  .saveButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .overlay {
+    animation: overlayIn 0.2s ease-out;
+  }
+
+  .modal {
+    animation: modalIn 0.2s ease-out;
+  }
+}
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
