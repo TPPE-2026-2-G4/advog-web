@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import TeamTable from './teamTable';
+import TeamTable from './TeamTable';
 
 const createMember = (overrides = {}) => ({
   funcionario_id: 1,

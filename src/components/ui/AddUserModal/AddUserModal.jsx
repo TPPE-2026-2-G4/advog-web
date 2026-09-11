@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import LoadingDots from '@/components/ui/loadingDots/loadingDots';
-import styles from './addUserModal.module.css';
+import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
+import styles from './AddUserModal.module.css';
 
 export default function AddUserModal({ isOpen, onClose, onCreated }) {
   const [formData, setFormData] = useState({ nome: '', email: '' });

@@ -1,14 +1,14 @@
 'use client';
 
-import { Lock, Unlock, X } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { useEffect } from 'react';
-import LoadingDots from '@/components/ui/loadingDots/loadingDots';
-import styles from './accessStatusModal.module.css';
+import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
+import styles from './DeleteUserModal.module.css';
 
-export default function AccessStatusModal({
+export default function DeleteUserModal({
   member,
   isOpen,
-  isUpdating,
+  isDeleting,
   error,
   onClose,
   onConfirm,
@@ -17,22 +17,19 @@ export default function AccessStatusModal({
     if (!isOpen) return undefined;
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && !isUpdating) {
+      if (event.key === 'Escape' && !isDeleting) {
         onClose();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isUpdating, onClose]);
+  }, [isOpen, isDeleting, onClose]);
 
   if (!isOpen || !member) return null;
 
-  const isRevoking = member.status === 'Ativo';
-  const actionLabel = isRevoking ? 'Revogar acesso' : 'Permitir acesso';
-
   const handleOverlayClick = (event) => {
-    if (event.target === event.currentTarget && !isUpdating) {
+    if (event.target === event.currentTarget && !isDeleting) {
       onClose();
     }
   };
@@ -42,24 +39,24 @@ export default function AccessStatusModal({
       <div className={styles.modal} role="dialog" aria-modal="true">
         <div className={styles.header}>
           <div className={styles.iconWrapper}>
-            {isRevoking ? <Lock size={22} /> : <Unlock size={22} />}
+            <AlertTriangle size={22} />
           </div>
           <button
             type="button"
             onClick={onClose}
             className={styles.closeButton}
             title="Fechar"
-            disabled={isUpdating}
+            disabled={isDeleting}
           >
             <X size={20} />
           </button>
         </div>
 
         <div className={styles.body}>
-          <h2 className={styles.title}>{actionLabel}?</h2>
+          <h2 className={styles.title}>Excluir funcionário?</h2>
           <p className={styles.message}>
-            Tem certeza que deseja {isRevoking ? 'revogar' : 'permitir'} o
-            acesso de <strong>{member.nome_func}</strong>?
+            Tem certeza que deseja excluir <strong>{member.nome_func}</strong>?
+            Esta ação não poderá ser desfeita.
           </p>
           {error && <p className={styles.error}>{error}</p>}
         </div>
@@ -69,17 +66,17 @@ export default function AccessStatusModal({
             type="button"
             onClick={onClose}
             className={styles.cancelButton}
-            disabled={isUpdating}
+            disabled={isDeleting}
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={styles.confirmButton}
-            disabled={isUpdating}
+            className={styles.deleteButton}
+            disabled={isDeleting}
           >
-            {isUpdating ? <LoadingDots /> : actionLabel}
+            {isDeleting ? <LoadingDots /> : 'Excluir funcionário'}
           </button>
         </div>
       </div>

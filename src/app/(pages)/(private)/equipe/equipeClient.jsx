@@ -1,12 +1,12 @@
 'use client';
 
 import { Plus, Users, UserCheck, Clock } from 'lucide-react';
-import StatCard from '@/components/ui/statCard/statCard';
-import TeamTable from '@/components/ui/teamTable/teamTable';
-import RoleTables from '@/components/ui/rolesTable/rolesTable';
-import AddUserModal from '@/components/ui/addUserModal/addUserModal';
-import DeleteUserModal from '@/components/ui/deleteUserModal/deleteUserModal';
-import AccessStatusModal from '@/components/ui/accessStatusModal/accessStatusModal';
+import StatCard from '@/components/ui/StatCard/StatCard';
+import TeamTable from '@/components/ui/TeamTable/TeamTable';
+import RoleTables from '@/components/ui/RolesTable/RolesTable';
+import AddUserModal from '@/components/ui/AddUserModal/AddUserModal';
+import DeleteUserModal from '@/components/ui/DeleteUserModal/DeleteUserModal';
+import AccessStatusModal from '@/components/ui/AccessStatusModal/AccessStatusModal';
 import { useEquipe } from '@/hooks/useEquipe';
 import styles from './equipe.module.css';
 
