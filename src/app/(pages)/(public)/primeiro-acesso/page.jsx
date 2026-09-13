@@ -3,11 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Auth from '@/components/layout/auth/auth';
-import { useAuth } from '@/hooks/useAuth';
 import styles from './firstLogin.module.css';
+import { firstLogin } from '@/services/auth';
 
 export default function FirstLoginPage() {
-  const { firstLogin } = useAuth();
   const [nome, setNome] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -30,6 +29,7 @@ export default function FirstLoginPage() {
         senha,
         uf,
         numeroOab,
+        funcionarioId: '8', //MUDAR ISSO AQUI DEPOOIS
       });
     } catch (error) {
       setErro(

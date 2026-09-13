@@ -30,3 +30,45 @@ export async function login(email, senha) {
 
   return response.json();
 }
+
+export async function firstLogin({
+  nome,
+  senha,
+  uf_oab,
+  numero_oab,
+  funcionarioId,
+}) {
+  if (!apiUrl) {
+    throw new Error('URL da API não configurada');
+  }
+
+  const response = await fetch(
+    `${apiUrl}/funcionarios/${funcionarioId}/primeiro-acesso`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        nome,
+        senha,
+        uf_oab: uf_oab || undefined,
+        numero_oab: numero_oab || undefined,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    let message = 'Não foi possível concluir o cadastro.';
+
+    try {
+      const errorData = await response.json();
+      if (errorData.message) {
+        message = errorData.message;
+      }
+    } catch {}
+    throw new Error(message);
+  }
+
+  return response.json();
+}
