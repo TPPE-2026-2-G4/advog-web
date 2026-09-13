@@ -43,9 +43,6 @@ describe('FirstLoginPage', () => {
     expect(
       screen.getByRole('button', { name: 'Concluir cadastro' })
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: 'Acessar a plataforma' })
-    ).toHaveAttribute('href', '/login');
   });
 
   it('exibe erro quando as senhas não coincidem', async () => {

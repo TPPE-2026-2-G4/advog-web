@@ -4,9 +4,11 @@ import { useState } from 'react';
 import Auth from '@/components/layout/auth/auth';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './login.module.css';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
@@ -17,6 +19,7 @@ export default function LoginPage() {
 
     try {
       await login(email, senha);
+      router.push('/dashboard');
     } catch (error) {
       setErro(
         error instanceof Error ? error.message : 'Não foi possível entrar.'

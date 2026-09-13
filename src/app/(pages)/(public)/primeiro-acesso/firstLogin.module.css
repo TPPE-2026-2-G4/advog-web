@@ -89,24 +89,6 @@
   margin-top: 4px;
 }
 
-.information {
-  align-self: center;
-  margin-top: 24px;
-  color: #6b7280;
-  font-size: 13px;
-  text-decoration: none;
-}
-
-.information a {
-  color: #c1a077;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.information a:hover {
-  text-decoration: underline;
-}
-
 @media (max-width: 1024px) and (min-width: 769px) {
   .form {
     max-width: 380px;

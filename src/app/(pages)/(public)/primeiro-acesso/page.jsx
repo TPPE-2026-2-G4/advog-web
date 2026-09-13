@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import Auth from '@/components/layout/auth/auth';
 import styles from './firstLogin.module.css';
 import { firstLogin } from '@/services/auth';
+import { useRouter } from 'next/navigation';
 
 export default function FirstLoginPage() {
+  const router = useRouter();
   const [nome, setNome] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -31,6 +32,7 @@ export default function FirstLoginPage() {
         numeroOab,
         funcionarioId: '8', //MUDAR ISSO AQUI DEPOOIS
       });
+      router.push('/login');
     } catch (error) {
       setErro(
         error instanceof Error
@@ -155,11 +157,6 @@ export default function FirstLoginPage() {
         </button>
 
         {erro && <span className={styles.error}>{erro}</span>}
-
-        <p className={styles.information}>
-          Já finalizou seu cadastro?{' '}
-          <Link href="/login">Acessar a plataforma</Link>
-        </p>
       </form>
     </Auth>
   );
