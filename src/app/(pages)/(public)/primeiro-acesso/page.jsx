@@ -1,10 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import Auth from '@/components/layout/auth/auth';
 import styles from './firstLogin.module.css';
 import { useFirstLogin } from '@/hooks/useFirstLogin';
 
-export default function FirstLoginPage() {
+function FirstLoginContent() {
   const {
     nome,
     setNome,
@@ -137,5 +138,13 @@ export default function FirstLoginPage() {
         {erro && <span className={styles.error}>{erro}</span>}
       </form>
     </Auth>
+  );
+}
+
+export default function FirstLoginPage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <FirstLoginContent />
+    </Suspense>
   );
 }
