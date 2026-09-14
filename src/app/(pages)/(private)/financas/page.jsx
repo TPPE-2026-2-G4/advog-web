@@ -1,5 +1,8 @@
 import FinancasClient from './financasClient';
+import { listarFinancas } from '@/services/financas';
 
 export default async function FinancasPage() {
-  return <FinancasClient />;
+  const financas = await listarFinancas();
+
+  return <FinancasClient initialData={financas} />;
 }

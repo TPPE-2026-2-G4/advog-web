@@ -10,7 +10,7 @@ body {
 .headerRow {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   flex-wrap: wrap;
   gap: 16px;
 }
@@ -18,14 +18,16 @@ body {
 .titleArea {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .title {
   font-size: clamp(26px, 4vw, 32px);
   color: #172133;
   font-family: var(--font-cormorant), serif;
+  font-weight: 600;
   margin: 0;
+  line-height: 1.2;
 }
 
 .subtitle {
@@ -34,23 +36,61 @@ body {
   margin: 0;
 }
 
-.addButton {
+.actions {
   display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reportButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: transparent;
+  color: #172133;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #172133;
+  border-radius: 6px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reportButton:hover {
+  background-color: rgba(23, 33, 51, 0.05);
+}
+
+.addButton {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   background-color: #c1a077;
   color: #172133;
   font-weight: 600;
   font-size: 14px;
-  border: none;
+  border: 1px solid #c1a077;
   border-radius: 6px;
   padding: 10px 16px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
 }
 
 .addButton:hover {
   background-color: #b08d60;
+  border-color: #b08d60;
+}
+
+.errorMessage {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-top: 16px;
+  border: 1px solid #fecaca;
 }
 
 .statsGrid {
@@ -75,8 +115,24 @@ body {
     align-items: stretch;
   }
 
+  .actions {
+    width: 100%;
+  }
+
+  .reportButton,
   .addButton {
+    flex: 1;
     justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .actions {
+    flex-direction: column;
+  }
+
+  .reportButton,
+  .addButton {
     width: 100%;
   }
 }
