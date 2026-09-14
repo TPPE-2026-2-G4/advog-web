@@ -1,20 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { useAuth } from '@/hooks/useAuth';
+import { firstLogin as mockFirstLogin } from '@/services/auth';
 import FirstLoginPage from './page';
 
-const mockFirstLogin = vi.fn();
-
-vi.mock('@/hooks/useAuth', () => ({
-  useAuth: vi.fn(),
+vi.mock('@/services/auth', () => ({
+  firstLogin: vi.fn(),
 }));
 
 describe('FirstLoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useAuth.mockReturnValue({
-      firstLogin: mockFirstLogin,
-    });
   });
 
   it('renderiza o título e subtítulo do primeiro acesso', () => {

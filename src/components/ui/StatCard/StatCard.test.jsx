@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import StatCard from './statCard';
+import StatCard from './StatCard';
 
 const IconeDeTeste = ({ size, color }) => (
   <span data-testid="icone-teste" data-size={size} data-color={color} />

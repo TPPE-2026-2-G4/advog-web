@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import RolesTable from './rolesTable';
-import styles from './rolesTable.module.css';
+import RolesTable from './RolesTable';
+import styles from './RolesTable.module.css';
 
 const roles = [
   {

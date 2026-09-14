@@ -31,32 +31,24 @@ export async function login(email, senha) {
   return response.json();
 }
 
-export async function firstLogin({
-  nome,
-  senha,
-  uf_oab,
-  numero_oab,
-  funcionarioId,
-}) {
+export async function firstLogin({ token, nome, senha, uf_oab, numero_oab }) {
   if (!apiUrl) {
     throw new Error('URL da API não configurada');
   }
 
-  const response = await fetch(
-    `${apiUrl}/funcionarios/${funcionarioId}/primeiro-acesso`,
-    {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        nome,
-        senha,
-        uf_oab: uf_oab || undefined,
-        numero_oab: numero_oab || undefined,
-      }),
-    }
-  );
+  const response = await fetch(`${apiUrl}/funcionarios/primeiro-acesso`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      token,
+      nome,
+      senha,
+      uf_oab: uf_oab || undefined,
+      numero_oab: numero_oab || undefined,
+    }),
+  });
 
   if (!response.ok) {
     let message = 'Não foi possível concluir o cadastro.';

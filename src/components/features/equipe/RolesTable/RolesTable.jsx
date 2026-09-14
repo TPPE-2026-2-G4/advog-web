@@ -1,5 +1,5 @@
 import { Shield, Plus } from 'lucide-react';
-import styles from './rolesTable.module.css';
+import styles from './RolesTable.module.css';
 
 const rolesData = [
   {

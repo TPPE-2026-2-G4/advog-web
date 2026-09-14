@@ -7,7 +7,7 @@ vi.mock('@/hooks/useEquipe', () => ({
   useEquipe: vi.fn(),
 }));
 
-vi.mock('@/components/ui/statCard/statCard', () => ({
+vi.mock('@/components/ui/StatCard/StatCard', () => ({
   default: ({ title, value }) => (
     <div data-testid="stat-card">
       <span>{title}</span>
@@ -16,7 +16,7 @@ vi.mock('@/components/ui/statCard/statCard', () => ({
   ),
 }));
 
-vi.mock('@/components/ui/teamTable/teamTable', () => ({
+vi.mock('@/components/features/equipe/TeamTable/TeamTable', () => ({
   default: ({ members, onDelete, onChangeAccess }) => (
     <div data-testid="team-table">
       <span>{members.length} membros</span>
@@ -30,11 +30,11 @@ vi.mock('@/components/ui/teamTable/teamTable', () => ({
   ),
 }));
 
-vi.mock('@/components/ui/rolesTable/rolesTable', () => ({
+vi.mock('@/components/features/equipe/RolesTable/RolesTable', () => ({
   default: () => <div data-testid="roles-table">Cargos</div>,
 }));
 
-vi.mock('@/components/ui/addUserModal/addUserModal', () => ({
+vi.mock('@/components/features/equipe/AddUserModal/AddUserModal', () => ({
   default: ({ isOpen, onClose, onCreated }) => (
     <div data-testid="add-modal">
       <span>{String(isOpen)}</span>
@@ -48,7 +48,7 @@ vi.mock('@/components/ui/addUserModal/addUserModal', () => ({
   ),
 }));
 
-vi.mock('@/components/ui/deleteUserModal/deleteUserModal', () => ({
+vi.mock('@/components/features/equipe/DeleteUserModal/DeleteUserModal', () => ({
   default: ({ member, isOpen, onClose, onConfirm }) => (
     <div data-testid="delete-modal">
       <span>{String(isOpen)}</span>
@@ -63,20 +63,23 @@ vi.mock('@/components/ui/deleteUserModal/deleteUserModal', () => ({
   ),
 }));
 
-vi.mock('@/components/ui/accessStatusModal/accessStatusModal', () => ({
-  default: ({ member, isOpen, onClose, onConfirm }) => (
-    <div data-testid="access-modal">
-      <span>{String(isOpen)}</span>
-      <span>{member?.nome_func || 'sem membro'}</span>
-      <button type="button" onClick={onClose}>
-        Fechar acesso
-      </button>
-      <button type="button" onClick={onConfirm}>
-        Confirmar acesso
-      </button>
-    </div>
-  ),
-}));
+vi.mock(
+  '@/components/features/equipe/AccessStatusModal/AccessStatusModal',
+  () => ({
+    default: ({ member, isOpen, onClose, onConfirm }) => (
+      <div data-testid="access-modal">
+        <span>{String(isOpen)}</span>
+        <span>{member?.nome_func || 'sem membro'}</span>
+        <button type="button" onClick={onClose}>
+          Fechar acesso
+        </button>
+        <button type="button" onClick={onConfirm}>
+          Confirmar acesso
+        </button>
+      </div>
+    ),
+  })
+);
 
 const member = {
   funcionario_id: 1,

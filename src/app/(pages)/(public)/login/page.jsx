@@ -1,31 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import Auth from '@/components/layout/auth/auth';
-import { useAuth } from '@/hooks/useAuth';
 import styles from './login.module.css';
-import { useRouter } from 'next/navigation';
+import { useLogin } from '@/hooks/useLogin';
 
 export default function LoginPage() {
-  const { login } = useAuth();
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [erro, setErro] = useState('');
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setErro('');
-
-    try {
-      await login(email, senha);
-      router.push('/dashboard');
-    } catch (error) {
-      setErro(
-        error instanceof Error ? error.message : 'Não foi possível entrar.'
-      );
-    }
-  }
+  const { email, setEmail, senha, setSenha, erro, handleSubmit } = useLogin();
 
   return (
     <Auth

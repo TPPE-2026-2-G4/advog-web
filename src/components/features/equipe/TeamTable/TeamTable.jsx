@@ -1,5 +1,5 @@
 import { CircleCheck, CircleSlash, Pencil, Trash2 } from 'lucide-react';
-import styles from './teamTable.module.css';
+import styles from './TeamTable.module.css';
 
 const roleBadgePalette = [
   styles.badgeBlue,

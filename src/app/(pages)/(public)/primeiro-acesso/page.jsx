@@ -1,46 +1,24 @@
 'use client';
 
-import { useState } from 'react';
 import Auth from '@/components/layout/auth/auth';
 import styles from './firstLogin.module.css';
-import { firstLogin } from '@/services/auth';
-import { useRouter } from 'next/navigation';
+import { useFirstLogin } from '@/hooks/useFirstLogin';
 
 export default function FirstLoginPage() {
-  const router = useRouter();
-  const [nome, setNome] = useState('');
-  const [senha, setSenha] = useState('');
-  const [confirmarSenha, setConfirmarSenha] = useState('');
-  const [uf, setUf] = useState('');
-  const [numeroOab, setNumeroOab] = useState('');
-  const [erro, setErro] = useState('');
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setErro('');
-
-    if (senha !== confirmarSenha) {
-      setErro('As senhas não conferem.');
-      return;
-    }
-
-    try {
-      await firstLogin({
-        nome,
-        senha,
-        uf,
-        numeroOab,
-        funcionarioId: '8', //MUDAR ISSO AQUI DEPOOIS
-      });
-      router.push('/login');
-    } catch (error) {
-      setErro(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível concluir o cadastro.'
-      );
-    }
-  }
+  const {
+    nome,
+    setNome,
+    senha,
+    setSenha,
+    confirmarSenha,
+    setConfirmarSenha,
+    uf,
+    setUf,
+    numeroOab,
+    setNumeroOab,
+    erro,
+    handleSubmit,
+  } = useFirstLogin();
 
   return (
     <Auth
