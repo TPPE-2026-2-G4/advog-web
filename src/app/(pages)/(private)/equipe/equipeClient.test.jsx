@@ -18,7 +18,14 @@ vi.mock('@/components/ui/statCard/statCard', () => ({
 }));
 
 vi.mock('@/components/ui/teamTable/teamTable', () => ({
-  default: ({ members, roles, onDelete, onChangeAccess, onEdit }) => (
+  default: ({
+    members,
+    roles,
+    onDelete,
+    onChangeAccess,
+    onEdit,
+    canEditUsers,
+  }) => (
     <div data-testid="team-table">
       <span>{members.length} membros</span>
       <span>{roles.length} cargos disponíveis</span>
@@ -28,9 +35,11 @@ vi.mock('@/components/ui/teamTable/teamTable', () => ({
       <button type="button" onClick={() => onChangeAccess(members[0])}>
         Alterar acesso primeiro
       </button>
-      <button type="button" onClick={() => onEdit(members[0])}>
-        Editar primeiro
-      </button>
+      {canEditUsers && (
+        <button type="button" onClick={() => onEdit(members[0])}>
+          Editar primeiro
+        </button>
+      )}
     </div>
   ),
 }));
@@ -118,9 +127,7 @@ vi.mock('@/components/ui/editUserModal/editUserModal', () => ({
         type="button"
         onClick={() =>
           onSave({
-            nome: 'Nome Editado',
-            email: 'editado@teste.local',
-            cargo: 'advogado',
+            cargo: 2,
           })
         }
       >
@@ -256,6 +263,10 @@ const createHookState = (overrides = {}) => ({
 describe('EquipeClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({ cargo: { permissao: { gerenciar_equipe: true } } })
+    );
   });
 
   it('renderiza título, indicadores, tabela e referência de cargos', () => {

@@ -4,16 +4,18 @@ import {
   criarFuncionario,
   excluirFuncionario,
   mudarAcessoFuncionario,
+  mudarCargoFuncionario,
 } from '@/services/funcionarios';
 import { atualizarCargo, criarCargo, excluirCargo } from '@/services/cargos';
 import { createEmptyPermission } from '@/constants/permissions';
-import { getInitials, toTeamMember } from '@/utils/funcionario';
+import { toTeamMember } from '@/utils/funcionario';
 import { useEquipe } from './useEquipe';
 
 vi.mock('@/services/funcionarios', () => ({
   criarFuncionario: vi.fn(),
   excluirFuncionario: vi.fn(),
   mudarAcessoFuncionario: vi.fn(),
+  mudarCargoFuncionario: vi.fn(),
 }));
 
 vi.mock('@/services/cargos', () => ({
@@ -23,7 +25,6 @@ vi.mock('@/services/cargos', () => ({
 }));
 
 vi.mock('@/utils/funcionario', () => ({
-  getInitials: vi.fn(),
   toTeamMember: vi.fn(),
 }));
 
@@ -74,15 +75,6 @@ const initialRoles = [
 describe('useEquipe', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getInitials.mockImplementation((name) =>
-      name
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((part) => part[0])
-        .join('')
-        .toUpperCase()
-    );
     toTeamMember.mockImplementation((funcionario) => ({
       funcionario_id: funcionario.funcionario_id,
       initials: 'JS',
@@ -423,7 +415,7 @@ describe('useEquipe', () => {
     });
   });
 
-  it('abre, atualiza e fecha a edição de um membro', () => {
+  it('abre, persiste o cargo e fecha a edição de um membro', async () => {
     const member = createMember({
       cargo_id: 3,
       cargo: 'Estagiário',
@@ -436,48 +428,45 @@ describe('useEquipe', () => {
     const { result } = renderHook(() =>
       useEquipe([member, otherMember], initialRoles)
     );
+    const funcionario = createFuncionario({
+      funcionario_id: member.funcionario_id,
+      cargo_id: 2,
+    });
+    const updatedMember = { cargo_id: 2, cargo: 'Advogado' };
+    mudarCargoFuncionario.mockResolvedValue(funcionario);
+    toTeamMember.mockReturnValue(updatedMember);
 
     act(() => result.current.handleOpenEditModal(member));
     expect(result.current.editingMember).toEqual(member);
 
-    act(() =>
-      result.current.handleUpdateUser({
-        nome: '  Maria Souza  ',
-        email: '  maria.souza@teste.local  ',
-        cargo: 2,
-      })
-    );
+    await act(async () => result.current.handleUpdateUser({ cargo: 2 }));
 
     expect(result.current.members).toEqual([
       {
         ...member,
-        initials: 'MS',
-        nome_func: 'Maria Souza',
-        email_func: 'maria.souza@teste.local',
         cargo_id: 2,
         cargo: 'Advogado',
       },
       otherMember,
     ]);
-    expect(getInitials).toHaveBeenCalledWith('  Maria Souza  ');
+    expect(mudarCargoFuncionario).toHaveBeenCalledWith(
+      member.funcionario_id,
+      2
+    );
+    expect(toTeamMember).toHaveBeenCalledWith(funcionario);
 
     act(() => result.current.handleCloseEditModal());
     expect(result.current.editingMember).toBeNull();
   });
 
-  it('não altera membros quando não há uma edição selecionada', () => {
+  it('não altera membros quando não há uma edição selecionada', async () => {
     const member = createMember();
     const { result } = renderHook(() => useEquipe([member]));
 
-    act(() =>
-      result.current.handleUpdateUser({
-        nome: 'Outro nome',
-        email: 'outro@teste.local',
-        cargo: 'admin',
-      })
-    );
+    await act(async () => result.current.handleUpdateUser({ cargo: 1 }));
 
     expect(result.current.members).toEqual([member]);
+    expect(mudarCargoFuncionario).not.toHaveBeenCalled();
   });
 
   it('protege a troca de cargo apenas do único administrador', () => {

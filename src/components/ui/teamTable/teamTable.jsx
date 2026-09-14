@@ -44,6 +44,7 @@ export default function TeamTable({
   onDelete,
   onChangeAccess,
   onEdit,
+  canEditUsers = false,
 }) {
   return (
     <div className={styles.tableContainer}>
@@ -127,14 +128,16 @@ export default function TeamTable({
 
                   <td className={styles.td} data-label="Ações">
                     <div className={styles.actionsCell}>
-                      <button
-                        className={styles.actionBtn}
-                        title="Editar usuário"
-                        onClick={() => onEdit?.(member)}
-                        type="button"
-                      >
-                        <Pencil size={18} />
-                      </button>
+                      {canEditUsers && (
+                        <button
+                          className={styles.actionBtn}
+                          title="Editar usuário"
+                          onClick={() => onEdit?.(member)}
+                          type="button"
+                        >
+                          <Pencil size={18} />
+                        </button>
+                      )}
                       {member.status !== 'Pendente' && (
                         <button
                           className={`${styles.actionBtn} ${

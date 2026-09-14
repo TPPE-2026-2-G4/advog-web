@@ -1,3 +1,5 @@
+import { getAccessToken } from '@/utils/authSession';
+
 const apiUrl =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.API_URL ||
@@ -89,6 +91,31 @@ export async function mudarAcessoFuncionario(funcionarioId) {
   if (!response.ok) {
     const error = await response.json().catch(() => null);
     throw new Error(error?.detail || 'Não foi possível atualizar o acesso.');
+  }
+
+  return response.json();
+}
+
+export async function mudarCargoFuncionario(funcionarioId, cargoId) {
+  const token = getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+  const response = await fetch(
+    `${apiUrl}/funcionarios/${funcionarioId}/mudar-cargo`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ cargo_id: Number(cargoId) }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, 'Não foi possível alterar o cargo.')
+    );
   }
 
   return response.json();

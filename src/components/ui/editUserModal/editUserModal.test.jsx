@@ -43,14 +43,14 @@ describe('EditUserModal', () => {
     }
   );
 
-  it('renderiza um diálogo acessível sem permitir editar o telefone', () => {
+  it('renderiza um diálogo acessível permitindo editar apenas o cargo', () => {
     renderModal();
 
     expect(
       screen.getByRole('dialog', { name: 'Editar Usuário' })
     ).toHaveAttribute('aria-modal', 'true');
-    expect(screen.getByLabelText('Nome Completo')).toHaveValue('Maria Silva');
-    expect(screen.getByLabelText('E-mail')).toHaveValue('maria@teste.local');
+    expect(screen.queryByLabelText('Nome Completo')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('E-mail')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Telefone')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Nível de Acesso')).toHaveValue('2');
 
@@ -91,9 +91,6 @@ describe('EditUserModal', () => {
       />
     );
 
-    expect(screen.getByLabelText('Nome Completo')).toHaveValue('João Santos');
-    expect(screen.getByLabelText('E-mail')).toHaveValue('joao@teste.local');
-    expect(screen.queryByLabelText('Telefone')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Nível de Acesso')).toHaveValue('3');
   });
 
@@ -108,17 +105,11 @@ describe('EditUserModal', () => {
     ).toBeInTheDocument();
   });
 
-  it('envia os campos editados com o cargo_id e fecha após salvar', async () => {
+  it('envia somente o cargo_id e fecha após salvar', async () => {
     const onSave = vi.fn().mockResolvedValue({});
     const onClose = vi.fn();
     renderModal({ onSave, onClose });
 
-    fireEvent.change(screen.getByLabelText('Nome Completo'), {
-      target: { value: 'Maria Souza' },
-    });
-    fireEvent.change(screen.getByLabelText('E-mail'), {
-      target: { value: 'maria.souza@teste.local' },
-    });
     fireEvent.change(screen.getByLabelText('Nível de Acesso'), {
       target: { value: '3' },
     });
@@ -126,8 +117,6 @@ describe('EditUserModal', () => {
 
     await waitFor(() =>
       expect(onSave).toHaveBeenCalledWith({
-        nome: 'Maria Souza',
-        email: 'maria.souza@teste.local',
         cargo: 3,
       })
     );
@@ -180,7 +169,7 @@ describe('EditUserModal', () => {
     expect(loadingIndicator.closest('button')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Fechar' })).toBeDisabled();
-    expect(screen.getByLabelText('Nome Completo')).toBeDisabled();
+    expect(screen.getByLabelText('Nível de Acesso')).toBeDisabled();
 
     fireEvent.click(container.firstChild);
     fireEvent.keyDown(document, { key: 'Escape' });

@@ -3,9 +3,10 @@ import {
   criarFuncionario,
   excluirFuncionario,
   mudarAcessoFuncionario,
+  mudarCargoFuncionario,
 } from '@/services/funcionarios';
 import { atualizarCargo, criarCargo, excluirCargo } from '@/services/cargos';
-import { getInitials, toTeamMember } from '@/utils/funcionario';
+import { toTeamMember } from '@/utils/funcionario';
 
 const cloneRoles = (roles) =>
   roles.map((role) => ({
@@ -129,28 +130,24 @@ export function useEquipe(initialData, initialRoles = []) {
     setEditingMember(null);
   };
 
-  const handleUpdateUser = ({ nome, email, cargo }) => {
+  const handleUpdateUser = async ({ cargo }) => {
     if (!editingMember) return;
 
-    const selectedRole = roles.find((role) => role.cargo_id === cargo);
-    const updatedMember = {
-      ...editingMember,
-      nome_func: nome.trim(),
-      email_func: email.trim(),
-      cargo_id: selectedRole?.cargo_id ?? cargo,
-      cargo: selectedRole?.nome_cargo ?? editingMember.cargo,
-      initials: getInitials(nome),
-    };
+    const funcionario = await mudarCargoFuncionario(
+      editingMember.funcionario_id,
+      cargo
+    );
+    const updatedMember = toTeamMember(funcionario);
 
     setMembers((current) =>
       current.map((member) =>
         member.funcionario_id === editingMember.funcionario_id
-          ? updatedMember
+          ? { ...member, ...updatedMember }
           : member
       )
     );
 
-    return updatedMember;
+    return funcionario;
   };
 
   const handleOpenPermissionsModal = (role) => {

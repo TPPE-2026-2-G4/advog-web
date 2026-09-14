@@ -1,13 +1,11 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import LoadingDots from '@/components/ui/loadingDots/loadingDots';
 import styles from './editUserModal.module.css';
 
 const emptyForm = {
-  nome: '',
-  email: '',
   cargo: '',
 };
 
@@ -29,8 +27,6 @@ const findMemberRoleId = (member, roles) => {
 };
 
 const toFormData = (member, roles) => ({
-  nome: member?.nome_func ?? member?.nome ?? '',
-  email: member?.email_func ?? member?.email ?? '',
   cargo: findMemberRoleId(member, roles),
 });
 
@@ -78,11 +74,6 @@ function EditUserDialog({ member, roles, isRoleLocked, onClose, onSave }) {
   const titleId = useId();
   const errorId = useId();
   const roleHintId = useId();
-  const nameInputRef = useRef(null);
-
-  useEffect(() => {
-    nameInputRef.current?.focus();
-  }, []);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -132,8 +123,6 @@ function EditUserDialog({ member, roles, isRoleLocked, onClose, onSave }) {
 
     try {
       await onSave({
-        nome: formData.nome,
-        email: formData.email,
         cargo: selectedRole?.cargo_id ?? formData.cargo,
       });
       onClose();
@@ -171,41 +160,6 @@ function EditUserDialog({ member, roles, isRoleLocked, onClose, onSave }) {
         </div>
 
         <div className={styles.body}>
-          <div className={styles.inputGroup}>
-            <label className={styles.label} htmlFor="edit-user-name">
-              Nome Completo
-            </label>
-            <input
-              ref={nameInputRef}
-              id="edit-user-name"
-              name="nome"
-              type="text"
-              className={styles.input}
-              value={formData.nome}
-              onChange={handleChange}
-              autoComplete="name"
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-
-          <div className={styles.inputGroup}>
-            <label className={styles.label} htmlFor="edit-user-email">
-              E-mail
-            </label>
-            <input
-              id="edit-user-email"
-              name="email"
-              type="email"
-              className={styles.input}
-              value={formData.email}
-              onChange={handleChange}
-              autoComplete="email"
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-
           <div className={styles.inputGroup}>
             <label className={styles.label} htmlFor="edit-user-role">
               Nível de Acesso

@@ -4,6 +4,7 @@ import {
   excluirFuncionario,
   listarFuncionarios,
   mudarAcessoFuncionario,
+  mudarCargoFuncionario,
 } from './funcionarios';
 
 const respostaJson = (dados, configuracao = {}) => ({
@@ -26,6 +27,7 @@ describe('serviço de funcionários', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.stubGlobal('fetch', vi.fn());
+    sessionStorage.clear();
   });
 
   describe('listarFuncionarios', () => {
@@ -205,5 +207,33 @@ describe('serviço de funcionários', () => {
         );
       }
     );
+  });
+
+  describe('mudarCargoFuncionario', () => {
+    it('envia o cargo e o token por PATCH', async () => {
+      const funcionario = { funcionario_id: 8, cargo_id: 2 };
+      sessionStorage.setItem('access_token', 'token-jwt');
+      fetch.mockResolvedValue(respostaJson(funcionario));
+
+      await expect(mudarCargoFuncionario(8, '2')).resolves.toEqual(funcionario);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/funcionarios/8/mudar-cargo',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer token-jwt',
+          },
+          body: JSON.stringify({ cargo_id: 2 }),
+        }
+      );
+    });
+
+    it('não faz a requisição sem token', async () => {
+      await expect(mudarCargoFuncionario(8, 2)).rejects.toThrow(
+        'Sessão expirada. Faça login novamente.'
+      );
+      expect(fetch).not.toHaveBeenCalled();
+    });
   });
 });

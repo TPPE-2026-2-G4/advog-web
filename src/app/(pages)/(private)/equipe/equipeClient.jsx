@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, Users, UserCheck, Clock } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
 import StatCard from '@/components/ui/statCard/statCard';
 import TeamTable from '@/components/ui/teamTable/teamTable';
 import RoleTables from '@/components/ui/rolesTable/rolesTable';
@@ -12,9 +13,18 @@ import RolePermissionsModal from '@/components/ui/rolePermissionsModal/rolePermi
 import NewRoleModal from '@/components/ui/newRoleModal/newRoleModal';
 import DeleteRoleModal from '@/components/ui/deleteRoleModal/deleteRoleModal';
 import { useEquipe } from '@/hooks/useEquipe';
+import { getCurrentUser } from '@/utils/authSession';
 import styles from './equipe.module.css';
 
+const emptySubscribe = () => () => {};
+
 export default function EquipeClient({ initialData, initialRoles = [] }) {
+  const canEditUsers = useSyncExternalStore(
+    emptySubscribe,
+    () => getCurrentUser()?.cargo?.permissao?.gerenciar_equipe === true,
+    () => false
+  );
+
   const {
     members,
     roles,
@@ -104,6 +114,7 @@ export default function EquipeClient({ initialData, initialRoles = [] }) {
         onDelete={handleOpenDeleteModal}
         onChangeAccess={handleOpenAccessModal}
         onEdit={handleOpenEditModal}
+        canEditUsers={canEditUsers}
       />
 
       <RoleTables
@@ -140,7 +151,7 @@ export default function EquipeClient({ initialData, initialRoles = [] }) {
 
       <EditUserModal
         member={editingMember}
-        isOpen={Boolean(editingMember)}
+        isOpen={canEditUsers && Boolean(editingMember)}
         roles={roles}
         isRoleLocked={isEditingOnlyAdmin}
         onClose={handleCloseEditModal}

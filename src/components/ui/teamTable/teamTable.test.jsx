@@ -126,8 +126,13 @@ describe('TeamTable', () => {
     expect(screen.getByText('Pendente').className).toContain('badgeYellow');
   });
 
-  it('sempre renderiza as ações de editar e excluir', () => {
-    render(<TeamTable members={[createMember({ status: 'Pendente' })]} />);
+  it('renderiza a edição somente para quem pode editar usuários', () => {
+    const member = createMember({ status: 'Pendente' });
+    const { rerender } = render(<TeamTable members={[member]} />);
+
+    expect(screen.queryByTitle('Editar usuário')).not.toBeInTheDocument();
+
+    rerender(<TeamTable members={[member]} canEditUsers />);
 
     expect(screen.getByTitle('Editar usuário')).toBeInTheDocument();
     expect(screen.queryByText('Editar')).not.toBeInTheDocument();
@@ -135,7 +140,9 @@ describe('TeamTable', () => {
   });
 
   it('ordena editar, acesso e excluir nesta sequência', () => {
-    render(<TeamTable members={[createMember({ status: 'Ativo' })]} />);
+    render(
+      <TeamTable members={[createMember({ status: 'Ativo' })]} canEditUsers />
+    );
 
     const actions = screen.getByTitle('Editar usuário').parentElement;
     const buttons = within(actions).getAllByRole('button');
@@ -160,7 +167,7 @@ describe('TeamTable', () => {
     const onEdit = vi.fn();
     const member = createMember();
 
-    render(<TeamTable members={[member]} onEdit={onEdit} />);
+    render(<TeamTable members={[member]} onEdit={onEdit} canEditUsers />);
     fireEvent.click(screen.getByTitle('Editar usuário'));
 
     expect(onEdit).toHaveBeenCalledOnce();

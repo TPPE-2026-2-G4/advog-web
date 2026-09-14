@@ -67,6 +67,11 @@ const renderEquipe = (members = []) =>
 describe('integração da página de equipe', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn());
+    sessionStorage.setItem('access_token', 'token-jwt');
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({ cargo: { permissao: { gerenciar_equipe: true } } })
+    );
   });
 
   afterEach(() => {
@@ -229,23 +234,29 @@ describe('integração da página de equipe', () => {
     expect(screen.getByText('Ativo')).toBeInTheDocument();
   });
 
-  it('edita os dados e o nível de acesso sem oferecer telefone', async () => {
+  it('edita somente o cargo enviando autenticação', async () => {
     const member = createMember({
       cargo_id: 3,
       cargo: 'Estagiário',
       telefone: '(61) 99999-9999',
     });
+    fetch.mockResolvedValue(
+      createApiResponse({
+        funcionario_id: 1,
+        nome: 'Maria Silva',
+        email: 'maria@teste.local',
+        cargo_id: 2,
+        cargo: roles[1],
+        status: 'Ativo',
+      })
+    );
     renderEquipe([member]);
 
     fireEvent.click(screen.getByTitle('Editar usuário'));
     expect(screen.getByLabelText('Nível de Acesso')).toHaveValue('3');
 
-    fireEvent.change(screen.getByLabelText('Nome Completo'), {
-      target: { value: 'Maria Souza' },
-    });
-    fireEvent.change(screen.getByLabelText('E-mail'), {
-      target: { value: 'maria.souza@teste.local' },
-    });
+    expect(screen.queryByLabelText('Nome Completo')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('E-mail')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Telefone')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Nível de Acesso'), {
       target: { value: '2' },
@@ -257,9 +268,19 @@ describe('integração da página de equipe', () => {
         screen.queryByRole('dialog', { name: 'Editar Usuário' })
       ).not.toBeInTheDocument();
     });
-    const memberRow = screen.getByText('Maria Souza').closest('tr');
+    const memberRow = screen.getByText('Maria Silva').closest('tr');
     expect(within(memberRow).getByText('Advogado')).toBeInTheDocument();
     expect(within(memberRow).getByText('(61) 99999-9999')).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/funcionarios/1/mudar-cargo'),
+      expect.objectContaining({
+        method: 'PATCH',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer token-jwt',
+        }),
+        body: JSON.stringify({ cargo_id: 2 }),
+      })
+    );
   });
 
   it('impede alterar o cargo do único administrador', () => {
@@ -314,14 +335,29 @@ describe('integração da página de equipe', () => {
       'visualizar_processos',
       'visualizar_equipe'
     );
-    fetch.mockResolvedValue(
-      createApiResponse({
-        cargo_id: 4,
-        nome_cargo: 'Paralegal',
-        descricao: 'Cargo personalizado.',
-        permissao: createdPermission,
-      })
-    );
+    fetch
+      .mockResolvedValueOnce(
+        createApiResponse({
+          cargo_id: 4,
+          nome_cargo: 'Paralegal',
+          descricao: 'Cargo personalizado.',
+          permissao: createdPermission,
+        })
+      )
+      .mockResolvedValueOnce(
+        createApiResponse({
+          funcionario_id: 1,
+          nome: 'Maria Silva',
+          email: 'maria@teste.local',
+          cargo_id: 4,
+          cargo: {
+            cargo_id: 4,
+            nome_cargo: 'Paralegal',
+            permissao: createdPermission,
+          },
+          status: 'Ativo',
+        })
+      );
     renderEquipe([member]);
 
     fireEvent.click(screen.getByRole('button', { name: 'Novo Cargo' }));
