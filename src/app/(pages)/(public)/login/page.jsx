@@ -5,6 +5,7 @@ import styles from './login.module.css';
 import { useLogin } from '@/hooks/useLogin';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Suspense } from 'react';
 
 function LoginContent() {
   const { email, setEmail, senha, setSenha, erro, isSubmitting, handleSubmit } =
@@ -84,5 +85,9 @@ function LoginContent() {
 }
 
 export default function LoginPage() {
-  return <LoginContent />;
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
+  );
 }
