@@ -260,4 +260,121 @@ describe('LancamentoModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it('exibe erro caso a submissão falhe e clica em entrada', async () => {
+    const handleSave = vi
+      .fn()
+      .mockRejectedValue(new Error('Erro forçado de salvamento'));
+    renderModal({ onSave: handleSave });
+    fireEvent.click(screen.getByRole('button', { name: 'Entrada' }));
+    fireEvent.change(screen.getByLabelText('Título'), {
+      target: { value: 'Teste' },
+    });
+    fireEvent.change(screen.getByLabelText('Valor'), {
+      target: { value: '100' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar Lançamento' }));
+    await waitFor(() => {
+      expect(
+        screen.getByText('Erro forçado de salvamento')
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('cobre fallbacks de formatação de data no payload (sem dataIso)', async () => {
+    const onSave = vi.fn().mockResolvedValue({});
+    renderModal({ onSave });
+
+    fireEvent.change(screen.getByLabelText('Título'), {
+      target: { value: 'Teste Fallback Date' },
+    });
+    fireEvent.change(screen.getByLabelText('Valor'), {
+      target: { value: '100' },
+    });
+
+    // Forçar data inválida para que dataIso retorne vazio e use formData.data
+    fireEvent.change(screen.getByLabelText('Data'), { target: { value: 'T' } });
+    fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
+      target: { value: 'T' },
+    });
+
+    fireEvent.submit(screen.getByRole('dialog'));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalled();
+    });
+  });
+
+  it('cobre fallbacks de valores iniciais faltantes em edição', () => {
+    // Para atingir linhas 37-38, 41-45 (tipo e titulo fallback, valor fallback)
+    const mockItem = {
+      id: 99,
+      // tipo ausente
+      // titulo ausente
+      // valor ausente
+      status: 'pendente', // só para não dar problema no isStatusConcluido vazio
+    };
+    renderModal({ initialItem: mockItem, onSave: vi.fn(), onClose: vi.fn() });
+
+    // Título fallback ''
+    expect(screen.getByLabelText('Título')).toHaveValue('');
+    // Valor fallback ''
+    expect(screen.getByLabelText('Valor')).toHaveValue('');
+    // Tipo fallback 'entrada'
+    expect(screen.getByRole('button', { name: 'Entrada' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
+  it('cobre branch else if de status não-concluido e sem data', async () => {
+    // Para atingir fallback date em submit e não-concluido status
+    const onSave = vi.fn().mockResolvedValue({});
+    const mockItem = {
+      id: 99,
+      status: 'pendente',
+    };
+    renderModal({ initialItem: mockItem, onSave, onClose: vi.fn() });
+
+    // Preenche pra não dar erro
+    fireEvent.change(screen.getByLabelText('Título'), {
+      target: { value: 'X' },
+    });
+    fireEvent.change(screen.getByLabelText('Valor'), {
+      target: { value: '1' },
+    });
+    fireEvent.change(screen.getByLabelText('Data'), {
+      target: { value: '2026-01-01' },
+    });
+
+    fireEvent.submit(screen.getByRole('dialog'));
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalled();
+    });
+  });
+
+  it('cobre fallback message em catch block vazio', async () => {
+    // Para atingir linha 168: err?.message || 'Erro ao salvar o lançamento financeiro.'
+    const onSave = vi.fn().mockRejectedValue({}); // Sem mensagem
+    const mockItem = { id: 99, status: 'pendente' };
+    renderModal({ initialItem: mockItem, onSave, onClose: vi.fn() });
+
+    // Preenche pra não dar erro de validacao
+    fireEvent.change(screen.getByLabelText('Título'), {
+      target: { value: 'X' },
+    });
+    fireEvent.change(screen.getByLabelText('Valor'), {
+      target: { value: '1' },
+    });
+    fireEvent.change(screen.getByLabelText('Data'), {
+      target: { value: '2026-01-01' },
+    });
+
+    fireEvent.submit(screen.getByRole('dialog'));
+    await waitFor(() => {
+      expect(
+        screen.getByText('Erro ao salvar o lançamento financeiro.')
+      ).toBeInTheDocument();
+    });
+  });
 });

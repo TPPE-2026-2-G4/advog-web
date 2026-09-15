@@ -272,4 +272,104 @@ describe('financas utils', () => {
       expect(toApiLancamento(null)).toEqual({});
     });
   });
+  describe('parseApiError branches', () => {
+    it('cobre fallback stringify em detail array (quando não tem msg)', () => {
+      const err = { detail: [{ noMsg: true }] };
+      const msg = parseApiError(err);
+      expect(msg).toContain('noMsg');
+    });
+
+    it('cobre fallback detail como objeto', () => {
+      const err = { detail: { chave: 'valor' } };
+      const msg = parseApiError(err);
+      expect(msg).toContain('valor');
+    });
+
+    it('cobre error.message sendo string', () => {
+      const err = { message: 'Erro simples em string' };
+      const msg = parseApiError(err);
+      expect(msg).toBe('Erro simples em string');
+    });
+
+    it('cobre defaultMessage', () => {
+      const err = {};
+      const msg = parseApiError(err);
+      expect(msg).toBe('Ocorreu um erro na requisição.');
+    });
+  });
+
+  describe('mais branches para 100% de cobertura', () => {
+    it('cobre detail array vazio após map/filter', () => {
+      const err = { detail: [() => {}] };
+      const msg = parseApiError(err);
+      expect(msg).toBe('[null]');
+    });
+
+    it('cobre fallbacks de toApiLancamento (titulo, valor, categoria)', () => {
+      const apiObj = toApiLancamento({ tipo: 'Entrada' });
+      expect(apiObj.titulo).toBe('');
+      expect(apiObj.valor).toBe(0);
+      expect(apiObj.categoria).toBe('Honorários');
+    });
+
+    it('cobre rawPagamento fallback em toApiLancamento', () => {
+      // para formatDateToIso(rawPagamento) ser falsy e usar || rawPagamento
+      const apiObj = toApiLancamento({ dataPagamento: 'T' });
+      expect(apiObj.data_pagamento).toBe('T');
+    });
+  });
+
+  it('cobre rawVencimento fallback em toApiLancamento', () => {
+    // para formatDateToIso(rawVencimento) ser falsy e usar || rawVencimento
+    const apiObj = toApiLancamento({ dataVencimento: 'T' });
+    expect(apiObj.data_vencimento).toBe('T');
+  });
+
+  it('cobre data_pagamento em toApiLancamento', () => {
+    // item.dataPagamentoIso e item.dataPagamento ausentes, mas item.data_pagamento presente
+    const apiObj = toApiLancamento({ data_pagamento: '2026-10-10' });
+    expect(apiObj.data_pagamento).toBe('2026-10-10');
+  });
+
+  it('cobre toLancamento fallbacks (vencimento e categoria)', () => {
+    // para dataVencimentoIso || dataIso, etc.
+    const front = toLancamento({ data: '2026-10-10' }); // sem vencimento explicit
+    expect(front.dataVencimentoIso).toBe('2026-10-10');
+    expect(front.categoria).toBe('Outros');
+  });
+
+  it('cobre number e undefined em formatCurrency', () => {
+    expect(formatCurrency(10.5)).toContain('10,50');
+    expect(formatCurrency(undefined)).toBe('R$ 0,00');
+  });
+
+  it('cobre fallback de loc vazio e fallback parseApiError msg', () => {
+    const err = { detail: [{ msg: 'Mensagem sem loc' }] };
+    expect(parseApiError(err)).toBe('Mensagem sem loc');
+  });
+
+  it('cobre formatDateToBr partes faltantes', () => {
+    // line 14: !year || !month || !day
+    expect(formatDateToBr('2026-08')).toBe('2026-08');
+  });
+
+  it('cobre detail array com string', () => {
+    // line 108: typeof d === 'string'
+    expect(parseApiError({ detail: ['Erro direto'] })).toBe('Erro direto');
+  });
+
+  it('cobre data_vencimento presente e ausente', () => {
+    // line 132: apiItem.data_vencimento truthy
+    const front = toLancamento({ data_vencimento: '2026-12-12' });
+    expect(front.dataVencimentoIso).toBe('2026-12-12');
+  });
+
+  it('cobre data fallback em vencimento (vencimentoBr || dataBr)', () => {
+    // lines 172-174
+    // Se passarmos apenas "data", vencimentoBr será vazio, e usará dataBr
+    const front = toLancamento({ data: '2026-11-11' });
+    expect(front.dataVencimentoIso).toBe('2026-11-11');
+    expect(front.data).toBe('11/11/2026');
+    expect(front.dataVencimento).toBe('11/11/2026');
+  });
 });

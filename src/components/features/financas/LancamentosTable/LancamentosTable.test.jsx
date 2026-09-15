@@ -91,6 +91,23 @@ const mockLancamentos = [
     valor: 180,
     status: 'pendente',
   },
+  {
+    id: 9,
+    data: '30/08/2026',
+    titulo: 'Sem data ISO',
+    categoria: 'Outros',
+    tipo: 'saida',
+    valor: 100,
+    status: 'pago',
+  },
+  {
+    id: 10,
+    titulo: 'Sem data alguma',
+    categoria: 'Outros',
+    tipo: 'saida',
+    valor: 50,
+    status: 'pago',
+  },
 ];
 
 describe('LancamentosTable', () => {
@@ -134,7 +151,7 @@ describe('LancamentosTable', () => {
 
     // Contagem e paginação
     expect(
-      screen.getByText('Exibindo 1–5 de 8 resultados')
+      screen.getByText('Exibindo 1–5 de 10 resultados')
     ).toBeInTheDocument();
     expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
   });
@@ -176,7 +193,7 @@ describe('LancamentosTable', () => {
 
     expect(screen.getByText('Página 2 de 2')).toBeInTheDocument();
     expect(
-      screen.getByText('Exibindo 6–8 de 8 resultados')
+      screen.getByText('Exibindo 6–10 de 10 resultados')
     ).toBeInTheDocument();
     expect(
       screen.getByText('Software Jurídico Mensalidade')
@@ -188,20 +205,25 @@ describe('LancamentosTable', () => {
     expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
   });
 
-  it('filtra por tipo ou status via dropdown', () => {
+  it('filtra por categoria e status via dropdown', () => {
     render(<LancamentosTable lancamentos={mockLancamentos} pageSize={10} />);
 
-    const select = screen.getByLabelText('Filtrar por tipo ou status');
+    const selectCategoria = screen.getByLabelText('Filtrar por categoria');
+    const selectStatus = screen.getByLabelText('Filtrar por status');
 
-    // Filtrar apenas saídas
-    fireEvent.change(select, { target: { value: 'saida' } });
-    expect(screen.getAllByText('Saída')).toHaveLength(4);
+    // Filtrar por categoria Honorários
+    fireEvent.change(selectCategoria, { target: { value: 'Honorários' } });
+
+    // There are 4 honorarios
+    expect(screen.getAllByText('Honorários').length).toBeGreaterThan(0);
     expect(
-      screen.queryByText('Honorários Iniciais - João Santos')
+      screen.queryByText('Aluguel do Escritório - Agosto/2026')
     ).not.toBeInTheDocument();
 
+    fireEvent.change(selectCategoria, { target: { value: '' } }); // reset
+
     // Filtrar apenas pendentes
-    fireEvent.change(select, { target: { value: 'pendente' } });
+    fireEvent.change(selectStatus, { target: { value: 'pendente' } });
     expect(
       screen.getByText('Consultoria Jurídica - Tech Solutions')
     ).toBeInTheDocument();
@@ -240,22 +262,24 @@ describe('LancamentosTable', () => {
   it('limpa os filtros aplicados ao clicar no botão Limpar', () => {
     render(<LancamentosTable lancamentos={mockLancamentos} pageSize={10} />);
 
-    const select = screen.getByLabelText('Filtrar por tipo ou status');
+    const selectCategoria = screen.getByLabelText('Filtrar por categoria');
+    const selectStatus = screen.getByLabelText('Filtrar por status');
     const inputDe = screen.getByLabelText('Data inicial');
     const clearBtn = screen.getByRole('button', { name: /Limpar/i });
 
-    fireEvent.change(select, { target: { value: 'saida' } });
+    fireEvent.change(selectStatus, { target: { value: 'pendente' } });
     fireEvent.change(inputDe, { target: { value: '2026-08-15' } });
     expect(
-      screen.getByText('Exibindo 1–3 de 3 resultados')
+      screen.getByText('Exibindo 1–2 de 2 resultados')
     ).toBeInTheDocument();
 
     fireEvent.click(clearBtn);
 
     expect(inputDe.value).toBe('');
-    expect(select.value).toBe('todos');
+    expect(selectCategoria.value).toBe('');
+    expect(selectStatus.value).toBe('');
     expect(
-      screen.getByText('Exibindo 1–8 de 8 resultados')
+      screen.getByText('Exibindo 1–10 de 10 resultados')
     ).toBeInTheDocument();
   });
 
@@ -363,8 +387,8 @@ describe('LancamentosTable', () => {
 
     expect(screen.getAllByText('Atrasado').length).toBeGreaterThanOrEqual(2);
 
-    const select = screen.getByLabelText('Filtrar por tipo ou status');
-    fireEvent.change(select, { target: { value: 'atrasado' } });
+    const selectStatus = screen.getByLabelText('Filtrar por status');
+    fireEvent.change(selectStatus, { target: { value: 'atrasado' } });
 
     expect(screen.getByText('Boleto Vencido')).toBeInTheDocument();
     expect(

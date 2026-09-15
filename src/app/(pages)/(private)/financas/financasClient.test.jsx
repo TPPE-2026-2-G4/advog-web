@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
+beforeEach(() => cleanup());
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import FinancasClient from './financasClient';
 import {
@@ -245,14 +247,20 @@ describe('FinancasClient', () => {
     fireEvent.click(editButtons[0]);
     expect(handleEditLancamento).toHaveBeenCalledOnce();
 
+    // Fechar o modal de edição antes de abrir o de exclusão
+    const closeButtons = screen.getAllByRole('button', { name: 'Fechar' });
+    fireEvent.click(closeButtons[0]);
+
     const deleteButtons = screen.getAllByRole('button', {
       name: 'Excluir lançamento',
     });
     fireEvent.click(deleteButtons[0]);
 
     // O modal deve abrir. Clicar no botão de confirmação do modal
+    const dialogs = screen.getAllByRole('dialog');
+    const deleteDialog = dialogs[dialogs.length - 1];
     const modalConfirmButton =
-      screen.getByRole('dialog').querySelector('.deleteButton') ||
+      deleteDialog.querySelector('.deleteButton') ||
       screen.getAllByRole('button', { name: 'Excluir lançamento' }).pop();
     fireEvent.click(modalConfirmButton);
 
@@ -287,7 +295,7 @@ describe('FinancasClient', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('Erro de conexão com o servidor.')
+        screen.getAllByText('Erro de conexão com o servidor.')[0]
       ).toBeInTheDocument();
     });
   });
@@ -381,6 +389,35 @@ describe('FinancasClient', () => {
     await waitFor(() => {
       expect(mudarStatusLancamento).toHaveBeenCalled();
       expect(handleToggleStatus).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('fecha o modal de exclusão ao clicar em Cancelar', async () => {
+    render(<FinancasClient initialData={mockLancamentos} />);
+    const deleteButtons = screen.getAllByRole('button', {
+      name: 'Excluir lançamento',
+    });
+    fireEvent.click(deleteButtons[0]);
+    const cancelButton = screen
+      .getAllByRole('button', { name: 'Cancelar' })
+      .pop();
+    fireEvent.click(cancelButton);
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('exibe mensagem de erro na tela caso a alteração de status falhe', async () => {
+    mudarStatusLancamento.mockRejectedValueOnce(
+      new Error('Erro ao alterar status.')
+    );
+    render(<FinancasClient initialData={mockLancamentos} />);
+    const toggleButtons = screen.getAllByRole('button', {
+      name: 'Marcar como pendente',
+    });
+    fireEvent.click(toggleButtons[0]);
+    await waitFor(() => {
+      expect(screen.getByText('Erro ao alterar status.')).toBeInTheDocument();
     });
   });
 });

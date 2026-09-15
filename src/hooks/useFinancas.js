@@ -130,7 +130,7 @@ export function useFinancas(initialData, options = {}) {
     lancamentos,
     setLancamentos,
     resumo,
-    totalLancamentos: lancamentos?.length ?? 0,
+    totalLancamentos: lancamentos.length,
     isNewModalOpen,
     setIsNewModalOpen,
     isReportModalOpen,

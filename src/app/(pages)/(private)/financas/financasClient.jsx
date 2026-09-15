@@ -78,7 +78,6 @@ export default function FinancasClient({
   };
 
   const handleConfirmDelete = async () => {
-    if (!lancamentoToDelete) return;
     try {
       await handleDeleteLancamento(lancamentoToDelete);
       setLancamentoToDelete(null);

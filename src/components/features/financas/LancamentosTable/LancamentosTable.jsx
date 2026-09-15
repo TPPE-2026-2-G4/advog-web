@@ -31,13 +31,22 @@ export default function LancamentosTable({
 }) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [filterType, setFilterType] = useState('todos');
+  const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+
+  const categoriasUnicas = useMemo(() => {
+    const categorias = new Set(
+      lancamentos.map((l) => l.categoria).filter(Boolean)
+    );
+    return Array.from(categorias).sort();
+  }, [lancamentos]);
 
   const handleClearFilters = () => {
     setDateFrom('');
     setDateTo('');
-    setFilterType('todos');
+    setFilterCategoria('');
+    setFilterStatus('');
     setCurrentPage(1);
   };
 
@@ -59,27 +68,29 @@ export default function LancamentosTable({
         }
       }
 
-      // Filtro por categoria / tipo / status
-      if (filterType !== 'todos') {
-        const lowerFilter = filterType.toLowerCase();
-        const matchTipo = item.tipo?.toLowerCase() === lowerFilter;
-        const matchCategoria = item.categoria?.toLowerCase() === lowerFilter;
-        const itemStatusLower = item.status?.toLowerCase();
-        const matchStatus =
-          itemStatusLower === lowerFilter ||
-          (lowerFilter === 'pago' &&
-            (itemStatusLower === 'pago' || itemStatusLower === 'recebido')) ||
-          (lowerFilter === 'recebido' &&
-            (itemStatusLower === 'pago' || itemStatusLower === 'recebido'));
+      // Filtro por categoria
+      if (filterCategoria && filterCategoria !== '') {
+        if (item.categoria !== filterCategoria) {
+          return false;
+        }
+      }
 
-        if (!matchTipo && !matchStatus && !matchCategoria) {
+      // Filtro por status
+      if (filterStatus && filterStatus !== '') {
+        const lowerFilter = filterStatus.toLowerCase();
+        const itemLabel = formatStatusLabel(
+          item.status,
+          item.tipo
+        ).toLowerCase();
+
+        if (itemLabel !== lowerFilter) {
           return false;
         }
       }
 
       return true;
     });
-  }, [lancamentos, dateFrom, dateTo, filterType]);
+  }, [lancamentos, dateFrom, dateTo, filterCategoria, filterStatus]);
 
   const totalResults = filteredLancamentos.length;
   const totalPages = Math.ceil(totalResults / pageSize) || 1;
@@ -94,15 +105,11 @@ export default function LancamentosTable({
   const endRecord = Math.min(startIndex + pageSize, totalResults);
 
   const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1);
-    }
+    setCurrentPage((prev) => Math.max(1, prev - 1));
   };
 
   const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage((prev) => prev + 1);
-    }
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
   };
 
   return (
@@ -154,20 +161,37 @@ export default function LancamentosTable({
           <div className={styles.selectWrap}>
             <select
               className={styles.select}
-              value={filterType}
+              value={filterCategoria}
               onChange={(e) => {
-                setFilterType(e.target.value);
+                setFilterCategoria(e.target.value);
                 setCurrentPage(1);
               }}
-              aria-label="Filtrar por tipo ou status"
+              aria-label="Filtrar por categoria"
             >
-              <option value="todos">Todos</option>
-              <option value="entrada">Entradas</option>
-              <option value="saida">Saídas</option>
+              <option value="">Todas as categorias</option>
+              {categoriasUnicas.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.selectWrap}>
+            <select
+              className={styles.select}
+              value={filterStatus}
+              onChange={(e) => {
+                setFilterStatus(e.target.value);
+                setCurrentPage(1);
+              }}
+              aria-label="Filtrar por status"
+            >
+              <option value="">Todos os status</option>
+              <option value="atrasado">Atrasado</option>
+              <option value="pendente">Pendente</option>
               <option value="pago">Pago</option>
               <option value="recebido">Recebido</option>
-              <option value="pendente">Pendente</option>
-              <option value="atrasado">Atrasado</option>
             </select>
           </div>
 

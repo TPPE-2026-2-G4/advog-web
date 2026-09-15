@@ -379,4 +379,15 @@ describe('serviço de finanças', () => {
       );
     });
   });
+  it('cobre fallback branch em buscarFinancas (retorna [] se não for array)', async () => {
+    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ id: 1 }) });
+    const res = await listarLancamentos();
+    expect(res).toEqual([]);
+  });
+
+  it('cobre branch em mudarStatusLancamento (status como objeto sem .status)', async () => {
+    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+    await mudarStatusLancamento(1, {}); // Passando obj vazio sem .status
+    expect(fetch).toHaveBeenCalled();
+  });
 });

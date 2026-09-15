@@ -294,4 +294,60 @@ describe('useFinancas', () => {
     expect(mudarStatusLancamento).toHaveBeenCalledWith(5, 'pendente');
     expect(result.current.lancamentos[0].status).toBe('pendente');
   });
+  it('cobre ramificações de fallback em manipulações (branches)', async () => {
+    // 1. err sem message (delete)
+    excluirFinancas.mockRejectedValueOnce('Error-String');
+    const { result } = renderHook(() => useFinancas(mockData));
+    await act(async () => {
+      try {
+        await result.current.handleDeleteLancamento(mockData[0]);
+      } catch (e) {}
+    });
+    expect(result.current.deleteError).toBe('Erro ao excluir lançamento.');
+
+    // 2. response null no create e id fallback
+    criarFinancas.mockResolvedValueOnce(null);
+    await act(async () => {
+      await result.current.handleCreateLancamento({ titulo: 'Sem response' });
+    });
+    expect(result.current.lancamentos[0].titulo).toBe('Sem response');
+
+    // 3. saveError fallback no create
+    criarFinancas.mockRejectedValueOnce('Sem objeto de erro');
+    await act(async () => {
+      try {
+        await result.current.handleCreateLancamento({ titulo: 'x' });
+      } catch (e) {}
+    });
+    expect(result.current.saveError).toBe('Erro ao criar lançamento.');
+
+    // 4. response null no update
+    atualizarFinancas.mockResolvedValueOnce(null);
+    await act(async () => {
+      await result.current.handleUpdateLancamento(mockData[1]);
+    });
+
+    // 5. saveError fallback no update
+    atualizarFinancas.mockRejectedValueOnce('Error string');
+    await act(async () => {
+      try {
+        await result.current.handleUpdateLancamento(mockData[1]);
+      } catch (e) {}
+    });
+    expect(result.current.saveError).toBe('Erro ao atualizar lançamento.');
+
+    // 6. response null no toggle e error fallback
+    mudarStatusLancamento.mockResolvedValueOnce(null);
+    await act(async () => {
+      await result.current.handleToggleStatus(mockData[0]);
+    });
+
+    mudarStatusLancamento.mockRejectedValueOnce('String de erro toggle');
+    await act(async () => {
+      try {
+        await result.current.handleToggleStatus(mockData[0]);
+      } catch (e) {}
+    });
+    expect(result.current.statusError).toBe('Erro ao atualizar status.');
+  });
 });
