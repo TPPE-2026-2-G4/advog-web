@@ -1,0 +1,212 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background-color: rgba(17, 24, 39, 0.6);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: min(672px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+}
+
+.modal * {
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.title {
+  margin: 0;
+  color: #172133;
+  font-family: var(--font-cormorant), serif;
+  font-size: 24px;
+}
+
+.closeButton {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: #9ca3af;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+}
+
+.closeButton:hover:not(:disabled) {
+  color: #374151;
+  background-color: #f3f4f6;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.description,
+.counter,
+.impactMessage,
+.error {
+  margin: 0;
+}
+
+.description {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.description strong {
+  color: #172133;
+}
+
+.counter {
+  padding-top: 12px;
+  color: #6b7280;
+  font-size: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.error {
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 24px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.impactMessage {
+  margin-right: auto;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.cancelButton,
+.saveButton {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.cancelButton {
+  color: #111827;
+  background-color: transparent;
+  border: 1px solid #374151;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background-color: #f9fafb;
+}
+
+.saveButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 104px;
+  color: #172133;
+  background-color: #c1a077;
+  border: 1px solid #c1a077;
+}
+
+.saveButton:hover:not(:disabled) {
+  background-color: #b08d60;
+}
+
+.closeButton:disabled,
+.cancelButton:disabled,
+.saveButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .overlay {
+    animation: overlayIn 0.2s ease-out;
+  }
+
+  .modal {
+    animation: modalIn 0.2s ease-out;
+  }
+}
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 600px) {
+  .header,
+  .body,
+  .footer {
+    padding: 18px 16px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .impactMessage {
+    margin-right: 0;
+  }
+
+  .cancelButton,
+  .saveButton {
+    width: 100%;
+  }
+}
