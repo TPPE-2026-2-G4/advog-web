@@ -1,17 +1,43 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter, useSearchParams } from 'next/navigation';
 import LoginPage from './page';
 
-const mockLogin = vi.fn();
+const { mockLogin, mockPush, mockReplace } = vi.hoisted(() => ({
+  mockLogin: vi.fn(),
+  mockPush: vi.fn(),
+  mockReplace: vi.fn(),
+}));
 
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: vi.fn(),
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({
+    push: mockPush,
+    replace: mockReplace,
+  })),
+  useSearchParams: vi.fn(),
+}));
+
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useRouter.mockReturnValue({
+      push: mockPush,
+      replace: mockReplace,
+    });
+    useSearchParams.mockReturnValue({
+      get: vi.fn().mockReturnValue(null),
+    });
     useAuth.mockReturnValue({
       login: mockLogin,
     });
@@ -69,9 +95,13 @@ describe('LoginPage', () => {
   });
 
   it('realiza login com as credenciais preenchidas', async () => {
-    mockLogin.mockResolvedValueOnce({
-      token: 'fake-token',
-    });
+    let resolveLogin;
+    mockLogin.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveLogin = resolve;
+        })
+    );
 
     render(<LoginPage />);
 
@@ -81,7 +111,11 @@ describe('LoginPage', () => {
     fireEvent.change(screen.getByLabelText('Senha'), {
       target: { value: 'senha-segura' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+    const submitButton = screen.getByRole('button', { name: 'Entrar' });
+    fireEvent.click(submitButton);
+
+    expect(submitButton).toBeDisabled();
+    resolveLogin({ token: 'fake-token' });
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith(
@@ -89,6 +123,7 @@ describe('LoginPage', () => {
         'senha-segura'
       );
     });
+    expect(submitButton).not.toBeDisabled();
   });
 
   it('exibe mensagem de erro quando o login falha', async () => {
@@ -101,5 +136,34 @@ describe('LoginPage', () => {
     expect(
       await screen.findByText('Email ou senha inválidos')
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Entrar' })).not.toBeDisabled();
+  });
+
+  it('exibe e remove a mensagem de cadastro concluído ao chegar pelo primeiro acesso', async () => {
+    vi.useFakeTimers();
+    const getSearchParam = vi.fn().mockReturnValue('sucesso');
+    useSearchParams.mockReturnValue({ get: getSearchParam });
+
+    try {
+      render(<LoginPage />);
+
+      expect(
+        screen.getByRole('status', {
+          name: 'Cadastro finalizado com sucesso!',
+        })
+      ).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+
+      expect(
+        screen.queryByRole('status', {
+          name: 'Cadastro finalizado com sucesso!',
+        })
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

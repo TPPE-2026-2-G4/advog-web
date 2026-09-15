@@ -67,7 +67,13 @@ describe('FirstLoginPage', () => {
   });
 
   it('realiza o primeiro acesso com os dados preenchidos', async () => {
-    mockFirstLogin.mockResolvedValueOnce({ success: true });
+    let resolveFirstLogin;
+    mockFirstLogin.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirstLogin = resolve;
+        })
+    );
 
     render(<FirstLoginPage />);
 
@@ -86,7 +92,18 @@ describe('FirstLoginPage', () => {
     fireEvent.change(screen.getByLabelText('Número da OAB'), {
       target: { value: '123456' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Concluir cadastro' }));
+    const submitButton = screen.getByRole('button', {
+      name: 'Concluir cadastro',
+    });
+    fireEvent.click(submitButton);
+
+    expect(submitButton).toBeDisabled();
+    expect(screen.getByText('Salvando')).toBeInTheDocument();
+    expect(
+      screen.getByRole('status', { name: 'Carregando' })
+    ).toBeInTheDocument();
+
+    resolveFirstLogin({ success: true });
 
     await waitFor(() => {
       expect(mockFirstLogin).toHaveBeenCalledWith({
@@ -96,6 +113,7 @@ describe('FirstLoginPage', () => {
         numeroOab: '123456',
       });
     });
+    expect(submitButton).not.toBeDisabled();
   });
 
   it('exibe mensagem de erro quando o primeiro acesso falha', async () => {
@@ -124,5 +142,8 @@ describe('FirstLoginPage', () => {
     expect(
       await screen.findByText('Erro ao finalizar cadastro')
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Concluir cadastro' })
+    ).not.toBeDisabled();
   });
 });

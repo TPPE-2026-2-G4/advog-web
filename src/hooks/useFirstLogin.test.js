@@ -110,7 +110,35 @@ describe('useFirstLogin', () => {
         uf: 'DF',
         numeroOab: '123456',
       });
-      expect(pushMock).toHaveBeenCalledWith('/login');
+      expect(pushMock).toHaveBeenCalledWith('/login?cadastro=sucesso');
+    });
+  });
+
+  it('ignora uma segunda submissão enquanto o cadastro está em andamento', async () => {
+    let resolveFirstLogin;
+    firstLoginMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFirstLogin = resolve;
+      })
+    );
+    render(createElement(FirstLoginConsumer));
+
+    fireEvent.change(screen.getByLabelText('senha'), {
+      target: { value: 'senha' },
+    });
+    fireEvent.change(screen.getByLabelText('confirmar senha'), {
+      target: { value: 'senha' },
+    });
+    const submitButton = screen.getByRole('button', { name: 'Concluir' });
+
+    fireEvent.submit(submitButton);
+    fireEvent.submit(submitButton);
+
+    expect(firstLoginMock).toHaveBeenCalledTimes(1);
+    resolveFirstLogin({ success: true });
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith('/login?cadastro=sucesso');
     });
   });
 

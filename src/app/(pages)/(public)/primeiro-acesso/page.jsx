@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import Auth from '@/components/layout/auth/auth';
 import styles from './firstLogin.module.css';
 import { useFirstLogin } from '@/hooks/useFirstLogin';
+import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 
 function FirstLoginContent() {
   const {
@@ -18,6 +19,7 @@ function FirstLoginContent() {
     numeroOab,
     setNumeroOab,
     erro,
+    isSubmitting,
     handleSubmit,
   } = useFirstLogin();
 
@@ -131,8 +133,15 @@ function FirstLoginContent() {
           </div>
         </div>
 
-        <button className={styles.button} type="submit">
-          Concluir cadastro
+        <button className={styles.button} type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              Salvando
+              <LoadingDots />
+            </>
+          ) : (
+            'Concluir cadastro'
+          )}
         </button>
 
         {erro && <span className={styles.error}>{erro}</span>}

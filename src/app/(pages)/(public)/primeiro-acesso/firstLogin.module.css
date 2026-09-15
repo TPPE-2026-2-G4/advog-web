@@ -83,6 +83,11 @@
   background-color: #24334d;
 }
 
+.button:disabled {
+  background-color: #4b5563;
+  cursor: not-allowed;
+}
+
 .error {
   color: #b91c1c;
   font-size: 13px;

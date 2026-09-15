@@ -76,6 +76,27 @@ describe('useLogin', () => {
     });
   });
 
+  it('ignora uma segunda submissão enquanto o login está em andamento', async () => {
+    let resolveLogin;
+    loginMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveLogin = resolve;
+      })
+    );
+    render(createElement(LoginConsumer));
+
+    const submitButton = screen.getByRole('button', { name: 'Entrar' });
+    fireEvent.submit(submitButton);
+    fireEvent.submit(submitButton);
+
+    expect(loginMock).toHaveBeenCalledTimes(1);
+    resolveLogin({ token: 'token' });
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith('/dashboard');
+    });
+  });
+
   it('exibe a mensagem de um erro de login', async () => {
     loginMock.mockRejectedValueOnce(new Error('Credenciais inválidas'));
     render(createElement(LoginConsumer));

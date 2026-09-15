@@ -1,6 +1,6 @@
 import { firstLogin } from '@/services/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 export function useFirstLogin() {
   const router = useRouter();
@@ -11,17 +11,27 @@ export function useFirstLogin() {
   const [uf, setUf] = useState('');
   const [numeroOab, setNumeroOab] = useState('');
   const [erro, setErro] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const token = searchParams.get('token');
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (submittingRef.current) {
+      return;
+    }
+
     setErro('');
 
     if (senha !== confirmarSenha) {
       setErro('As senhas não conferem.');
       return;
     }
+
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
     try {
       await firstLogin({
@@ -31,13 +41,16 @@ export function useFirstLogin() {
         uf,
         numeroOab,
       });
-      router.push('/login');
+      router.push('/login?cadastro=sucesso');
     } catch (error) {
       setErro(
         error instanceof Error
           ? error.message
           : 'Não foi possível concluir o cadastro.'
       );
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   }
 
@@ -54,6 +67,7 @@ export function useFirstLogin() {
     setNumeroOab,
     erro,
     setErro,
+    isSubmitting,
     handleSubmit,
   };
 }

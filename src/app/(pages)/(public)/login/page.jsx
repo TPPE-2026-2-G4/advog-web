@@ -3,15 +3,47 @@
 import Auth from '@/components/layout/auth/auth';
 import styles from './login.module.css';
 import { useLogin } from '@/hooks/useLogin';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-export default function LoginPage() {
-  const { email, setEmail, senha, setSenha, erro, handleSubmit } = useLogin();
+function LoginContent() {
+  const { email, setEmail, senha, setSenha, erro, isSubmitting, handleSubmit } =
+    useLogin();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [cadastroConcluido, setCadastroConcluido] = useState(
+    () => searchParams.get('cadastro') === 'sucesso'
+  );
+
+  useEffect(() => {
+    if (searchParams.get('cadastro') !== 'sucesso') {
+      return;
+    }
+
+    router.replace('/login');
+
+    const timeoutId = setTimeout(() => {
+      setCadastroConcluido(false);
+    }, 4000);
+
+    return () => clearTimeout(timeoutId);
+  }, [router, searchParams]);
 
   return (
     <Auth
       title="Acesso ao Sistema"
       subtitle="Insira suas credenciais para continuar"
     >
+      {cadastroConcluido && (
+        <div
+          className={styles.success}
+          role="status"
+          aria-label="Cadastro finalizado com sucesso!"
+        >
+          Cadastro finalizado com sucesso!
+        </div>
+      )}
+
       <form className={styles.form} onSubmit={handleSubmit}>
         <label className={styles.label} htmlFor="email">
           Email empresarial
@@ -41,7 +73,7 @@ export default function LoginPage() {
           Esqueci minha senha
         </a>
 
-        <button className={styles.button} type="submit">
+        <button className={styles.button} type="submit" disabled={isSubmitting}>
           Entrar
         </button>
 
@@ -49,4 +81,8 @@ export default function LoginPage() {
       </form>
     </Auth>
   );
+}
+
+export default function LoginPage() {
+  return <LoginContent />;
 }
