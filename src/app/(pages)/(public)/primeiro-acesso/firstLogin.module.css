@@ -1,0 +1,160 @@
+.form {
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 450;
+  color: #172133;
+  margin-top: 8px;
+}
+
+.input {
+  height: 44px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 0 18px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 15px;
+  background-color: transparent;
+  outline: none;
+}
+
+.input::placeholder {
+  font: inherit;
+  color: rgba(107, 114, 128, 0.75);
+}
+
+.input:focus {
+  border-color: #c1a077;
+}
+
+.select {
+  color: #172133;
+  cursor: pointer;
+}
+
+.select option {
+  color: #172133;
+}
+
+.rowOab {
+  display: flex;
+  width: 100%;
+  gap: 18px;
+}
+
+.rowOab .label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.ufGroup {
+  flex: 0 0 30%;
+}
+
+.numeroGroup {
+  flex: 1;
+}
+
+.rowOab .input {
+  width: 100%;
+}
+
+.button {
+  height: 40px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: #172133;
+  color: white;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.button:hover {
+  background-color: #24334d;
+}
+
+.button:disabled {
+  background-color: #4b5563;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #b91c1c;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .form {
+    max-width: 380px;
+  }
+
+  .input {
+    height: 42px;
+    font-size: 14px;
+  }
+
+  .button {
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .rowOab {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .form {
+    width: 100%;
+    max-width: 450px;
+  }
+
+  .label {
+    font-size: 12px;
+  }
+
+  .input {
+    height: 42px;
+    padding: 0 16px;
+    font-size: 14px;
+    border-radius: 14px;
+  }
+
+  .rowOab {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ufGroup,
+  .numeroGroup {
+    width: 100%;
+    flex: none;
+  }
+
+  .button {
+    height: 42px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+
+  .error {
+    font-size: 12px;
+  }
+
+  .information {
+    font-size: 12px;
+    text-align: center;
+    margin-top: 20px;
+  }
+}
