@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { createEmptyPermission } from '@/constants/permissions';
 import TeamTable from './TeamTable';
-import styles from './teamTable.module.css';
+import styles from './TeamTable.module.css';
 
 const withAllowedPermissions = (...permissionNames) => ({
   ...createEmptyPermission(),
@@ -148,7 +148,7 @@ describe('TeamTable', () => {
     const buttons = within(actions).getAllByRole('button');
 
     expect(buttons[0]).toHaveAttribute('title', 'Editar usuário');
-    expect(buttons[1]).toHaveTextContent('Revogar acesso');
+    expect(buttons[1]).toHaveAttribute('title', 'Revogar acesso');
     expect(buttons[2]).toHaveAttribute('title', 'Excluir usuário');
   });
 
