@@ -105,6 +105,18 @@
   border-color: #c1a077;
 }
 
+.select:disabled {
+  color: #6b7280;
+  cursor: not-allowed;
+  background-color: #f9fafb;
+}
+
+.helperText {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
 .footer {
   padding: 24px;
   border-top: 1px solid #f3f4f6;
