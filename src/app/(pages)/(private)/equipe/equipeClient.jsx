@@ -3,11 +3,11 @@
 import { Plus, Users, UserCheck, Clock } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import StatCard from '@/components/ui/statCard/statCard';
-import TeamTable from '@/components/ui/teamTable/teamTable';
-import RoleTables from '@/components/ui/rolesTable/rolesTable';
-import AddUserModal from '@/components/ui/addUserModal/addUserModal';
-import DeleteUserModal from '@/components/ui/deleteUserModal/deleteUserModal';
-import AccessStatusModal from '@/components/ui/accessStatusModal/accessStatusModal';
+import TeamTable from '@/components/features/equipe/TeamTable/TeamTable';
+import RoleTables from '@/components/features/equipe/RolesTable/RolesTable';
+import AddUserModal from '@/components/features/equipe/AddUserModal/AddUserModal';
+import DeleteUserModal from '@/components/features/equipe/DeleteUserModal/DeleteUserModal';
+import AccessStatusModal from '@/components/features/equipe/AccessStatusModal/AccessStatusModal';
 import EditUserModal from '@/components/ui/editUserModal/editUserModal';
 import RolePermissionsModal from '@/components/ui/rolePermissionsModal/rolePermissionsModal';
 import NewRoleModal from '@/components/ui/newRoleModal/newRoleModal';

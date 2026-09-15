@@ -1,5 +1,5 @@
 import { Shield, Plus, Trash2 } from 'lucide-react';
-import styles from './rolesTable.module.css';
+import styles from './RolesTable.module.css';
 
 const roleStyles = {
   admin: { card: styles.cardAdmin, badge: styles.badgeBlue },

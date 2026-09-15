@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { createEmptyPermission } from '@/constants/permissions';
-import TeamTable from './teamTable';
+import TeamTable from './TeamTable';
 import styles from './teamTable.module.css';
 
 const withAllowedPermissions = (...permissionNames) => ({

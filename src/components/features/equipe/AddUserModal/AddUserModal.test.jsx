@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import AddUserModal from './addUserModal';
+import AddUserModal from './AddUserModal';
 
 const roles = [
   { cargo_id: 1, nome_cargo: 'Administrador' },

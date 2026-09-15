@@ -1,0 +1,149 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { firstLogin as mockFirstLogin } from '@/services/auth';
+import FirstLoginPage from './page';
+
+vi.mock('@/services/auth', () => ({
+  firstLogin: vi.fn(),
+}));
+
+describe('FirstLoginPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renderiza o título e subtítulo do primeiro acesso', () => {
+    render(<FirstLoginPage />);
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Primeiro acesso',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Complete seus dados para finalizar seu cadastro e acessar a plataforma'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('renderiza todos os campos e ações do formulário', () => {
+    render(<FirstLoginPage />);
+
+    expect(screen.getByLabelText('Nome completo')).toBeInTheDocument();
+    expect(screen.getByLabelText('Senha')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirmar senha')).toBeInTheDocument();
+    expect(screen.getByLabelText('UF da OAB')).toBeInTheDocument();
+    expect(screen.getByLabelText('Número da OAB')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Concluir cadastro' })
+    ).toBeInTheDocument();
+  });
+
+  it('exibe erro quando as senhas não coincidem', async () => {
+    render(<FirstLoginPage />);
+
+    fireEvent.change(screen.getByLabelText('Nome completo'), {
+      target: { value: 'Maria Souza Lima' },
+    });
+    fireEvent.change(screen.getByLabelText('Senha'), {
+      target: { value: 'senha-123' },
+    });
+    fireEvent.change(screen.getByLabelText('Confirmar senha'), {
+      target: { value: 'senha-456' },
+    });
+    fireEvent.change(screen.getByLabelText('UF da OAB'), {
+      target: { value: 'DF' },
+    });
+    fireEvent.change(screen.getByLabelText('Número da OAB'), {
+      target: { value: '123456' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Concluir cadastro' }));
+
+    expect(
+      await screen.findByText('As senhas não conferem.')
+    ).toBeInTheDocument();
+    expect(mockFirstLogin).not.toHaveBeenCalled();
+  });
+
+  it('realiza o primeiro acesso com os dados preenchidos', async () => {
+    let resolveFirstLogin;
+    mockFirstLogin.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirstLogin = resolve;
+        })
+    );
+
+    render(<FirstLoginPage />);
+
+    fireEvent.change(screen.getByLabelText('Nome completo'), {
+      target: { value: 'Maria Souza Lima' },
+    });
+    fireEvent.change(screen.getByLabelText('Senha'), {
+      target: { value: 'senha-segura' },
+    });
+    fireEvent.change(screen.getByLabelText('Confirmar senha'), {
+      target: { value: 'senha-segura' },
+    });
+    fireEvent.change(screen.getByLabelText('UF da OAB'), {
+      target: { value: 'DF' },
+    });
+    fireEvent.change(screen.getByLabelText('Número da OAB'), {
+      target: { value: '123456' },
+    });
+    const submitButton = screen.getByRole('button', {
+      name: 'Concluir cadastro',
+    });
+    fireEvent.click(submitButton);
+
+    expect(submitButton).toBeDisabled();
+    expect(screen.getByText('Salvando')).toBeInTheDocument();
+    expect(
+      screen.getByRole('status', { name: 'Carregando' })
+    ).toBeInTheDocument();
+
+    resolveFirstLogin({ success: true });
+
+    await waitFor(() => {
+      expect(mockFirstLogin).toHaveBeenCalledWith({
+        nome: 'Maria Souza Lima',
+        senha: 'senha-segura',
+        uf: 'DF',
+        numeroOab: '123456',
+      });
+    });
+    expect(submitButton).not.toBeDisabled();
+  });
+
+  it('exibe mensagem de erro quando o primeiro acesso falha', async () => {
+    mockFirstLogin.mockRejectedValueOnce(
+      new Error('Erro ao finalizar cadastro')
+    );
+
+    render(<FirstLoginPage />);
+    fireEvent.change(screen.getByLabelText('Nome completo'), {
+      target: { value: 'Maria Souza Lima' },
+    });
+    fireEvent.change(screen.getByLabelText('Senha'), {
+      target: { value: 'senha-segura' },
+    });
+    fireEvent.change(screen.getByLabelText('Confirmar senha'), {
+      target: { value: 'senha-segura' },
+    });
+    fireEvent.change(screen.getByLabelText('UF da OAB'), {
+      target: { value: 'DF' },
+    });
+    fireEvent.change(screen.getByLabelText('Número da OAB'), {
+      target: { value: '123456' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Concluir cadastro' }));
+
+    expect(
+      await screen.findByText('Erro ao finalizar cadastro')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Concluir cadastro' })
+    ).not.toBeDisabled();
+  });
+});

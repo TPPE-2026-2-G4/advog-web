@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { createEmptyPermission } from '@/constants/permissions';
-import RolesTable from './rolesTable';
-import styles from './rolesTable.module.css';
+import RolesTable from './RolesTable';
+import styles from './RolesTable.module.css';
 
 const withAllowedPermissions = (...permissionNames) => ({
   ...createEmptyPermission(),

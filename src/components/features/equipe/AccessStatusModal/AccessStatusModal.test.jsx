@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import AccessStatusModal from './accessStatusModal';
+import AccessStatusModal from './AccessStatusModal';
 
 const createMember = (status) => ({
   funcionario_id: 8,
