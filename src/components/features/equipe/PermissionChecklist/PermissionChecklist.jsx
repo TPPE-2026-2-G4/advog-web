@@ -2,7 +2,7 @@ import {
   createEmptyPermission,
   getPermissionLabel,
 } from '@/constants/permissions';
-import styles from './permissionChecklist.module.css';
+import styles from './PermissionChecklist.module.css';
 
 export default function PermissionChecklist({
   permission = createEmptyPermission(),

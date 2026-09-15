@@ -97,7 +97,7 @@ export async function mudarCargoFuncionario(funcionarioId, cargoId) {
   if (!token) throw new Error('Sessão expirada. Faça login novamente.');
 
   const response = await fetch(
-    `${apiUrl}/funcionarios/${funcionarioId}/mudar-cargo`,
+    `${API_URL}/funcionarios/${funcionarioId}/mudar-cargo`,
     {
       method: 'PATCH',
       headers: {

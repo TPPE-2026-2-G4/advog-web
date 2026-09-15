@@ -4,7 +4,7 @@ import {
   createEmptyPermission,
   PERMISSION_LABELS,
 } from '@/constants/permissions';
-import NewRoleModal from './newRoleModal';
+import NewRoleModal from './NewRoleModal';
 
 const permissionEntries = Object.entries(PERMISSION_LABELS);
 const roles = [

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import DeleteRoleModal from './deleteRoleModal';
+import DeleteRoleModal from './DeleteRoleModal';
 
 const role = {
   cargo_id: 4,

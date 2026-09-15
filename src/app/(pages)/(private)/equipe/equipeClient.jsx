@@ -2,16 +2,16 @@
 
 import { Plus, Users, UserCheck, Clock } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
-import StatCard from '@/components/ui/statCard/statCard';
+import StatCard from '@/components/ui/StatCard/StatCard';
 import TeamTable from '@/components/features/equipe/TeamTable/TeamTable';
 import RoleTables from '@/components/features/equipe/RolesTable/RolesTable';
 import AddUserModal from '@/components/features/equipe/AddUserModal/AddUserModal';
 import DeleteUserModal from '@/components/features/equipe/DeleteUserModal/DeleteUserModal';
 import AccessStatusModal from '@/components/features/equipe/AccessStatusModal/AccessStatusModal';
-import EditUserModal from '@/components/ui/editUserModal/editUserModal';
-import RolePermissionsModal from '@/components/ui/rolePermissionsModal/rolePermissionsModal';
-import NewRoleModal from '@/components/ui/newRoleModal/newRoleModal';
-import DeleteRoleModal from '@/components/ui/deleteRoleModal/deleteRoleModal';
+import EditUserModal from '@/components/features/equipe/EditUserModal/EditUserModal';
+import RolePermissionsModal from '@/components/features/equipe/RolePermissionsModal/RolePermissionsModal';
+import NewRoleModal from '@/components/features/equipe/NewRoleModal/NewRoleModal';
+import DeleteRoleModal from '@/components/features/equipe/DeleteRoleModal/DeleteRoleModal';
 import { useEquipe } from '@/hooks/useEquipe';
 import { getCurrentUser } from '@/utils/authSession';
 import styles from './equipe.module.css';

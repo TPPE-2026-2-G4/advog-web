@@ -118,7 +118,7 @@ vi.mock(
   })
 );
 
-vi.mock('@/components/ui/editUserModal/editUserModal', () => ({
+vi.mock('@/components/features/equipe/EditUserModal/EditUserModal', () => ({
   default: ({ member, isOpen, onClose, onSave }) => (
     <div data-testid="edit-user-modal">
       <span>{String(isOpen)}</span>
@@ -140,33 +140,36 @@ vi.mock('@/components/ui/editUserModal/editUserModal', () => ({
   ),
 }));
 
-vi.mock('@/components/ui/rolePermissionsModal/rolePermissionsModal', () => ({
-  default: ({ role, isOpen, onClose, onSave }) => (
-    <div data-testid="permissions-modal">
-      <span>{String(isOpen)}</span>
-      <span>{role?.nome_cargo || 'sem cargo'}</span>
-      <button type="button" onClick={onClose}>
-        Fechar permissões
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          onSave({
-            cargo_id: role.cargo_id,
-            permissao: {
-              ...createEmptyPermission(),
-              visualizar_equipe: true,
-            },
-          })
-        }
-      >
-        Salvar permissões
-      </button>
-    </div>
-  ),
-}));
+vi.mock(
+  '@/components/features/equipe/RolePermissionsModal/RolePermissionsModal',
+  () => ({
+    default: ({ role, isOpen, onClose, onSave }) => (
+      <div data-testid="permissions-modal">
+        <span>{String(isOpen)}</span>
+        <span>{role?.nome_cargo || 'sem cargo'}</span>
+        <button type="button" onClick={onClose}>
+          Fechar permissões
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            onSave({
+              cargo_id: role.cargo_id,
+              permissao: {
+                ...createEmptyPermission(),
+                visualizar_equipe: true,
+              },
+            })
+          }
+        >
+          Salvar permissões
+        </button>
+      </div>
+    ),
+  })
+);
 
-vi.mock('@/components/ui/newRoleModal/newRoleModal', () => ({
+vi.mock('@/components/features/equipe/NewRoleModal/NewRoleModal', () => ({
   default: ({ isOpen, onClose, onCreate }) => (
     <div data-testid="new-role-modal">
       <span>{String(isOpen)}</span>
@@ -189,7 +192,7 @@ vi.mock('@/components/ui/newRoleModal/newRoleModal', () => ({
   ),
 }));
 
-vi.mock('@/components/ui/deleteRoleModal/deleteRoleModal', () => ({
+vi.mock('@/components/features/equipe/DeleteRoleModal/DeleteRoleModal', () => ({
   default: ({ role, isOpen, isDeleting, error, onClose, onConfirm }) => (
     <div data-testid="delete-role-modal">
       <span>{String(isOpen)}</span>

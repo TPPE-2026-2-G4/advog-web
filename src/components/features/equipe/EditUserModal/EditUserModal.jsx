@@ -2,8 +2,8 @@
 
 import { X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
-import LoadingDots from '@/components/ui/loadingDots/loadingDots';
-import styles from './editUserModal.module.css';
+import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
+import styles from './EditUserModal.module.css';
 
 const emptyForm = {
   cargo: '',

@@ -4,7 +4,7 @@ import {
   createEmptyPermission,
   PERMISSION_LABELS,
 } from '@/constants/permissions';
-import PermissionChecklist from './permissionChecklist';
+import PermissionChecklist from './PermissionChecklist';
 
 const permissionEntries = Object.entries(PERMISSION_LABELS);
 

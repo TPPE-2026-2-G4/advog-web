@@ -154,15 +154,9 @@ export default function TeamTable({
                           type="button"
                         >
                           {member.status === 'Ativo' ? (
-                            <>
-                              <CircleSlash size={17} aria-hidden="true" />
-                              <span>Revogar acesso</span>
-                            </>
+                            <CircleSlash size={17} aria-hidden="true" />
                           ) : (
-                            <>
-                              <CircleCheck size={17} aria-hidden="true" />
-                              <span>Permitir acesso</span>
-                            </>
+                            <CircleCheck size={17} aria-hidden="true" />
                           )}
                         </button>
                       )}

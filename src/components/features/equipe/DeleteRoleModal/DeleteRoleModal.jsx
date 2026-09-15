@@ -2,8 +2,8 @@
 
 import { AlertTriangle, X } from 'lucide-react';
 import { useEffect, useId } from 'react';
-import LoadingDots from '@/components/ui/loadingDots/loadingDots';
-import styles from './deleteRoleModal.module.css';
+import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
+import styles from './DeleteRoleModal.module.css';
 
 export default function DeleteRoleModal({
   role,

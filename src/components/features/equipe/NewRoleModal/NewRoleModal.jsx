@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import LoadingDots from '@/components/ui/loadingDots/loadingDots';
-import PermissionChecklist from '@/components/ui/permissionChecklist/permissionChecklist';
+import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
+import PermissionChecklist from '@/components/features/equipe/PermissionChecklist/PermissionChecklist';
 import { createEmptyPermission } from '@/constants/permissions';
-import styles from './newRoleModal.module.css';
+import styles from './NewRoleModal.module.css';
 
 const normalizeRoleName = (roleName) =>
   roleName.trim().toLocaleLowerCase('pt-BR');
