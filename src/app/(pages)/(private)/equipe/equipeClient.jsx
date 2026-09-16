@@ -1,18 +1,33 @@
 'use client';
 
 import { Plus, Users, UserCheck, Clock } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
 import StatCard from '@/components/ui/StatCard/StatCard';
 import TeamTable from '@/components/features/equipe/TeamTable/TeamTable';
 import RoleTables from '@/components/features/equipe/RolesTable/RolesTable';
 import AddUserModal from '@/components/features/equipe/AddUserModal/AddUserModal';
 import DeleteUserModal from '@/components/features/equipe/DeleteUserModal/DeleteUserModal';
 import AccessStatusModal from '@/components/features/equipe/AccessStatusModal/AccessStatusModal';
+import EditUserModal from '@/components/features/equipe/EditUserModal/EditUserModal';
+import RolePermissionsModal from '@/components/features/equipe/RolePermissionsModal/RolePermissionsModal';
+import NewRoleModal from '@/components/features/equipe/NewRoleModal/NewRoleModal';
+import DeleteRoleModal from '@/components/features/equipe/DeleteRoleModal/DeleteRoleModal';
 import { useEquipe } from '@/hooks/useEquipe';
+import { getCurrentUser } from '@/utils/authSession';
 import styles from './equipe.module.css';
 
-export default function EquipeClient({ initialData }) {
+const emptySubscribe = () => () => {};
+
+export default function EquipeClient({ initialData, initialRoles = [] }) {
+  const canEditUsers = useSyncExternalStore(
+    emptySubscribe,
+    () => getCurrentUser()?.cargo?.permissao?.gerenciar_equipe === true,
+    () => false
+  );
+
   const {
     members,
+    roles,
     isModalOpen,
     selectedMember,
     isDeleting,
@@ -31,7 +46,25 @@ export default function EquipeClient({ initialData }) {
     handleOpenAccessModal,
     handleCloseAccessModal,
     handleChangeAccess,
-  } = useEquipe(initialData);
+    editingMember,
+    isEditingOnlyAdmin,
+    handleOpenEditModal,
+    handleCloseEditModal,
+    handleUpdateUser,
+    permissionsRole,
+    handleOpenPermissionsModal,
+    handleClosePermissionsModal,
+    handleUpdateRolePermissions,
+    isNewRoleModalOpen,
+    setIsNewRoleModalOpen,
+    handleCreateRole,
+    roleToDelete,
+    isDeletingRole,
+    deleteRoleError,
+    handleOpenDeleteRoleModal,
+    handleCloseDeleteRoleModal,
+    handleDeleteRole,
+  } = useEquipe(initialData, initialRoles);
 
   return (
     <div className={styles.container}>
@@ -77,14 +110,23 @@ export default function EquipeClient({ initialData }) {
 
       <TeamTable
         members={members}
+        roles={roles}
         onDelete={handleOpenDeleteModal}
         onChangeAccess={handleOpenAccessModal}
+        onEdit={handleOpenEditModal}
+        canEditUsers={canEditUsers}
       />
 
-      <RoleTables />
+      <RoleTables
+        roles={roles}
+        onCreateRole={() => setIsNewRoleModalOpen(true)}
+        onEditPermissions={handleOpenPermissionsModal}
+        onDeleteRole={handleOpenDeleteRoleModal}
+      />
 
       <AddUserModal
         isOpen={isModalOpen}
+        roles={roles}
         onClose={() => setIsModalOpen(false)}
         onCreated={handleCreateUser}
       />
@@ -105,6 +147,38 @@ export default function EquipeClient({ initialData }) {
         error={accessError}
         onClose={handleCloseAccessModal}
         onConfirm={handleChangeAccess}
+      />
+
+      <EditUserModal
+        member={editingMember}
+        isOpen={canEditUsers && Boolean(editingMember)}
+        roles={roles}
+        isRoleLocked={isEditingOnlyAdmin}
+        onClose={handleCloseEditModal}
+        onSave={handleUpdateUser}
+      />
+
+      <RolePermissionsModal
+        role={permissionsRole}
+        isOpen={Boolean(permissionsRole)}
+        onClose={handleClosePermissionsModal}
+        onSave={handleUpdateRolePermissions}
+      />
+
+      <NewRoleModal
+        isOpen={isNewRoleModalOpen}
+        roles={roles}
+        onClose={() => setIsNewRoleModalOpen(false)}
+        onCreate={handleCreateRole}
+      />
+
+      <DeleteRoleModal
+        role={roleToDelete}
+        isOpen={Boolean(roleToDelete)}
+        isDeleting={isDeletingRole}
+        error={deleteRoleError}
+        onClose={handleCloseDeleteRoleModal}
+        onConfirm={handleDeleteRole}
       />
     </div>
   );

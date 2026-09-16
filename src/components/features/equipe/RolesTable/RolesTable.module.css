@@ -84,6 +84,10 @@
   border: 1px solid #fef08a;
 }
 
+.cardDefault {
+  border: 1px solid #d1d5db;
+}
+
 .cardHeader {
   display: flex;
   align-items: center;
@@ -103,9 +107,17 @@
   margin: 0;
 }
 
-.editLink {
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.editLink,
+.deleteLink {
   font-size: 14px;
-  color: #c1a077;
   font-weight: 500;
   text-decoration: none;
   background: none;
@@ -115,10 +127,23 @@
   text-align: left;
   display: inline-flex;
   align-items: center;
-  margin-top: auto;
+}
+
+.editLink {
+  color: #c1a077;
 }
 
 .editLink:hover {
+  text-decoration: underline;
+}
+
+.deleteLink {
+  gap: 5px;
+  color: #b91c1c;
+}
+
+.deleteLink:hover {
+  color: #991b1b;
   text-decoration: underline;
 }
 
@@ -146,6 +171,12 @@
   background-color: #fefce8;
   color: #a16207;
   border-color: #fef08a;
+}
+
+.badgeDefault {
+  background-color: #f9fafb;
+  color: #4b5563;
+  border-color: #d1d5db;
 }
 
 @media (max-width: 768px) {

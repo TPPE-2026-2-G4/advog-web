@@ -4,6 +4,7 @@ import {
   excluirFuncionario,
   listarFuncionarios,
   mudarAcessoFuncionario,
+  mudarCargoFuncionario,
 } from './funcionarios';
 
 const respostaJson = (dados, configuracao = {}) => ({
@@ -26,6 +27,7 @@ describe('serviço de funcionários', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.stubGlobal('fetch', vi.fn());
+    sessionStorage.clear();
   });
 
   describe('listarFuncionarios', () => {
@@ -64,10 +66,11 @@ describe('serviço de funcionários', () => {
   });
 
   describe('criarFuncionario', () => {
-    it('envia nome e e-mail por POST e retorna o funcionário criado', async () => {
+    it('envia nome, e-mail e cargo por POST e retorna o funcionário criado', async () => {
       const dados = {
         nome: 'Ana Paula Ribeiro',
         email: 'ana.ribeiro@teste.local',
+        cargo_id: 2,
       };
       const funcionario = { funcionario_id: 3, ...dados, status: 'Pendente' };
       fetch.mockResolvedValue(respostaJson(funcionario));
@@ -91,13 +94,44 @@ describe('serviço de funcionários', () => {
         respostaComErroSemJson(),
         'Não foi possível cadastrar o usuário.',
       ],
+      [
+        'validação estruturada do FastAPI',
+        respostaComErro([
+          {
+            type: 'missing',
+            loc: ['body', 'cargo_id'],
+            msg: 'Field required',
+          },
+        ]),
+        'Cargo: campo obrigatório.',
+      ],
+      [
+        'validação estruturada de formato',
+        respostaComErro([
+          {
+            type: 'value_error',
+            loc: ['body', 'email'],
+            msg: 'E-mail inválido',
+          },
+        ]),
+        'E-mail: E-mail inválido',
+      ],
+      [
+        'validação estruturada sem mensagem utilizável',
+        respostaComErro([{}]),
+        'Não foi possível cadastrar o usuário.',
+      ],
     ])(
       'lança o erro com %s quando a criação falha',
       async (_descricao, resposta, mensagemEsperada) => {
         fetch.mockResolvedValue(resposta);
 
         await expect(
-          criarFuncionario({ nome: 'Maria', email: 'maria@teste.local' })
+          criarFuncionario({
+            nome: 'Maria',
+            email: 'maria@teste.local',
+            cargo_id: 2,
+          })
         ).rejects.toThrow(mensagemEsperada);
       }
     );
@@ -173,5 +207,33 @@ describe('serviço de funcionários', () => {
         );
       }
     );
+  });
+
+  describe('mudarCargoFuncionario', () => {
+    it('envia o cargo e o token por PATCH', async () => {
+      const funcionario = { funcionario_id: 8, cargo_id: 2 };
+      sessionStorage.setItem('access_token', 'token-jwt');
+      fetch.mockResolvedValue(respostaJson(funcionario));
+
+      await expect(mudarCargoFuncionario(8, '2')).resolves.toEqual(funcionario);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/funcionarios/8/mudar-cargo',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer token-jwt',
+          },
+          body: JSON.stringify({ cargo_id: 2 }),
+        }
+      );
+    });
+
+    it('não faz a requisição sem token', async () => {
+      await expect(mudarCargoFuncionario(8, 2)).rejects.toThrow(
+        'Sessão expirada. Faça login novamente.'
+      );
+      expect(fetch).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,4 +1,37 @@
+import { getAccessToken } from '@/utils/authSession';
 import { API_URL } from './api';
+
+const validationFieldLabels = {
+  nome: 'Nome',
+  email: 'E-mail',
+  cargo_id: 'Cargo',
+};
+
+const getErrorMessage = async (response, fallbackMessage) => {
+  const error = await response.json().catch(() => null);
+
+  if (typeof error?.detail === 'string') return error.detail;
+
+  if (Array.isArray(error?.detail)) {
+    const messages = error.detail
+      .map((validationError) => {
+        const field = validationError.loc?.at(-1);
+        const label = validationFieldLabels[field] || field;
+
+        if (!label || !validationError.msg) return null;
+        if (validationError.type === 'missing') {
+          return `${label}: campo obrigatório.`;
+        }
+
+        return `${label}: ${validationError.msg}`;
+      })
+      .filter(Boolean);
+
+    if (messages.length > 0) return messages.join(' ');
+  }
+
+  return fallbackMessage;
+};
 
 export async function listarFuncionarios() {
   try {
@@ -24,8 +57,9 @@ export async function criarFuncionario(dados) {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => null);
-    throw new Error(error?.detail || 'Não foi possível cadastrar o usuário.');
+    throw new Error(
+      await getErrorMessage(response, 'Não foi possível cadastrar o usuário.')
+    );
   }
 
   return response.json();
@@ -53,6 +87,31 @@ export async function mudarAcessoFuncionario(funcionarioId) {
   if (!response.ok) {
     const error = await response.json().catch(() => null);
     throw new Error(error?.detail || 'Não foi possível atualizar o acesso.');
+  }
+
+  return response.json();
+}
+
+export async function mudarCargoFuncionario(funcionarioId, cargoId) {
+  const token = getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+  const response = await fetch(
+    `${API_URL}/funcionarios/${funcionarioId}/mudar-cargo`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ cargo_id: Number(cargoId) }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, 'Não foi possível alterar o cargo.')
+    );
   }
 
   return response.json();
