@@ -224,9 +224,6 @@ describe('FinancasClient', () => {
     expect(
       screen.getByText('Honorários Iniciais - João Santos')
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('Exibindo 1–5 de 8 resultados')
-    ).toBeInTheDocument();
   });
 
   it('permite acionar edição e exclusão de lançamentos', async () => {

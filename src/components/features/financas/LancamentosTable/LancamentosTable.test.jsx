@@ -103,10 +103,7 @@ describe('LancamentosTable', () => {
     expect(
       screen.getByText('Nenhum lançamento encontrado.')
     ).toBeInTheDocument();
-
   });
-
-
 
   it('renderiza tipos, formatação monetária e status corretamente', () => {
     render(
@@ -131,8 +128,6 @@ describe('LancamentosTable', () => {
     expect(screen.getAllByText('Pago').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Pendente').length).toBeGreaterThanOrEqual(1);
   });
-
-
 
   it('chama onEdit e onDelete ao clicar nos botões de ação', () => {
     const handleEdit = vi.fn();

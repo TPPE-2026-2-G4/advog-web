@@ -23,7 +23,6 @@ export default function LancamentosTable({
   onDelete,
   onToggleStatus,
 }) {
-
   return (
     <div className={styles.tableContainer}>
       <div className={styles.header}>
@@ -172,7 +171,6 @@ export default function LancamentosTable({
           </tbody>
         </table>
       </div>
-
     </div>
   );
 }
