@@ -25,93 +25,6 @@
   margin: 0;
 }
 
-.filtersArea {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.filterGroup {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.filterLabel {
-  font-size: 13px;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.dateInputWrap {
-  display: inline-flex;
-  align-items: center;
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 9999px;
-  padding: 4px 12px;
-  gap: 8px;
-  transition: border-color 0.2s;
-}
-
-.dateInputWrap:focus-within {
-  border-color: #c1a077;
-}
-
-.dateInput {
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  color: #374151;
-  outline: none;
-  font-family: inherit;
-}
-
-.calendarIcon {
-  color: #9ca3af;
-  pointer-events: none;
-}
-
-.selectWrap {
-  display: inline-flex;
-  align-items: center;
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 9999px;
-  padding: 4px 12px;
-  position: relative;
-}
-
-.select {
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  color: #374151;
-  outline: none;
-  font-family: inherit;
-  cursor: pointer;
-  padding-right: 4px;
-}
-
-.clearButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: transparent;
-  border: none;
-  color: #6b7280;
-  font-size: 13px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: color 0.2s;
-}
-
-.clearButton:hover {
-  color: #172133;
-}
-
 .tableScroll {
   overflow-x: auto;
 }
@@ -340,25 +253,6 @@
     flex-direction: column;
     align-items: stretch;
     padding: 16px;
-  }
-
-  .filtersArea {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filterGroup {
-    justify-content: space-between;
-  }
-
-  .dateInputWrap,
-  .selectWrap {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .clearButton {
-    align-self: flex-start;
   }
 
   .tableScroll {

@@ -1,17 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   AlertCircle,
   ArrowDownRight,
   ArrowUpRight,
-  Calendar,
   Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Pencil,
-  RotateCcw,
   Trash2,
   X,
 } from 'lucide-react';
@@ -29,74 +27,13 @@ export default function LancamentosTable({
   onToggleStatus,
   pageSize = 5,
 }) {
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [filterCategoria, setFilterCategoria] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const categoriasUnicas = useMemo(() => {
-    const categorias = new Set(
-      lancamentos.map((l) => l.categoria).filter(Boolean)
-    );
-    return Array.from(categorias).sort();
-  }, [lancamentos]);
-
-  const handleClearFilters = () => {
-    setDateFrom('');
-    setDateTo('');
-    setFilterCategoria('');
-    setFilterStatus('');
-    setCurrentPage(1);
-  };
-
-  const filteredLancamentos = useMemo(() => {
-    return lancamentos.filter((item) => {
-      const itemDateStr = item.dataIso || item.data;
-      if (dateFrom && itemDateStr) {
-        const itemDate = new Date(itemDateStr).getTime();
-        const fromDate = new Date(dateFrom).getTime();
-        if (!isNaN(itemDate) && !isNaN(fromDate) && itemDate < fromDate) {
-          return false;
-        }
-      }
-      if (dateTo && itemDateStr) {
-        const itemDate = new Date(itemDateStr).getTime();
-        const toDate = new Date(dateTo).getTime();
-        if (!isNaN(itemDate) && !isNaN(toDate) && itemDate > toDate) {
-          return false;
-        }
-      }
-
-      // Filtro por categoria
-      if (filterCategoria && filterCategoria !== '') {
-        if (item.categoria !== filterCategoria) {
-          return false;
-        }
-      }
-
-      // Filtro por status
-      if (filterStatus && filterStatus !== '') {
-        const lowerFilter = filterStatus.toLowerCase();
-        const itemLabel = formatStatusLabel(
-          item.status,
-          item.tipo
-        ).toLowerCase();
-
-        if (itemLabel !== lowerFilter) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [lancamentos, dateFrom, dateTo, filterCategoria, filterStatus]);
-
-  const totalResults = filteredLancamentos.length;
+  const totalResults = lancamentos.length;
   const totalPages = Math.ceil(totalResults / pageSize) || 1;
 
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedLancamentos = filteredLancamentos.slice(
+  const paginatedLancamentos = lancamentos.slice(
     startIndex,
     startIndex + pageSize
   );
@@ -116,95 +53,6 @@ export default function LancamentosTable({
     <div className={styles.tableContainer}>
       <div className={styles.header}>
         <h2 className={styles.headerTitle}>Lançamentos Recentes</h2>
-
-        <div className={styles.filtersArea}>
-          <div className={styles.filterGroup}>
-            <label htmlFor="filter-de" className={styles.filterLabel}>
-              De:
-            </label>
-            <div className={styles.dateInputWrap}>
-              <input
-                id="filter-de"
-                type="date"
-                className={styles.dateInput}
-                value={dateFrom}
-                onChange={(e) => {
-                  setDateFrom(e.target.value);
-                  setCurrentPage(1);
-                }}
-                aria-label="Data inicial"
-              />
-              <Calendar size={15} className={styles.calendarIcon} />
-            </div>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <label htmlFor="filter-ate" className={styles.filterLabel}>
-              Até:
-            </label>
-            <div className={styles.dateInputWrap}>
-              <input
-                id="filter-ate"
-                type="date"
-                className={styles.dateInput}
-                value={dateTo}
-                onChange={(e) => {
-                  setDateTo(e.target.value);
-                  setCurrentPage(1);
-                }}
-                aria-label="Data final"
-              />
-              <Calendar size={15} className={styles.calendarIcon} />
-            </div>
-          </div>
-
-          <div className={styles.selectWrap}>
-            <select
-              className={styles.select}
-              value={filterCategoria}
-              onChange={(e) => {
-                setFilterCategoria(e.target.value);
-                setCurrentPage(1);
-              }}
-              aria-label="Filtrar por categoria"
-            >
-              <option value="">Todas as categorias</option>
-              {categoriasUnicas.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.selectWrap}>
-            <select
-              className={styles.select}
-              value={filterStatus}
-              onChange={(e) => {
-                setFilterStatus(e.target.value);
-                setCurrentPage(1);
-              }}
-              aria-label="Filtrar por status"
-            >
-              <option value="">Todos os status</option>
-              <option value="atrasado">Atrasado</option>
-              <option value="pendente">Pendente</option>
-              <option value="pago">Pago</option>
-              <option value="recebido">Recebido</option>
-            </select>
-          </div>
-
-          <button
-            type="button"
-            className={styles.clearButton}
-            onClick={handleClearFilters}
-            aria-label="Limpar filtros"
-          >
-            <RotateCcw size={14} />
-            Limpar
-          </button>
-        </div>
       </div>
 
       <div className={styles.tableScroll}>

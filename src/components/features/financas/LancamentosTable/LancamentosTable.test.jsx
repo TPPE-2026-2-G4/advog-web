@@ -91,23 +91,6 @@ const mockLancamentos = [
     valor: 180,
     status: 'pendente',
   },
-  {
-    id: 9,
-    data: '30/08/2026',
-    titulo: 'Sem data ISO',
-    categoria: 'Outros',
-    tipo: 'saida',
-    valor: 100,
-    status: 'pago',
-  },
-  {
-    id: 10,
-    titulo: 'Sem data alguma',
-    categoria: 'Outros',
-    tipo: 'saida',
-    valor: 50,
-    status: 'pago',
-  },
 ];
 
 describe('LancamentosTable', () => {
@@ -151,7 +134,7 @@ describe('LancamentosTable', () => {
 
     // Contagem e paginação
     expect(
-      screen.getByText('Exibindo 1–5 de 10 resultados')
+      screen.getByText('Exibindo 1–5 de 8 resultados')
     ).toBeInTheDocument();
     expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
   });
@@ -176,8 +159,8 @@ describe('LancamentosTable', () => {
 
     // Status: entrada exibe Recebido, saída exibe Pago
     expect(screen.getAllByText('Recebido').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Pago').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText('Pendente').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Pago').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Pendente').length).toBeGreaterThanOrEqual(1);
   });
 
   it('avança para a próxima página e volta', () => {
@@ -193,7 +176,7 @@ describe('LancamentosTable', () => {
 
     expect(screen.getByText('Página 2 de 2')).toBeInTheDocument();
     expect(
-      screen.getByText('Exibindo 6–10 de 10 resultados')
+      screen.getByText('Exibindo 6–8 de 8 resultados')
     ).toBeInTheDocument();
     expect(
       screen.getByText('Software Jurídico Mensalidade')
@@ -203,84 +186,6 @@ describe('LancamentosTable', () => {
 
     fireEvent.click(prevBtn);
     expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
-  });
-
-  it('filtra por categoria e status via dropdown', () => {
-    render(<LancamentosTable lancamentos={mockLancamentos} pageSize={10} />);
-
-    const selectCategoria = screen.getByLabelText('Filtrar por categoria');
-    const selectStatus = screen.getByLabelText('Filtrar por status');
-
-    // Filtrar por categoria Honorários
-    fireEvent.change(selectCategoria, { target: { value: 'Honorários' } });
-
-    // There are 4 honorarios
-    expect(screen.getAllByText('Honorários').length).toBeGreaterThan(0);
-    expect(
-      screen.queryByText('Aluguel do Escritório - Agosto/2026')
-    ).not.toBeInTheDocument();
-
-    fireEvent.change(selectCategoria, { target: { value: '' } }); // reset
-
-    // Filtrar apenas pendentes
-    fireEvent.change(selectStatus, { target: { value: 'pendente' } });
-    expect(
-      screen.getByText('Consultoria Jurídica - Tech Solutions')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Material de Escritório')).toBeInTheDocument();
-    expect(
-      screen.queryByText('Honorários Iniciais - João Santos')
-    ).not.toBeInTheDocument();
-  });
-
-  it('filtra por intervalo de datas', () => {
-    render(<LancamentosTable lancamentos={mockLancamentos} pageSize={10} />);
-
-    const inputDe = screen.getByLabelText('Data inicial');
-    const inputAte = screen.getByLabelText('Data final');
-
-    fireEvent.change(inputDe, { target: { value: '2026-08-10' } });
-    fireEvent.change(inputAte, { target: { value: '2026-08-20' } });
-
-    expect(
-      screen.queryByText('Honorários Iniciais - João Santos')
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText('Honorários de Êxito - Costa Indústrias')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Aluguel do Escritório - Agosto/2026')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Consultoria Jurídica - Tech Solutions')
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText('Software Jurídico Mensalidade')
-    ).not.toBeInTheDocument();
-  });
-
-  it('limpa os filtros aplicados ao clicar no botão Limpar', () => {
-    render(<LancamentosTable lancamentos={mockLancamentos} pageSize={10} />);
-
-    const selectCategoria = screen.getByLabelText('Filtrar por categoria');
-    const selectStatus = screen.getByLabelText('Filtrar por status');
-    const inputDe = screen.getByLabelText('Data inicial');
-    const clearBtn = screen.getByRole('button', { name: /Limpar/i });
-
-    fireEvent.change(selectStatus, { target: { value: 'pendente' } });
-    fireEvent.change(inputDe, { target: { value: '2026-08-15' } });
-    expect(
-      screen.getByText('Exibindo 1–2 de 2 resultados')
-    ).toBeInTheDocument();
-
-    fireEvent.click(clearBtn);
-
-    expect(inputDe.value).toBe('');
-    expect(selectCategoria.value).toBe('');
-    expect(selectStatus.value).toBe('');
-    expect(
-      screen.getByText('Exibindo 1–10 de 10 resultados')
-    ).toBeInTheDocument();
   });
 
   it('chama onEdit e onDelete ao clicar nos botões de ação', () => {
@@ -366,7 +271,7 @@ describe('LancamentosTable', () => {
     expect(handleToggleStatus).toHaveBeenCalledWith(atrasadoSaida);
   });
 
-  it('renderiza o badge de atrasado e filtra por atrasado', () => {
+  it('renderiza o badge de atrasado corretamente', () => {
     const atrasadoItem = {
       id: 99,
       data: '01/01/2026',
@@ -378,21 +283,9 @@ describe('LancamentosTable', () => {
       status: 'atrasado',
     };
 
-    render(
-      <LancamentosTable
-        lancamentos={[...mockLancamentos, atrasadoItem]}
-        pageSize={15}
-      />
-    );
+    render(<LancamentosTable lancamentos={[atrasadoItem]} pageSize={15} />);
 
-    expect(screen.getAllByText('Atrasado').length).toBeGreaterThanOrEqual(2);
-
-    const selectStatus = screen.getByLabelText('Filtrar por status');
-    fireEvent.change(selectStatus, { target: { value: 'atrasado' } });
-
+    expect(screen.getAllByText('Atrasado').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Boleto Vencido')).toBeInTheDocument();
-    expect(
-      screen.queryByText('Honorários Iniciais - João Santos')
-    ).not.toBeInTheDocument();
   });
 });
