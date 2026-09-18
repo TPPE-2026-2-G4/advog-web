@@ -103,41 +103,10 @@ describe('LancamentosTable', () => {
     expect(
       screen.getByText('Nenhum lançamento encontrado.')
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('Exibindo 0–0 de 0 resultados')
-    ).toBeInTheDocument();
+
   });
 
-  it('renderiza os primeiros 5 lançamentos por padrão (pagina 1)', () => {
-    render(<LancamentosTable lancamentos={mockLancamentos} pageSize={5} />);
 
-    expect(
-      screen.getByText('Honorários Iniciais - João Santos')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Custas Processuais - Maria Souza')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Honorários de Êxito - Costa Indústrias')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Aluguel do Escritório - Agosto/2026')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Consultoria Jurídica - Tech Solutions')
-    ).toBeInTheDocument();
-
-    // Itens da página 2 não devem estar visíveis
-    expect(
-      screen.queryByText('Software Jurídico Mensalidade')
-    ).not.toBeInTheDocument();
-
-    // Contagem e paginação
-    expect(
-      screen.getByText('Exibindo 1–5 de 8 resultados')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
-  });
 
   it('renderiza tipos, formatação monetária e status corretamente', () => {
     render(
@@ -163,30 +132,7 @@ describe('LancamentosTable', () => {
     expect(screen.getAllByText('Pendente').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('avança para a próxima página e volta', () => {
-    render(<LancamentosTable lancamentos={mockLancamentos} pageSize={5} />);
 
-    const prevBtn = screen.getByRole('button', { name: 'Página anterior' });
-    const nextBtn = screen.getByRole('button', { name: 'Próxima página' });
-
-    expect(prevBtn).toBeDisabled();
-    expect(nextBtn).not.toBeDisabled();
-
-    fireEvent.click(nextBtn);
-
-    expect(screen.getByText('Página 2 de 2')).toBeInTheDocument();
-    expect(
-      screen.getByText('Exibindo 6–8 de 8 resultados')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Software Jurídico Mensalidade')
-    ).toBeInTheDocument();
-    expect(nextBtn).toBeDisabled();
-    expect(prevBtn).not.toBeDisabled();
-
-    fireEvent.click(prevBtn);
-    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
-  });
 
   it('chama onEdit e onDelete ao clicar nos botões de ação', () => {
     const handleEdit = vi.fn();

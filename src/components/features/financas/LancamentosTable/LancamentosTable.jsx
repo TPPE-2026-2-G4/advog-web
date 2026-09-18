@@ -1,14 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import {
   AlertCircle,
   ArrowDownRight,
   ArrowUpRight,
   Check,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   Pencil,
   Trash2,
   X,
@@ -25,29 +22,7 @@ export default function LancamentosTable({
   onEdit,
   onDelete,
   onToggleStatus,
-  pageSize = 5,
 }) {
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const totalResults = lancamentos.length;
-  const totalPages = Math.ceil(totalResults / pageSize) || 1;
-
-  const startIndex = (currentPage - 1) * pageSize;
-  const paginatedLancamentos = lancamentos.slice(
-    startIndex,
-    startIndex + pageSize
-  );
-
-  const startRecord = totalResults === 0 ? 0 : startIndex + 1;
-  const endRecord = Math.min(startIndex + pageSize, totalResults);
-
-  const handlePrevPage = () => {
-    setCurrentPage((prev) => Math.max(1, prev - 1));
-  };
-
-  const handleNextPage = () => {
-    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
-  };
 
   return (
     <div className={styles.tableContainer}>
@@ -69,14 +44,14 @@ export default function LancamentosTable({
             </tr>
           </thead>
           <tbody>
-            {paginatedLancamentos.length === 0 ? (
+            {lancamentos.length === 0 ? (
               <tr>
                 <td colSpan={7} className={styles.emptyState}>
                   Nenhum lançamento encontrado.
                 </td>
               </tr>
             ) : (
-              paginatedLancamentos.map((item) => {
+              lancamentos.map((item) => {
                 const isEntrada = item.tipo?.toLowerCase() === 'entrada';
                 const statusLower = item.status?.toLowerCase();
                 const isPago = isStatusConcluido(item.status);
@@ -198,37 +173,6 @@ export default function LancamentosTable({
         </table>
       </div>
 
-      <div className={styles.footer}>
-        <p className={styles.resultsCount}>
-          Exibindo {startRecord}–{endRecord} de {totalResults} resultados
-        </p>
-
-        <div className={styles.pagination}>
-          <button
-            type="button"
-            className={styles.paginationBtn}
-            onClick={handlePrevPage}
-            disabled={currentPage <= 1}
-            aria-label="Página anterior"
-          >
-            <ChevronLeft size={16} />
-          </button>
-
-          <span className={styles.paginationText}>
-            Página {currentPage} de {totalPages}
-          </span>
-
-          <button
-            type="button"
-            className={styles.paginationBtn}
-            onClick={handleNextPage}
-            disabled={currentPage >= totalPages}
-            aria-label="Próxima página"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
