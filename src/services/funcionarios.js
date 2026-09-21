@@ -116,3 +116,34 @@ export async function mudarCargoFuncionario(funcionarioId, cargoId) {
 
   return response.json();
 }
+
+export async function mudarExibicaoInstitucional(
+  funcionarioId,
+  exibicaoInstitucional
+) {
+  const token = getAccessToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+
+  const response = await fetch(
+    `${API_URL}/funcionarios/${funcionarioId}/exibicao-institucional`,
+    {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ exibicaoInstitucional }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        'Não foi possível alterar a visibilidade do advogado.'
+      )
+    );
+  }
+
+  return response.json();
+}
