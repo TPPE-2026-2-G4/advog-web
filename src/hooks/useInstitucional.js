@@ -27,7 +27,7 @@ export function useInstitucional(initialData, options = {}) {
     initialData?.imagemSobre || DEFAULT_INSTITUCIONAL.imagemSobre
   );
   const [team, setTeam] = useState(
-    options.initialTeam && options.initialTeam.length > 0
+    Array.isArray(options.initialTeam)
       ? options.initialTeam
       : DEFAULT_EQUIPE_SITE
   );

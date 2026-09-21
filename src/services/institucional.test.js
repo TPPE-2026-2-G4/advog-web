@@ -117,13 +117,32 @@ describe('serviço institucional', () => {
       });
       expect(res.nomeEscritorio).toBe('Offline Test');
     });
+
+    it('salva sem header de Authorization quando getAccessToken retorna null', async () => {
+      getAccessToken.mockReturnValue(null);
+      const novosDados = { nomeEscritorio: 'Sem Token' };
+      fetch.mockResolvedValue(respostaJson(novosDados));
+
+      const res = await salvarDadosInstitucionais(novosDados);
+      expect(res).toEqual(novosDados);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/institucional',
+        expect.objectContaining({
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+      );
+    });
   });
 
   describe('uploadImagemInstitucional', () => {
     it('retorna URL da imagem após upload bem-sucedido de sobre com token', async () => {
       getAccessToken.mockReturnValue('token-456');
       fetch.mockResolvedValue(
-        respostaJson({ url: 'http://localhost:9000/institucional/sobre/foto.jpg' })
+        respostaJson({
+          url: 'http://localhost:9000/institucional/sobre/foto.jpg',
+        })
       );
 
       const fakeFile = new File(['fake content'], 'foto.jpg', {
@@ -137,6 +156,23 @@ describe('serviço institucional', () => {
           headers: {
             Authorization: 'Bearer token-456',
           },
+        })
+      );
+    });
+
+    it('faz upload sem Authorization quando getAccessToken retorna null', async () => {
+      getAccessToken.mockReturnValue(null);
+      fetch.mockResolvedValue(respostaJson({ url: 'http://minio/logo.png' }));
+
+      const fakeFile = new File(['fake content'], 'logo.png', {
+        type: 'image/png',
+      });
+      const url = await uploadImagemInstitucional(fakeFile);
+      expect(url).toBe('http://minio/logo.png');
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/institucional/upload/logo',
+        expect.objectContaining({
+          headers: {},
         })
       );
     });

@@ -6,12 +6,7 @@ import { Scale, X, Phone, Mail, MapPin } from 'lucide-react';
 import { getLawyerInitials } from '@/utils/funcionario';
 import styles from './site.module.css';
 
-export default function PreviewModal({
-  isOpen,
-  onClose,
-  formData,
-  team = [],
-}) {
+export default function PreviewModal({ isOpen, onClose, formData, team = [] }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -164,10 +159,11 @@ export default function PreviewModal({
               <div className={styles.previewTeamGrid}>
                 {visibleTeam.map((member) => {
                   const initials = getLawyerInitials(member.nome);
-                  const cargo =
-                    typeof member.cargo === 'object'
-                      ? member.cargo?.nome || member.cargo?.nome_cargo || ''
-                      : member.cargo || '';
+                  const cargo = !member.cargo
+                    ? ''
+                    : typeof member.cargo === 'object'
+                      ? member.cargo.nome || member.cargo.nome_cargo || ''
+                      : String(member.cargo);
                   return (
                     <div
                       key={member.funcionario_id}

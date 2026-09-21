@@ -9,9 +9,6 @@ export default async function SitePage() {
   ]);
 
   return (
-    <SiteClient
-      initialData={dadosInstitucionais}
-      initialTeam={funcionarios}
-    />
+    <SiteClient initialData={dadosInstitucionais} initialTeam={funcionarios} />
   );
 }

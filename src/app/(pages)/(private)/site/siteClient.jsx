@@ -184,10 +184,7 @@ export default function SiteClient({
       )}
 
       {activeTab === 'team' && (
-        <TeamTab
-          team={team}
-          onToggleLawyer={handleToggleLawyerVisibility}
-        />
+        <TeamTab team={team} onToggleLawyer={handleToggleLawyerVisibility} />
       )}
 
       {activeTab === 'colors' && (

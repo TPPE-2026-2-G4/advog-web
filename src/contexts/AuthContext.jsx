@@ -16,13 +16,13 @@ export function AuthProvider({ children }) {
 
     setUser(currentUser);
 
-    if (token && typeof window !== 'undefined') {
+    if (token) {
       localStorage.setItem('token', token);
       localStorage.setItem('access_token', token);
       sessionStorage.setItem('access_token', token);
     }
 
-    if (currentUser && typeof window !== 'undefined') {
+    if (currentUser) {
       const serialized = JSON.stringify(currentUser);
       localStorage.setItem('current_user', serialized);
       sessionStorage.setItem('current_user', serialized);
@@ -33,13 +33,11 @@ export function AuthProvider({ children }) {
 
   function logout() {
     setUser(null);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('current_user');
-      sessionStorage.removeItem('access_token');
-      sessionStorage.removeItem('current_user');
-    }
+    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('current_user');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('current_user');
   }
 
   return (

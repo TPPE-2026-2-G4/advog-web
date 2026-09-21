@@ -67,7 +67,7 @@ export async function buscarDadosInstitucionais() {
 
 export async function salvarDadosInstitucionais(dados) {
   try {
-    const token = typeof window !== 'undefined' ? getAccessToken() : null;
+    const token = getAccessToken();
     const headers = {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -97,7 +97,7 @@ export async function salvarDadosInstitucionais(dados) {
 
 export async function uploadImagemInstitucional(arquivo, tipo = 'logo') {
   try {
-    const token = typeof window !== 'undefined' ? getAccessToken() : null;
+    const token = getAccessToken();
     const formData = new FormData();
     formData.append('file', arquivo);
 

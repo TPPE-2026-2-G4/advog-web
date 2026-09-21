@@ -377,12 +377,20 @@ describe('Componentes UI do Módulo Site', () => {
         cargo: null,
         exibicaoInstitucional: false,
       },
+      {
+        funcionario_id: 5,
+        nome: 'Carlos Souza',
+        cargo: {},
+        exibicaoInstitucional: true,
+      },
     ];
 
     it('renderiza os membros da equipe com avatares e cargos', () => {
       render(<TeamTab team={mockTeam} onToggleLawyer={vi.fn()} />);
 
-      expect(screen.getByText('Advogados exibidos no site')).toBeInTheDocument();
+      expect(
+        screen.getByText('Advogados exibidos no site')
+      ).toBeInTheDocument();
       expect(screen.getByText('Dr. Alexandre Carreiro')).toBeInTheDocument();
       expect(screen.getByText('Sócio Fundador')).toBeInTheDocument();
       expect(screen.getByText('AC')).toBeInTheDocument();
@@ -399,7 +407,7 @@ describe('Componentes UI do Módulo Site', () => {
       expect(screen.getByText('MC')).toBeInTheDocument();
 
       expect(
-        screen.getByText('2 de 4 advogados visíveis no site institucional')
+        screen.getByText('3 de 5 advogados visíveis no site institucional')
       ).toBeInTheDocument();
     });
 
@@ -587,13 +595,31 @@ describe('Componentes UI do Módulo Site', () => {
           funcionario_id: 2,
           nome: 'Dra. Ana Paula Ribeiro',
           cargo: { nome: 'Advogada Sênior' },
-          exibicaoInstitucional: false,
+          exibicaoInstitucional: true,
         },
         {
           funcionario_id: 3,
           nome: 'Mariana Costa',
           cargo: { nome_cargo: 'Advogada Plena' },
           exibicaoInstitucional: true,
+        },
+        {
+          funcionario_id: 4,
+          nome: 'Pedro Lima',
+          cargo: null,
+          exibicaoInstitucional: true,
+        },
+        {
+          funcionario_id: 5,
+          nome: 'Carlos Souza',
+          cargo: {},
+          exibicaoInstitucional: true,
+        },
+        {
+          funcionario_id: 6,
+          nome: 'Advogado Oculto',
+          cargo: 'Consultor',
+          exibicaoInstitucional: false,
         },
       ];
 
@@ -623,10 +649,11 @@ describe('Componentes UI do Módulo Site', () => {
       expect(screen.getByText('Mariana Costa')).toBeInTheDocument();
       expect(screen.getByText('MC')).toBeInTheDocument();
 
-      // Advogada não visível não deve aparecer
-      expect(
-        screen.queryByText('Dra. Ana Paula Ribeiro')
-      ).not.toBeInTheDocument();
+      expect(screen.getByText('Dra. Ana Paula Ribeiro')).toBeInTheDocument();
+      expect(screen.getByText('Advogada Sênior')).toBeInTheDocument();
+
+      // Advogado não visível não deve aparecer
+      expect(screen.queryByText('Advogado Oculto')).not.toBeInTheDocument();
     });
 
     it('não renderiza a seção Nossa Equipe se nenhum advogado estiver visível', () => {

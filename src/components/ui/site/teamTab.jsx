@@ -24,10 +24,11 @@ export default function TeamTab({ team = [], onToggleLawyer }) {
       <div className={styles.teamList}>
         {team.map((member) => {
           const initials = getLawyerInitials(member.nome);
-          const cargo =
-            typeof member.cargo === 'object'
-              ? member.cargo?.nome || member.cargo?.nome_cargo || ''
-              : member.cargo || '';
+          const cargo = !member.cargo
+            ? ''
+            : typeof member.cargo === 'object'
+              ? member.cargo.nome || member.cargo.nome_cargo || ''
+              : String(member.cargo);
           const isVisible = Boolean(member.exibicaoInstitucional);
 
           return (
@@ -64,7 +65,8 @@ export default function TeamTab({ team = [], onToggleLawyer }) {
       <div className={styles.teamFooter}>
         <Check size={16} className={styles.teamFooterCheck} />
         <span>
-          {visibleCount} de {totalCount} advogados visíveis no site institucional
+          {visibleCount} de {totalCount} advogados visíveis no site
+          institucional
         </span>
       </div>
     </div>

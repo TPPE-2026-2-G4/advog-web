@@ -247,9 +247,9 @@ describe('serviço de funcionários', () => {
       sessionStorage.setItem('access_token', 'token-jwt');
       fetch.mockResolvedValue(respostaJson(funcionario));
 
-      await expect(
-        mudarExibicaoInstitucional(8, true)
-      ).resolves.toEqual(funcionario);
+      await expect(mudarExibicaoInstitucional(8, true)).resolves.toEqual(
+        funcionario
+      );
 
       expect(fetch).toHaveBeenCalledWith(
         'http://localhost:8000/funcionarios/8/exibicao-institucional',
@@ -269,9 +269,9 @@ describe('serviço de funcionários', () => {
         respostaComErro('Não autorizado a alterar visibilidade')
       );
 
-      await expect(
-        mudarExibicaoInstitucional(8, false)
-      ).rejects.toThrow('Não autorizado a alterar visibilidade');
+      await expect(mudarExibicaoInstitucional(8, false)).rejects.toThrow(
+        'Não autorizado a alterar visibilidade'
+      );
     });
   });
 });
