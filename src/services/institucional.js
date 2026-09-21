@@ -1,3 +1,5 @@
+import { getAccessToken } from '@/utils/authSession';
+
 const apiUrl =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.API_URL ||
@@ -9,6 +11,9 @@ export const DEFAULT_INSTITUCIONAL = {
   descricao: 'Tradição e excelência na defesa dos seus direitos',
   sobreEscritorio:
     'Fundado em 2010 por Dr. Alexandre Carreiro, o escritório nasceu com a missão de oferecer atendimento jurídico de excelência, combinando tradição e inovação tecnológica.',
+  imagemSobre: null,
+  textoAdicionalSobre:
+    'Mais de 500 casos atendidos · 15 anos de atuação · Atendimento personalizado',
   email: 'contato@carreiro.adv.br',
   telefone: '(61) 98765-4321',
   endereco: 'SCLN 203, Bloco B — Brasília, DF',
@@ -17,6 +22,33 @@ export const DEFAULT_INSTITUCIONAL = {
   logotipo: '',
   bannerHero: '',
 };
+
+export const DEFAULT_EQUIPE_SITE = [
+  {
+    funcionario_id: 1,
+    nome: 'Dr. Alexandre Carreiro',
+    cargo: 'Sócio Fundador · Direito Trabalhista e Civil',
+    exibicaoInstitucional: true,
+  },
+  {
+    funcionario_id: 2,
+    nome: 'Dra. Ana Paula Ribeiro',
+    cargo: 'Advogada Sênior · Direito Civil e Previdenciário',
+    exibicaoInstitucional: true,
+  },
+  {
+    funcionario_id: 3,
+    nome: 'Dr. Pedro Lima',
+    cargo: 'Advogado Júnior · Direito Tributário',
+    exibicaoInstitucional: true,
+  },
+  {
+    funcionario_id: 4,
+    nome: 'Dra. Mariana Costa',
+    cargo: 'Estagiária · Direito Trabalhista',
+    exibicaoInstitucional: true,
+  },
+];
 
 export async function buscarDadosInstitucionais() {
   try {
@@ -35,11 +67,15 @@ export async function buscarDadosInstitucionais() {
 
 export async function salvarDadosInstitucionais(dados) {
   try {
+    const token = typeof window !== 'undefined' ? getAccessToken() : null;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+
     const response = await fetch(`${apiUrl}/institucional`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(dados),
     });
 
@@ -61,11 +97,17 @@ export async function salvarDadosInstitucionais(dados) {
 
 export async function uploadImagemInstitucional(arquivo, tipo = 'logo') {
   try {
+    const token = typeof window !== 'undefined' ? getAccessToken() : null;
     const formData = new FormData();
     formData.append('file', arquivo);
 
+    const headers = {
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+
     const response = await fetch(`${apiUrl}/institucional/upload/${tipo}`, {
       method: 'POST',
+      headers,
       body: formData,
     });
 

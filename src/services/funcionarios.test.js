@@ -5,6 +5,7 @@ import {
   listarFuncionarios,
   mudarAcessoFuncionario,
   mudarCargoFuncionario,
+  mudarExibicaoInstitucional,
 } from './funcionarios';
 
 const respostaJson = (dados, configuracao = {}) => ({
@@ -234,6 +235,43 @@ describe('serviço de funcionários', () => {
         'Sessão expirada. Faça login novamente.'
       );
       expect(fetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('mudarExibicaoInstitucional', () => {
+    it('envia a visibilidade institucional e o token por PATCH', async () => {
+      const funcionario = {
+        funcionario_id: 8,
+        exibicaoInstitucional: true,
+      };
+      sessionStorage.setItem('access_token', 'token-jwt');
+      fetch.mockResolvedValue(respostaJson(funcionario));
+
+      await expect(
+        mudarExibicaoInstitucional(8, true)
+      ).resolves.toEqual(funcionario);
+
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/funcionarios/8/exibicao-institucional',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer token-jwt',
+          },
+          body: JSON.stringify({ exibicaoInstitucional: true }),
+        }
+      );
+    });
+
+    it('lança erro quando a alteração de exibição institucional falha', async () => {
+      fetch.mockResolvedValue(
+        respostaComErro('Não autorizado a alterar visibilidade')
+      );
+
+      await expect(
+        mudarExibicaoInstitucional(8, false)
+      ).rejects.toThrow('Não autorizado a alterar visibilidade');
     });
   });
 });

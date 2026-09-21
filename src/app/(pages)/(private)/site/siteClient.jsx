@@ -10,11 +10,16 @@ import {
 import { useInstitucional } from '@/hooks/useInstitucional';
 import VisualIdentityTab from '@/components/ui/site/visualIdentityTab';
 import ContentTab from '@/components/ui/site/contentTab';
+import TeamTab from '@/components/ui/site/teamTab';
 import ColorsTab from '@/components/ui/site/colorsTab';
 import PreviewModal from '@/components/ui/site/previewModal';
 import styles from '@/components/ui/site/site.module.css';
 
-export default function SiteClient({ initialData, isAdmin = true }) {
+export default function SiteClient({
+  initialData,
+  initialTeam,
+  isAdmin = true,
+}) {
   const {
     formData,
     activeTab,
@@ -27,11 +32,15 @@ export default function SiteClient({ initialData, isAdmin = true }) {
     uploadError,
     logoPreview,
     bannerPreview,
+    sobreImagePreview,
+    team,
     handleInputChange,
     handleUploadLogo,
     handleUploadBanner,
+    handleUploadImagemSobre,
+    handleToggleLawyerVisibility,
     handleSave,
-  } = useInstitucional(initialData, { isAdmin });
+  } = useInstitucional(initialData, { isAdmin, initialTeam });
 
   if (!isAdmin) {
     return (
@@ -132,6 +141,18 @@ export default function SiteClient({ initialData, isAdmin = true }) {
         <button
           type="button"
           role="tab"
+          aria-selected={activeTab === 'team'}
+          className={`${styles.tabItem} ${
+            activeTab === 'team' ? styles.tabItemActive : ''
+          }`}
+          onClick={() => setActiveTab('team')}
+        >
+          Equipe no Site
+        </button>
+
+        <button
+          type="button"
+          role="tab"
           aria-selected={activeTab === 'colors'}
           className={`${styles.tabItem} ${
             activeTab === 'colors' ? styles.tabItemActive : ''
@@ -154,7 +175,19 @@ export default function SiteClient({ initialData, isAdmin = true }) {
       )}
 
       {activeTab === 'content' && (
-        <ContentTab formData={formData} onInputChange={handleInputChange} />
+        <ContentTab
+          formData={formData}
+          onInputChange={handleInputChange}
+          onUploadImagemSobre={handleUploadImagemSobre}
+          sobreImagePreview={sobreImagePreview}
+        />
+      )}
+
+      {activeTab === 'team' && (
+        <TeamTab
+          team={team}
+          onToggleLawyer={handleToggleLawyerVisibility}
+        />
       )}
 
       {activeTab === 'colors' && (
@@ -166,6 +199,7 @@ export default function SiteClient({ initialData, isAdmin = true }) {
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
         formData={formData}
+        team={team}
       />
     </div>
   );

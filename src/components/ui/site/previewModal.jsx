@@ -3,9 +3,15 @@
 
 import { useEffect } from 'react';
 import { Scale, X, Phone, Mail, MapPin } from 'lucide-react';
+import { getLawyerInitials } from '@/utils/funcionario';
 import styles from './site.module.css';
 
-export default function PreviewModal({ isOpen, onClose, formData }) {
+export default function PreviewModal({
+  isOpen,
+  onClose,
+  formData,
+  team = [],
+}) {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -32,6 +38,7 @@ export default function PreviewModal({ isOpen, onClose, formData }) {
   const sobre =
     formData.sobreEscritorio ||
     'Fundado em 2010 por Dr. Alexandre Carreiro, o escritório nasceu com a missão de oferecer atendimento jurídico de excelência, combinando tradição e inovação tecnológica.';
+  const visibleTeam = team.filter((member) => member.exibicaoInstitucional);
 
   return (
     <div
@@ -132,8 +139,53 @@ export default function PreviewModal({ isOpen, onClose, formData }) {
           {/* Sobre o Escritório */}
           <section className={styles.previewSection}>
             <h2 className={styles.previewSectionTitle}>Sobre o Escritório</h2>
+            {formData.imagemSobre && (
+              <img
+                src={formData.imagemSobre}
+                alt="Sobre o Escritório"
+                className={styles.previewAboutImage}
+              />
+            )}
             <p className={styles.previewSectionText}>{sobre}</p>
+            {formData.textoAdicionalSobre && (
+              <span className={styles.previewExtraBadge}>
+                {formData.textoAdicionalSobre}
+              </span>
+            )}
           </section>
+
+          {/* Seção Nossa Equipe */}
+          {visibleTeam.length > 0 && (
+            <section
+              className={styles.previewSection}
+              style={{ borderTop: '1px solid #e5e7eb', paddingTop: '32px' }}
+            >
+              <h2 className={styles.previewSectionTitle}>Nossa Equipe</h2>
+              <div className={styles.previewTeamGrid}>
+                {visibleTeam.map((member) => {
+                  const initials = getLawyerInitials(member.nome);
+                  const cargo =
+                    typeof member.cargo === 'object'
+                      ? member.cargo?.nome || member.cargo?.nome_cargo || ''
+                      : member.cargo || '';
+                  return (
+                    <div
+                      key={member.funcionario_id}
+                      className={styles.previewTeamCard}
+                    >
+                      <div className={styles.previewTeamAvatar}>{initials}</div>
+                      <span className={styles.previewTeamName}>
+                        {member.nome}
+                      </span>
+                      {cargo && (
+                        <span className={styles.previewTeamRole}>{cargo}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {/* Contato */}
           <section

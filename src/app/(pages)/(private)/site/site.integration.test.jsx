@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SiteClient from './siteClient';
 import { salvarDadosInstitucionais } from '@/services/institucional';
+import { mudarExibicaoInstitucional } from '@/services/funcionarios';
 
 vi.mock('@/services/institucional', () => ({
   DEFAULT_INSTITUCIONAL: {
@@ -9,6 +10,8 @@ vi.mock('@/services/institucional', () => ({
     nomeEscritorio: 'Carreiro Advogados',
     descricao: 'Slogan teste',
     sobreEscritorio: 'História teste',
+    imagemSobre: null,
+    textoAdicionalSobre: 'Texto adicional teste',
     email: 'contato@carreiro.adv.br',
     telefone: '(61) 98765-4321',
     endereco: 'Brasília, DF',
@@ -17,8 +20,26 @@ vi.mock('@/services/institucional', () => ({
     logotipo: '',
     bannerHero: '',
   },
+  DEFAULT_EQUIPE_SITE: [
+    {
+      funcionario_id: 1,
+      nome: 'Dr. Alexandre Carreiro',
+      cargo: 'Sócio Fundador',
+      exibicaoInstitucional: true,
+    },
+    {
+      funcionario_id: 2,
+      nome: 'Dra. Ana Paula Ribeiro',
+      cargo: 'Advogada Sênior',
+      exibicaoInstitucional: false,
+    },
+  ],
   salvarDadosInstitucionais: vi.fn(),
   uploadImagemInstitucional: vi.fn(),
+}));
+
+vi.mock('@/services/funcionarios', () => ({
+  mudarExibicaoInstitucional: vi.fn(),
 }));
 
 describe('Integração: Módulo de Personalização do Site', () => {
@@ -26,7 +47,7 @@ describe('Integração: Módulo de Personalização do Site', () => {
     vi.clearAllMocks();
   });
 
-  it('permite navegar entre as abas e interagir com os formulários', () => {
+  it('permite navegar entre as 4 abas e interagir com os formulários', () => {
     render(<SiteClient />);
 
     expect(screen.getByText('Logotipo')).toBeInTheDocument();
@@ -37,6 +58,10 @@ describe('Integração: Módulo de Personalização do Site', () => {
     expect(screen.getByLabelText('Nome do escritório')).toHaveValue(
       'Carreiro Advogados'
     );
+
+    fireEvent.click(screen.getByRole('tab', { name: /equipe no site/i }));
+    expect(screen.getByText('Advogados exibidos no site')).toBeInTheDocument();
+    expect(screen.getByText('Dr. Alexandre Carreiro')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Cores' }));
     expect(screen.getByText('Paleta de cores')).toBeInTheDocument();
@@ -107,5 +132,31 @@ describe('Integração: Módulo de Personalização do Site', () => {
     expect(
       screen.queryByRole('tab', { name: 'Conteúdo' })
     ).not.toBeInTheDocument();
+  });
+
+  it('permite alternar visibilidade da equipe e salvar com sucesso', async () => {
+    salvarDadosInstitucionais.mockResolvedValueOnce({
+      id: 1,
+      nomeEscritorio: 'Carreiro Advogados',
+    });
+    mudarExibicaoInstitucional.mockResolvedValue({});
+
+    render(<SiteClient />);
+
+    fireEvent.click(screen.getByRole('tab', { name: /equipe no site/i }));
+    const toggleAlexandre = screen.getByRole('switch', {
+      name: 'Exibir Dr. Alexandre Carreiro no site',
+    });
+    fireEvent.click(toggleAlexandre);
+
+    fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Configurações do site salvas com sucesso!')
+      ).toBeInTheDocument();
+    });
+
+    expect(mudarExibicaoInstitucional).toHaveBeenCalledWith(1, false);
   });
 });

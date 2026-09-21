@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import VisualIdentityTab from './visualIdentityTab';
 import ContentTab from './contentTab';
 import ColorsTab from './colorsTab';
+import TeamTab from './teamTab';
 import PreviewModal from './previewModal';
 
 describe('Componentes UI do Módulo Site', () => {
@@ -262,6 +263,165 @@ describe('Componentes UI do Módulo Site', () => {
         'endereco',
         'Novo Endereço'
       );
+
+      fireEvent.change(
+        screen.getByLabelText(
+          'Informações adicionais (exibidas abaixo da descrição)'
+        ),
+        {
+          target: { value: 'Novas informações adicionais' },
+        }
+      );
+      expect(handleInputChange).toHaveBeenCalledWith(
+        'textoAdicionalSobre',
+        'Novas informações adicionais'
+      );
+    });
+
+    it('renderiza upload de imagem da seção sobre e aciona onUploadImagemSobre', () => {
+      const handleUpload = vi.fn();
+      render(
+        <ContentTab
+          formData={{}}
+          onInputChange={vi.fn()}
+          onUploadImagemSobre={handleUpload}
+          sobreImagePreview=""
+        />
+      );
+
+      const fileInput = screen.getByTestId('sobre-file-input');
+      const fakeFile = new File(['fake'], 'sobre.jpg', { type: 'image/jpeg' });
+      fireEvent.change(fileInput, { target: { files: [fakeFile] } });
+
+      expect(handleUpload).toHaveBeenCalledWith(fakeFile);
+    });
+
+    it('ignora seleção vazia de arquivo para a imagem sobre', () => {
+      const handleUpload = vi.fn();
+      render(
+        <ContentTab
+          formData={{}}
+          onInputChange={vi.fn()}
+          onUploadImagemSobre={handleUpload}
+          sobreImagePreview=""
+        />
+      );
+
+      const fileInput = screen.getByTestId('sobre-file-input');
+      fireEvent.change(fileInput, { target: { files: [] } });
+
+      expect(handleUpload).not.toHaveBeenCalled();
+    });
+
+    it('exibe prévia da imagem sobre e botão de substituir quando fornecida', () => {
+      render(
+        <ContentTab
+          formData={{ imagemSobre: 'http://minio/sobre.jpg' }}
+          onInputChange={vi.fn()}
+          onUploadImagemSobre={vi.fn()}
+        />
+      );
+
+      const img = screen.getByAltText('Imagem da seção Sobre');
+      expect(img).toBeInTheDocument();
+      expect(img).toHaveAttribute('src', 'http://minio/sobre.jpg');
+
+      const replaceBtn = screen.getByRole('button', {
+        name: /substituir imagem/i,
+      });
+      fireEvent.click(replaceBtn);
+    });
+
+    it('permite acionar upload de imagem sobre por teclado Enter e Espaço', () => {
+      render(
+        <ContentTab
+          formData={{}}
+          onInputChange={vi.fn()}
+          onUploadImagemSobre={vi.fn()}
+        />
+      );
+
+      const uploadArea = screen.getByRole('button', {
+        name: /clique para fazer upload/i,
+      });
+      fireEvent.click(uploadArea);
+      fireEvent.keyDown(uploadArea, { key: 'Enter' });
+      fireEvent.keyDown(uploadArea, { key: ' ' });
+      fireEvent.keyDown(uploadArea, { key: 'Tab' });
+    });
+  });
+
+  describe('TeamTab', () => {
+    const mockTeam = [
+      {
+        funcionario_id: 1,
+        nome: 'Dr. Alexandre Carreiro',
+        cargo: 'Sócio Fundador',
+        exibicaoInstitucional: true,
+      },
+      {
+        funcionario_id: 2,
+        nome: 'Dra. Ana Paula Ribeiro',
+        cargo: { nome: 'Advogada Sênior' },
+        exibicaoInstitucional: false,
+      },
+      {
+        funcionario_id: 3,
+        nome: 'Pedro Lima',
+        cargo: { nome_cargo: 'Advogado Pleno' },
+        exibicaoInstitucional: true,
+      },
+      {
+        funcionario_id: 4,
+        nome: 'Mariana Costa',
+        cargo: null,
+        exibicaoInstitucional: false,
+      },
+    ];
+
+    it('renderiza os membros da equipe com avatares e cargos', () => {
+      render(<TeamTab team={mockTeam} onToggleLawyer={vi.fn()} />);
+
+      expect(screen.getByText('Advogados exibidos no site')).toBeInTheDocument();
+      expect(screen.getByText('Dr. Alexandre Carreiro')).toBeInTheDocument();
+      expect(screen.getByText('Sócio Fundador')).toBeInTheDocument();
+      expect(screen.getByText('AC')).toBeInTheDocument();
+
+      expect(screen.getByText('Dra. Ana Paula Ribeiro')).toBeInTheDocument();
+      expect(screen.getByText('Advogada Sênior')).toBeInTheDocument();
+      expect(screen.getByText('AP')).toBeInTheDocument();
+
+      expect(screen.getByText('Pedro Lima')).toBeInTheDocument();
+      expect(screen.getByText('Advogado Pleno')).toBeInTheDocument();
+      expect(screen.getByText('PL')).toBeInTheDocument();
+
+      expect(screen.getByText('Mariana Costa')).toBeInTheDocument();
+      expect(screen.getByText('MC')).toBeInTheDocument();
+
+      expect(
+        screen.getByText('2 de 4 advogados visíveis no site institucional')
+      ).toBeInTheDocument();
+    });
+
+    it('dispara onToggleLawyer ao clicar no switch', () => {
+      const handleToggle = vi.fn();
+      render(<TeamTab team={mockTeam} onToggleLawyer={handleToggle} />);
+
+      const toggleAlexandre = screen.getByRole('switch', {
+        name: 'Exibir Dr. Alexandre Carreiro no site',
+      });
+      expect(toggleAlexandre).toHaveAttribute('aria-checked', 'true');
+
+      fireEvent.click(toggleAlexandre);
+      expect(handleToggle).toHaveBeenCalledWith(1);
+    });
+
+    it('renderiza corretamente com lista vazia de membros', () => {
+      render(<TeamTab team={[]} onToggleLawyer={vi.fn()} />);
+
+      expect(
+        screen.getByText('0 de 0 advogados visíveis no site institucional')
+      ).toBeInTheDocument();
     });
   });
 
@@ -413,6 +573,81 @@ describe('Componentes UI do Módulo Site', () => {
 
       fireEvent.click(screen.getByTestId('preview-modal-overlay'));
       expect(handleClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('renderiza imagemSobre, textoAdicionalSobre e advogados visíveis da equipe', () => {
+      const mockTeam = [
+        {
+          funcionario_id: 1,
+          nome: 'Dr. Alexandre Carreiro',
+          cargo: 'Sócio Fundador',
+          exibicaoInstitucional: true,
+        },
+        {
+          funcionario_id: 2,
+          nome: 'Dra. Ana Paula Ribeiro',
+          cargo: { nome: 'Advogada Sênior' },
+          exibicaoInstitucional: false,
+        },
+        {
+          funcionario_id: 3,
+          nome: 'Mariana Costa',
+          cargo: { nome_cargo: 'Advogada Plena' },
+          exibicaoInstitucional: true,
+        },
+      ];
+
+      render(
+        <PreviewModal
+          isOpen={true}
+          onClose={vi.fn()}
+          formData={{
+            imagemSobre: 'http://minio/sobre.jpg',
+            textoAdicionalSobre: 'Mais de 500 casos atendidos',
+          }}
+          team={mockTeam}
+        />
+      );
+
+      const sobreImg = screen.getByAltText('Sobre o Escritório');
+      expect(sobreImg).toHaveAttribute('src', 'http://minio/sobre.jpg');
+      expect(
+        screen.getByText('Mais de 500 casos atendidos')
+      ).toBeInTheDocument();
+
+      expect(screen.getByText('Nossa Equipe')).toBeInTheDocument();
+      expect(screen.getByText('Dr. Alexandre Carreiro')).toBeInTheDocument();
+      expect(screen.getByText('Sócio Fundador')).toBeInTheDocument();
+      expect(screen.getByText('AC')).toBeInTheDocument();
+
+      expect(screen.getByText('Mariana Costa')).toBeInTheDocument();
+      expect(screen.getByText('MC')).toBeInTheDocument();
+
+      // Advogada não visível não deve aparecer
+      expect(
+        screen.queryByText('Dra. Ana Paula Ribeiro')
+      ).not.toBeInTheDocument();
+    });
+
+    it('não renderiza a seção Nossa Equipe se nenhum advogado estiver visível', () => {
+      const mockTeam = [
+        {
+          funcionario_id: 1,
+          nome: 'Dr. Alexandre Carreiro',
+          exibicaoInstitucional: false,
+        },
+      ];
+
+      render(
+        <PreviewModal
+          isOpen={true}
+          onClose={vi.fn()}
+          formData={{}}
+          team={mockTeam}
+        />
+      );
+
+      expect(screen.queryByText('Nossa Equipe')).not.toBeInTheDocument();
     });
   });
 });

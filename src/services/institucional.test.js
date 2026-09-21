@@ -1,10 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_INSTITUCIONAL,
+  DEFAULT_EQUIPE_SITE,
   buscarDadosInstitucionais,
   salvarDadosInstitucionais,
   uploadImagemInstitucional,
 } from './institucional';
+import { getAccessToken } from '@/utils/authSession';
+
+vi.mock('@/utils/authSession', () => ({
+  getAccessToken: vi.fn(),
+}));
 
 const respostaJson = (dados, configuracao = {}) => ({
   ok: true,
@@ -21,9 +27,16 @@ describe('serviço institucional', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.stubGlobal('fetch', vi.fn());
+    getAccessToken.mockReturnValue(null);
     if (!globalThis.URL.createObjectURL) {
       globalThis.URL.createObjectURL = vi.fn().mockReturnValue('blob:mock-url');
     }
+  });
+
+  it('exporta DEFAULT_EQUIPE_SITE com 4 advogados visíveis', () => {
+    expect(DEFAULT_EQUIPE_SITE).toHaveLength(4);
+    expect(DEFAULT_EQUIPE_SITE[0].nome).toBe('Dr. Alexandre Carreiro');
+    expect(DEFAULT_EQUIPE_SITE[0].exibicaoInstitucional).toBe(true);
   });
 
   describe('buscarDadosInstitucionais', () => {
@@ -57,7 +70,8 @@ describe('serviço institucional', () => {
   });
 
   describe('salvarDadosInstitucionais', () => {
-    it('envia dados via PUT e retorna resposta da API', async () => {
+    it('envia dados via PUT e retorna resposta da API com token se autenticado', async () => {
+      getAccessToken.mockReturnValue('token-123');
       const novosDados = { nomeEscritorio: 'Novo Nome' };
       fetch.mockResolvedValue(respostaJson(novosDados));
 
@@ -67,6 +81,10 @@ describe('serviço institucional', () => {
         'http://localhost:8000/institucional',
         expect.objectContaining({
           method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer token-123',
+          },
           body: JSON.stringify(novosDados),
         })
       );
@@ -102,16 +120,25 @@ describe('serviço institucional', () => {
   });
 
   describe('uploadImagemInstitucional', () => {
-    it('retorna URL da imagem após upload bem-sucedido', async () => {
+    it('retorna URL da imagem após upload bem-sucedido de sobre com token', async () => {
+      getAccessToken.mockReturnValue('token-456');
       fetch.mockResolvedValue(
-        respostaJson({ url: 'http://localhost:9000/institucional/logo.png' })
+        respostaJson({ url: 'http://localhost:9000/institucional/sobre/foto.jpg' })
       );
 
-      const fakeFile = new File(['fake content'], 'logo.png', {
-        type: 'image/png',
+      const fakeFile = new File(['fake content'], 'foto.jpg', {
+        type: 'image/jpeg',
       });
-      const url = await uploadImagemInstitucional(fakeFile, 'logo');
-      expect(url).toBe('http://localhost:9000/institucional/logo.png');
+      const url = await uploadImagemInstitucional(fakeFile, 'sobre');
+      expect(url).toBe('http://localhost:9000/institucional/sobre/foto.jpg');
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/institucional/upload/sobre',
+        expect.objectContaining({
+          headers: {
+            Authorization: 'Bearer token-456',
+          },
+        })
+      );
     });
 
     it('retorna createObjectURL quando a API responde sem url', async () => {

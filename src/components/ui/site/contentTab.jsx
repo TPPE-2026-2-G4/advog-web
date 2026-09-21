@@ -1,8 +1,27 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
+import { useRef } from 'react';
+import { Image as ImageIcon } from 'lucide-react';
 import styles from './site.module.css';
 
-export default function ContentTab({ formData, onInputChange }) {
+export default function ContentTab({
+  formData,
+  onInputChange,
+  onUploadImagemSobre,
+  sobreImagePreview,
+}) {
+  const sobreInputRef = useRef(null);
+
+  const handleSobreChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file && onUploadImagemSobre) {
+      onUploadImagemSobre(file);
+    }
+  };
+
+  const preview = sobreImagePreview || formData.imagemSobre;
+
   return (
     <div className={styles.card}>
       {/* Seção Textos Institucionais */}
@@ -46,7 +65,76 @@ export default function ContentTab({ formData, onInputChange }) {
           rows={4}
           value={formData.sobreEscritorio || ''}
           onChange={(e) => onInputChange('sobreEscritorio', e.target.value)}
-          placeholder="Conte a história, missão e valores do escritório..."
+          placeholder="Fundado em 2010 por Dr. Alexandre Carreiro..."
+        />
+      </div>
+
+      {/* Imagem da seção "Sobre" */}
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>
+          Imagem da seção &quot;Sobre&quot;
+        </label>
+        <input
+          type="file"
+          ref={sobreInputRef}
+          onChange={handleSobreChange}
+          accept="image/jpeg,image/png"
+          style={{ display: 'none' }}
+          data-testid="sobre-file-input"
+        />
+
+        {preview ? (
+          <div className={styles.aboutPreviewBox}>
+            <img
+              src={preview}
+              alt="Imagem da seção Sobre"
+              className={styles.aboutImage}
+            />
+            <button
+              type="button"
+              className={styles.aboutReplaceBtn}
+              onClick={() => sobreInputRef.current?.click()}
+            >
+              Substituir imagem
+            </button>
+          </div>
+        ) : (
+          <div
+            className={styles.aboutUploadArea}
+            onClick={() => sobreInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                sobreInputRef.current?.click();
+              }
+            }}
+          >
+            <ImageIcon size={36} className={styles.aboutUploadIcon} />
+            <span
+              style={{ fontSize: '15px', fontWeight: '500', color: '#172133' }}
+            >
+              Clique para fazer upload
+            </span>
+            <span className={styles.uploadHelperText}>
+              JPG, PNG — recomendado 800×600 px
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Informações adicionais (exibidas abaixo da descrição) */}
+      <div className={styles.formGroup}>
+        <label htmlFor="textoAdicionalSobre" className={styles.formLabel}>
+          Informações adicionais (exibidas abaixo da descrição)
+        </label>
+        <textarea
+          id="textoAdicionalSobre"
+          className={styles.formTextarea}
+          rows={3}
+          value={formData.textoAdicionalSobre || ''}
+          onChange={(e) => onInputChange('textoAdicionalSobre', e.target.value)}
+          placeholder="Mais de 500 casos atendidos · 15 anos de atuação · Atendimento personalizado"
         />
       </div>
 

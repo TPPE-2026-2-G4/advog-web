@@ -2,9 +2,11 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_INSTITUCIONAL,
+  DEFAULT_EQUIPE_SITE,
   salvarDadosInstitucionais,
   uploadImagemInstitucional,
 } from '@/services/institucional';
+import { mudarExibicaoInstitucional } from '@/services/funcionarios';
 import { useInstitucional } from './useInstitucional';
 
 vi.mock('@/services/institucional', () => ({
@@ -13,6 +15,8 @@ vi.mock('@/services/institucional', () => ({
     nomeEscritorio: 'Carreiro Advogados',
     descricao: 'Slogan teste',
     sobreEscritorio: 'Sobre teste',
+    imagemSobre: null,
+    textoAdicionalSobre: 'Texto adicional teste',
     email: 'contato@teste.com',
     telefone: '(61) 9999-9999',
     endereco: 'Brasília, DF',
@@ -21,8 +25,26 @@ vi.mock('@/services/institucional', () => ({
     logotipo: '',
     bannerHero: '',
   },
+  DEFAULT_EQUIPE_SITE: [
+    {
+      funcionario_id: 1,
+      nome: 'Dr. Alexandre Carreiro',
+      cargo: 'Sócio Fundador · Direito Trabalhista e Civil',
+      exibicaoInstitucional: true,
+    },
+    {
+      funcionario_id: 2,
+      nome: 'Dra. Ana Paula Ribeiro',
+      cargo: 'Advogada Sênior · Direito Civil e Previdenciário',
+      exibicaoInstitucional: true,
+    },
+  ],
   salvarDadosInstitucionais: vi.fn(),
   uploadImagemInstitucional: vi.fn(),
+}));
+
+vi.mock('@/services/funcionarios', () => ({
+  mudarExibicaoInstitucional: vi.fn(),
 }));
 
 describe('useInstitucional', () => {
@@ -118,6 +140,18 @@ describe('useInstitucional', () => {
       await result.current.handleUploadBanner(arquivoInvalido);
     });
     expect(result.current.uploadError).toContain('Formato inválido');
+
+    const arquivoGrande = new File(
+      [new ArrayBuffer(6 * 1024 * 1024)],
+      'banner.png',
+      {
+        type: 'image/png',
+      }
+    );
+    await act(async () => {
+      await result.current.handleUploadBanner(arquivoGrande);
+    });
+    expect(result.current.uploadError).toContain('excede o limite');
 
     uploadImagemInstitucional.mockResolvedValueOnce('http://minio/banner.jpg');
     const arquivoValido = new File(['ok'], 'banner.jpg', {
@@ -257,6 +291,132 @@ describe('useInstitucional', () => {
     expect(result.current.formData.bannerHero).toBe('');
   });
 
+  it('permite alterar a aba ativa para team', () => {
+    const { result } = renderHook(() => useInstitucional());
+
+    act(() => {
+      result.current.setActiveTab('team');
+    });
+    expect(result.current.activeTab).toBe('team');
+  });
+
+  it('inicializa team com options.initialTeam quando fornecido', () => {
+    const customTeam = [
+      { funcionario_id: 99, nome: 'Dr. Teste', exibicaoInstitucional: false },
+    ];
+    const { result } = renderHook(() =>
+      useInstitucional(null, { initialTeam: customTeam })
+    );
+
+    expect(result.current.team).toEqual(customTeam);
+  });
+
+  it('valida formato e tamanho ao fazer upload de imagem sobre', async () => {
+    const { result } = renderHook(() => useInstitucional());
+
+    const arquivoInvalido = new File(['x'], 'doc.pdf', {
+      type: 'application/pdf',
+    });
+    await act(async () => {
+      await result.current.handleUploadImagemSobre(arquivoInvalido);
+    });
+    expect(result.current.uploadError).toContain('Formato inválido');
+
+    const arquivoGrande = new File(
+      [new ArrayBuffer(6 * 1024 * 1024)],
+      'sobre.png',
+      {
+        type: 'image/png',
+      }
+    );
+    await act(async () => {
+      await result.current.handleUploadImagemSobre(arquivoGrande);
+    });
+    expect(result.current.uploadError).toContain('excede o limite');
+
+    uploadImagemInstitucional.mockResolvedValueOnce('http://minio/sobre.jpg');
+    const arquivoValido = new File(['ok'], 'sobre.jpg', {
+      type: 'image/jpeg',
+    });
+    await act(async () => {
+      await result.current.handleUploadImagemSobre(arquivoValido);
+    });
+    expect(result.current.formData.imagemSobre).toBe('http://minio/sobre.jpg');
+    expect(result.current.sobreImagePreview).toBe('http://minio/sobre.jpg');
+  });
+
+  it('trata erro no upload de imagem sobre', async () => {
+    uploadImagemInstitucional.mockRejectedValueOnce(
+      new Error('Falha no upload sobre')
+    );
+    const { result } = renderHook(() => useInstitucional());
+    const arquivoValido = new File(['ok'], 'sobre.jpg', {
+      type: 'image/jpeg',
+    });
+
+    await act(async () => {
+      await result.current.handleUploadImagemSobre(arquivoValido);
+    });
+    expect(result.current.uploadError).toBe('Falha no upload sobre');
+
+    uploadImagemInstitucional.mockRejectedValueOnce({});
+    await act(async () => {
+      await result.current.handleUploadImagemSobre(arquivoValido);
+    });
+    expect(result.current.uploadError).toBe(
+      'Falha ao carregar imagem da seção sobre.'
+    );
+
+    await act(async () => {
+      await result.current.handleUploadImagemSobre(null);
+    });
+  });
+
+  it('alterna a visibilidade de um advogado da equipe através de handleToggleLawyerVisibility', () => {
+    const { result } = renderHook(() => useInstitucional());
+
+    const initialMember = result.current.team.find(
+      (m) => m.funcionario_id === 1
+    );
+    expect(initialMember.exibicaoInstitucional).toBe(true);
+
+    act(() => {
+      result.current.handleToggleLawyerVisibility(1);
+    });
+
+    const updatedMember = result.current.team.find(
+      (m) => m.funcionario_id === 1
+    );
+    expect(updatedMember.exibicaoInstitucional).toBe(false);
+
+    // Toggle de id que não existe não altera os demais
+    act(() => {
+      result.current.handleToggleLawyerVisibility(9999);
+    });
+    expect(result.current.team.length).toBe(DEFAULT_EQUIPE_SITE.length);
+  });
+
+  it('sincroniza a visibilidade da equipe no salvar com mudarExibicaoInstitucional', async () => {
+    salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
+    mudarExibicaoInstitucional.mockResolvedValue({});
+
+    const { result } = renderHook(() => useInstitucional());
+
+    act(() => {
+      result.current.handleToggleLawyerVisibility(1);
+    });
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(salvarDadosInstitucionais).toHaveBeenCalledWith(
+      result.current.formData
+    );
+    expect(mudarExibicaoInstitucional).toHaveBeenCalledWith(1, false);
+    expect(result.current.saveSuccess).toBe(true);
+  });
+
   it('trata erro genérico sem mensagem explícita ao salvar configurações', async () => {
     salvarDadosInstitucionais.mockRejectedValueOnce({});
     const { result } = renderHook(() => useInstitucional());
@@ -266,5 +426,20 @@ describe('useInstitucional', () => {
     });
 
     expect(result.current.saveError).toBe('Erro ao salvar as configurações.');
+  });
+
+  it('salva com sucesso quando team é vazio ou inexistente', async () => {
+    salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
+
+    const { result } = renderHook(() =>
+      useInstitucional(null, { initialTeam: [] })
+    );
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(salvarDadosInstitucionais).toHaveBeenCalled();
+    expect(result.current.saveSuccess).toBe(true);
   });
 });

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import {
   DEFAULT_INSTITUCIONAL,
+  DEFAULT_EQUIPE_SITE,
   salvarDadosInstitucionais,
   uploadImagemInstitucional,
 } from '@/services/institucional';
+import { mudarExibicaoInstitucional } from '@/services/funcionarios';
 
 export function useInstitucional(initialData, options = {}) {
   const [formData, setFormData] = useState(
@@ -20,6 +22,14 @@ export function useInstitucional(initialData, options = {}) {
   );
   const [bannerPreview, setBannerPreview] = useState(
     initialData?.bannerHero || DEFAULT_INSTITUCIONAL.bannerHero
+  );
+  const [sobreImagePreview, setSobreImagePreview] = useState(
+    initialData?.imagemSobre || DEFAULT_INSTITUCIONAL.imagemSobre
+  );
+  const [team, setTeam] = useState(
+    options.initialTeam && options.initialTeam.length > 0
+      ? options.initialTeam
+      : DEFAULT_EQUIPE_SITE
   );
 
   const isAdmin = options.isAdmin !== undefined ? options.isAdmin : true;
@@ -75,6 +85,11 @@ export function useInstitucional(initialData, options = {}) {
       return;
     }
 
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('O arquivo excede o limite máximo de 5 MB.');
+      return;
+    }
+
     try {
       const url = await uploadImagemInstitucional(file, 'banner');
       setBannerPreview(url);
@@ -82,6 +97,48 @@ export function useInstitucional(initialData, options = {}) {
     } catch (error) {
       setUploadError(error.message || 'Falha ao carregar imagem do banner.');
     }
+  };
+
+  const handleUploadImagemSobre = async (file) => {
+    if (!file) return;
+
+    setUploadError('');
+
+    const formatosValidos = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (
+      !formatosValidos.includes(file.type) &&
+      !file.name.match(/\.(jpe?g|png)$/i)
+    ) {
+      setUploadError('Formato inválido. Selecione um arquivo JPG ou PNG.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('O arquivo excede o limite máximo de 5 MB.');
+      return;
+    }
+
+    try {
+      const url = await uploadImagemInstitucional(file, 'sobre');
+      setSobreImagePreview(url);
+      setFormData((prev) => ({ ...prev, imagemSobre: url }));
+    } catch (error) {
+      setUploadError(
+        error.message || 'Falha ao carregar imagem da seção sobre.'
+      );
+    }
+  };
+
+  const handleToggleLawyerVisibility = (funcionarioId) => {
+    setTeam((prevTeam) =>
+      prevTeam.map((member) =>
+        member.funcionario_id === funcionarioId
+          ? { ...member, exibicaoInstitucional: !member.exibicaoInstitucional }
+          : member
+      )
+    );
+    setSaveSuccess(false);
+    setSaveError('');
   };
 
   const handleSave = async () => {
@@ -92,6 +149,18 @@ export function useInstitucional(initialData, options = {}) {
     try {
       const saved = await salvarDadosInstitucionais(formData);
       setFormData(saved);
+
+      if (team && team.length > 0) {
+        await Promise.allSettled(
+          team.map((member) =>
+            mudarExibicaoInstitucional(
+              member.funcionario_id,
+              Boolean(member.exibicaoInstitucional)
+            )
+          )
+        );
+      }
+
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (error) {
@@ -113,10 +182,14 @@ export function useInstitucional(initialData, options = {}) {
     uploadError,
     logoPreview,
     bannerPreview,
+    sobreImagePreview,
+    team,
     isAdmin,
     handleInputChange,
     handleUploadLogo,
     handleUploadBanner,
+    handleUploadImagemSobre,
+    handleToggleLawyerVisibility,
     handleSave,
   };
 }
