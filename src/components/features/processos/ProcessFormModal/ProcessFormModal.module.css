@@ -1,0 +1,197 @@
+.modal {
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.title {
+  margin: 0;
+  color: #172133;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.requiredHint {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.requiredHint span {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.label {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.label::after {
+  margin-left: 3px;
+  color: #b91c1c;
+  font-weight: 700;
+  content: '*';
+}
+.input,
+.select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 11px 14px;
+  color: #111827;
+  font-family: inherit;
+  font-size: 14px;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #c1a077;
+  box-shadow: 0 0 0 2px rgba(193, 160, 119, 0.2);
+}
+
+.input:read-only,
+.input:disabled,
+.select:disabled {
+  color: #6b7280;
+  cursor: not-allowed;
+  background-color: #f9fafb;
+  opacity: 0.8;
+}
+
+.error {
+  margin: 0;
+  padding: 12px 14px;
+  color: #b91c1c;
+  font-size: 13px;
+  line-height: 1.4;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+}
+
+.footer {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.cancelButton,
+.saveButton {
+  min-height: 42px;
+  padding: 10px 20px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.cancelButton {
+  color: #172133;
+  background-color: #ffffff;
+  border: 1px solid #374151;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background-color: #f9fafb;
+}
+
+.saveButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 144px;
+  color: #172133;
+  background-color: #c1a077;
+  border: 1px solid #c1a077;
+}
+
+.saveButton:hover:not(:disabled) {
+  background-color: #b08d60;
+  border-color: #b08d60;
+}
+
+.cancelButton:focus-visible,
+.saveButton:focus-visible {
+  outline: 2px solid #c1a077;
+  outline-offset: 2px;
+}
+
+.cancelButton:disabled,
+.saveButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 640px) {
+  .header,
+  .body,
+  .footer {
+    padding: 18px 16px;
+  }
+
+  .title {
+    font-size: 23px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .footer {
+    flex-direction: column-reverse;
+  }
+
+  .cancelButton,
+  .saveButton {
+    width: 100%;
+  }
+}
