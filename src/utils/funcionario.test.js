@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getInitials, toTeamMember } from './funcionario';
+import { getInitials, getLawyerInitials, toTeamMember } from './funcionario';
 
 describe('getInitials', () => {
   it.each([
@@ -123,5 +123,22 @@ describe('toTeamMember', () => {
 
     expect(teamMember.permissao).toEqual(permissao);
     expect(teamMember.permissao).not.toBe(permissao);
+  });
+});
+
+describe('getLawyerInitials', () => {
+  it.each([
+    ['Dr. Alexandre Carreiro', 'AC'],
+    ['Dra. Ana Paula Ribeiro', 'AP'],
+    ['Dr. Pedro Lima', 'PL'],
+    ['Dra. Mariana Costa', 'MC'],
+    ['Adv. Carlos Eduardo', 'CE'],
+    ['João', 'JO'],
+    ['  ', ''],
+    ['', ''],
+    [null, ''],
+    [undefined, ''],
+  ])('retorna as iniciais corretas para %s como %s', (name, expected) => {
+    expect(getLawyerInitials(name)).toBe(expected);
   });
 });
