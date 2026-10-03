@@ -91,5 +91,67 @@ describe('AuthProvider', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sair' }));
 
     expect(screen.getByTestId('user')).toHaveTextContent('Nenhum usuário');
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(sessionStorage.getItem('access_token')).toBeNull();
+  });
+
+  it('inicia com usuário salvo no storage quando disponível', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({ email: 'restaurado@exemplo.com' })
+    );
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    expect(screen.getByTestId('user')).toHaveTextContent(
+      'restaurado@exemplo.com'
+    );
+  });
+
+  it('autentica com formato backend (access_token e funcionario) e persiste em ambos storages', async () => {
+    loginServiceMock.mockResolvedValue({
+      access_token: 'jwt-backend',
+      funcionario: { id: 2, email: 'backend@exemplo.com' },
+    });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent(
+        'backend@exemplo.com'
+      );
+    });
+
+    expect(localStorage.getItem('access_token')).toBe('jwt-backend');
+    expect(sessionStorage.getItem('access_token')).toBe('jwt-backend');
+    expect(sessionStorage.getItem('current_user')).toContain(
+      'backend@exemplo.com'
+    );
+  });
+
+  it('permite login quando o payload não possui token ou usuário', async () => {
+    loginServiceMock.mockResolvedValue({});
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent('Nenhum usuário');
+    });
   });
 });
