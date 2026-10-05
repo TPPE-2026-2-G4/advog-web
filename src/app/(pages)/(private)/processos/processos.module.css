@@ -1,0 +1,141 @@
+.container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  margin: 0;
+  color: #172133;
+  font-size: clamp(27px, 4vw, 34px);
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.addButton,
+.retryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 7px;
+}
+
+.addButton {
+  color: #172133;
+  background-color: #c1a077;
+  border: 1px solid #c1a077;
+}
+
+.addButton:hover {
+  background-color: #b08d60;
+  border-color: #b08d60;
+}
+
+.errorState {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 24px;
+  padding: 24px;
+  background-color: #ffffff;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.errorState h2 {
+  margin: 0;
+  color: #991b1b;
+  font-size: 21px;
+}
+
+.errorState p {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.retryButton {
+  flex-shrink: 0;
+  color: #172133;
+  background-color: #ffffff;
+  border: 1px solid #172133;
+}
+
+.retryButton:hover:not(:disabled) {
+  background-color: #f9fafb;
+}
+
+.retryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.addButton:focus-visible,
+.retryButton:focus-visible {
+  outline: 2px solid #c1a077;
+  outline-offset: 2px;
+}
+
+.spinning {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .headerRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .addButton {
+    width: 100%;
+  }
+
+  .errorState {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 20px 16px;
+  }
+
+  .retryButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinning {
+    animation: none;
+  }
+}
