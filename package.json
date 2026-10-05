@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "lucide-react": "^1.41.0",
-    "next": "16.3.3",
+    "next": "^16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -46,7 +46,7 @@
     "commitizen": "^4.3.2",
     "cz-conventional-changelog": "^3.3.0",
     "eslint": "^9",
-    "eslint-config-next": "16.3.3",
+    "eslint-config-next": "^16.3.8",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "jsdom": "^30.0.1",
@@ -54,5 +54,8 @@
     "prettier": "^3.9.6",
     "tailwindcss": "^4",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "braces": "npm:@dieub/braces-depth-guard@3.0.3-pn.0"
   }
 }
