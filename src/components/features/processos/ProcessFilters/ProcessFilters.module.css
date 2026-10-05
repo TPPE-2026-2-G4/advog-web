@@ -1,0 +1,115 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 16px;
+  background-color: #ffffff;
+  border: 1px solid #f3f4f6;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.searchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.searchField {
+  position: relative;
+  flex: 1 1 320px;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  color: #9ca3af;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.searchField .input {
+  padding-left: 42px;
+}
+
+.selectField {
+  flex: 0 1 220px;
+}
+
+.input,
+.select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 14px;
+  color: #172133;
+  font-family: inherit;
+  font-size: 14px;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.input:focus-visible,
+.select:focus-visible {
+  outline: 2px solid #c1a077;
+  outline-offset: 1px;
+}
+
+.input[aria-invalid='true'] {
+  border-color: #b91c1c;
+}
+
+.dateRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: 6px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dateField {
+  display: flex;
+  flex: 0 1 200px;
+  flex-direction: column;
+  gap: 4px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.dateError {
+  flex-basis: 100%;
+  margin: 0;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .selectField,
+  .dateField {
+    flex: 1 1 100%;
+  }
+}

@@ -1,54 +1,134 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   atualizarProcesso,
   criarProcesso,
   excluirProcesso,
   listarProcessos,
 } from '@/services/processos';
+import {
+  PROCESS_PAGE_SIZE,
+  hasInvalidDateRange,
+  toProcessPage,
+  toProcessView,
+  toResponsavelNames,
+} from '@/utils/processo';
 
-export const PROCESS_PAGE_SIZE = 5;
+const SEARCH_DEBOUNCE_MS = 300;
+export const DATE_RANGE_ERROR =
+  'A data inicial não pode ser posterior à data final.';
+
+const EMPTY_FILTERS = Object.freeze({
+  busca: '',
+  status: '',
+  responsavelId: '',
+  prazoInicio: '',
+  prazoFim: '',
+});
+const EMPTY_PAGE = Object.freeze({
+  itens: [],
+  total: 0,
+  page: 1,
+  pageSize: PROCESS_PAGE_SIZE,
+  totalPages: 1,
+});
+const NO_RESPONSAVEIS = Object.freeze([]);
 
 const getErrorMessage = (error, fallbackMessage) =>
   error instanceof Error ? error.message : fallbackMessage;
 
-export function useProcessos(initialData = [], initialError = '') {
-  const [processos, setProcessos] = useState(initialData);
+export function useProcessos({
+  initialPage = EMPTY_PAGE,
+  initialError = '',
+  responsaveis = NO_RESPONSAVEIS,
+} = {}) {
+  const responsavelNames = useMemo(
+    () => toResponsavelNames(responsaveis),
+    [responsaveis]
+  );
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [debouncedBusca, setDebouncedBusca] = useState('');
+  const [currentPage, setCurrentPage] = useState(initialPage.page);
+  const [pageData, setPageData] = useState(initialPage);
   const [loadError, setLoadError] = useState(initialError);
-  const [isReloading, setIsReloading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProcess, setEditingProcess] = useState(null);
   const [detailProcess, setDetailProcess] = useState(null);
   const [deletingProcess, setDeletingProcess] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const skipInitialFetch = useRef(true);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(processos.length / PROCESS_PAGE_SIZE)
+  const dateRangeError = hasInvalidDateRange(
+    filters.prazoInicio,
+    filters.prazoFim
+  )
+    ? DATE_RANGE_ERROR
+    : '';
+  const hasActiveFilters = Object.values(filters).some(Boolean);
+  const activeFilters = useMemo(
+    () => ({ ...filters, busca: debouncedBusca }),
+    [filters, debouncedBusca]
   );
-  const pageStart = (currentPage - 1) * PROCESS_PAGE_SIZE;
-  const visibleProcesses = processos.slice(
-    pageStart,
-    pageStart + PROCESS_PAGE_SIZE
-  );
+  const requestKey = JSON.stringify([activeFilters, currentPage, reloadKey]);
+  const [settledKey, setSettledKey] = useState(requestKey);
+  const isReloading = !dateRangeError && settledKey !== requestKey;
 
-  const reloadProcesses = async () => {
-    setIsReloading(true);
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebouncedBusca(filters.busca),
+      SEARCH_DEBOUNCE_MS
+    );
 
-    try {
-      const receivedProcesses = await listarProcessos();
-      setProcessos(receivedProcesses);
-      setLoadError('');
-      setCurrentPage(1);
-    } catch (error) {
-      setLoadError(
-        getErrorMessage(error, 'Não foi possível carregar os processos.')
-      );
-    } finally {
-      setIsReloading(false);
+    return () => clearTimeout(timer);
+  }, [filters.busca]);
+
+  useEffect(() => {
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false;
+      return;
     }
+    if (dateRangeError) return;
+
+    let ignore = false;
+
+    listarProcessos({
+      ...activeFilters,
+      page: currentPage,
+      pageSize: PROCESS_PAGE_SIZE,
+    })
+      .then((page) => {
+        if (ignore) return;
+        setPageData(toProcessPage(page, responsavelNames));
+        setLoadError('');
+        setSettledKey(requestKey);
+      })
+      .catch((error) => {
+        if (ignore) return;
+        setLoadError(
+          getErrorMessage(error, 'Não foi possível carregar os processos.')
+        );
+        setSettledKey(requestKey);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [
+    activeFilters,
+    currentPage,
+    reloadKey,
+    requestKey,
+    dateRangeError,
+    responsavelNames,
+  ]);
+
+  const setFilter = (name, value) => {
+    setFilters((current) => ({ ...current, [name]: value }));
+    setCurrentPage(1);
   };
+
+  const reloadProcesses = () => setReloadKey((key) => key + 1);
 
   const openCreateForm = () => {
     setEditingProcess(null);
@@ -69,21 +149,18 @@ export function useProcessos(initialData = [], initialError = '') {
     if (editingProcess) {
       const updatedProcess = await atualizarProcesso(editingProcess.id, dados);
 
-      setProcessos((current) =>
-        current.map((processo) =>
-          processo.id === updatedProcess.id ? updatedProcess : processo
-        )
-      );
       setDetailProcess((current) =>
-        current?.id === updatedProcess.id ? updatedProcess : current
+        current?.id === editingProcess.id
+          ? toProcessView(updatedProcess, responsavelNames)
+          : current
       );
+      reloadProcesses();
       return updatedProcess;
     }
 
     const createdProcess = await criarProcesso(dados);
-    setProcessos((current) => [createdProcess, ...current]);
-    setLoadError('');
     setCurrentPage(1);
+    reloadProcesses();
     return createdProcess;
   };
 
@@ -104,20 +181,17 @@ export function useProcessos(initialData = [], initialError = '') {
 
     try {
       await excluirProcesso(deletingProcess.id);
-      const remainingCount = Math.max(0, processos.length - 1);
       const remainingPages = Math.max(
         1,
-        Math.ceil(remainingCount / PROCESS_PAGE_SIZE)
+        Math.ceil((pageData.total - 1) / PROCESS_PAGE_SIZE)
       );
 
-      setProcessos((current) =>
-        current.filter((processo) => processo.id !== deletingProcess.id)
-      );
       setCurrentPage((page) => Math.min(page, remainingPages));
       setDetailProcess((current) =>
         current?.id === deletingProcess.id ? null : current
       );
       setDeletingProcess(null);
+      reloadProcesses();
     } catch (error) {
       setDeleteError(
         getErrorMessage(error, 'Não foi possível excluir o processo.')
@@ -128,18 +202,24 @@ export function useProcessos(initialData = [], initialError = '') {
   };
 
   return {
-    processos,
-    visibleProcesses,
+    processos: pageData.itens,
+    totalItems: pageData.total,
+    pageSize: PROCESS_PAGE_SIZE,
     loadError,
     isReloading,
     currentPage,
-    totalPages,
+    totalPages: pageData.totalPages,
+    filters,
+    dateRangeError,
+    hasActiveFilters,
+    responsaveis,
     isFormOpen,
     editingProcess,
     detailProcess,
     deletingProcess,
     isDeleting,
     deleteError,
+    setFilter,
     setCurrentPage,
     setDetailProcess,
     reloadProcesses,

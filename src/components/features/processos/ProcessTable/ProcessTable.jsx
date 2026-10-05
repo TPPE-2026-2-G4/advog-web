@@ -6,7 +6,11 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react';
-import { formatProcessDate, isOverdueDeadline } from '@/utils/processo';
+import {
+  PROCESS_PAGE_SIZE,
+  formatProcessDate,
+  isOverdueDeadline,
+} from '@/utils/processo';
 import styles from './ProcessTable.module.css';
 
 const getStatusStyle = (status) => {
@@ -20,13 +24,15 @@ export default function ProcessTable({
   totalItems = 0,
   currentPage = 1,
   totalPages = 1,
+  pageSize = PROCESS_PAGE_SIZE,
+  hasActiveFilters = false,
   onPageChange,
   onView,
   onEdit,
   onDelete,
 }) {
-  const firstItem = totalItems === 0 ? 0 : (currentPage - 1) * 5 + 1;
-  const lastItem = Math.min(currentPage * 5, totalItems);
+  const firstItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastItem = Math.min(currentPage * pageSize, totalItems);
 
   return (
     <section className={styles.container} aria-label="Lista de processos">
@@ -35,8 +41,17 @@ export default function ProcessTable({
           <div className={styles.emptyIcon}>
             <FileText size={28} aria-hidden="true" />
           </div>
-          <h2>Nenhum processo cadastrado</h2>
-          <p>Cadastre o primeiro processo para começar a gerenciá-lo.</p>
+          {hasActiveFilters ? (
+            <>
+              <h2>Nenhum processo encontrado</h2>
+              <p>Ajuste os filtros para ver outros resultados.</p>
+            </>
+          ) : (
+            <>
+              <h2>Nenhum processo cadastrado</h2>
+              <p>Cadastre o primeiro processo para começar a gerenciá-lo.</p>
+            </>
+          )}
         </div>
       ) : (
         <div className={styles.tableScroll}>

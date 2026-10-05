@@ -117,4 +117,29 @@ describe('ProcessTable', () => {
     );
     expect(props.onPageChange).toHaveBeenCalledWith(1);
   });
+
+  it('informa que nenhum resultado corresponde aos filtros ativos', () => {
+    renderTable({ processes: [], totalItems: 0, hasActiveFilters: true });
+
+    expect(
+      screen.getByRole('heading', { name: 'Nenhum processo encontrado' })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Nenhum processo cadastrado' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('calcula o resumo de paginação com o tamanho de página informado', () => {
+    renderTable({
+      processes: [processes[0]],
+      totalItems: 12,
+      currentPage: 2,
+      totalPages: 3,
+      pageSize: 4,
+    });
+
+    expect(
+      screen.getByText('Mostrando 5–8 de 12 processos')
+    ).toBeInTheDocument();
+  });
 });

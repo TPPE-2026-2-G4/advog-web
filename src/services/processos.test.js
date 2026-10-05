@@ -38,12 +38,32 @@ describe('serviço de processos', () => {
   });
 
   it('lista processos sem usar cache', async () => {
-    fetch.mockResolvedValue(jsonResponse([processData]));
+    const page = { itens: [processData], total: 1, page: 1, page_size: 5 };
+    fetch.mockResolvedValue(jsonResponse(page));
 
-    await expect(listarProcessos()).resolves.toEqual([processData]);
+    await expect(listarProcessos()).resolves.toEqual(page);
     expect(fetch).toHaveBeenCalledWith('http://localhost:8000/processos/', {
       cache: 'no-store',
     });
+  });
+
+  it('envia filtros e página preenchidos na query string', async () => {
+    fetch.mockResolvedValue(jsonResponse({ itens: [], total: 0 }));
+
+    await listarProcessos({
+      busca: '0061234',
+      status: 'Ativo',
+      responsavelId: '3',
+      prazoInicio: '2026-09-01',
+      prazoFim: '2026-09-30',
+      page: 2,
+      pageSize: 5,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/processos/?busca=0061234&status=Ativo&responsavel_id=3&prazo_inicio=2026-09-01&prazo_fim=2026-09-30&page=2&page_size=5',
+      { cache: 'no-store' }
+    );
   });
 
   it('envia o cadastro por POST', async () => {

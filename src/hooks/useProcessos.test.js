@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   atualizarProcesso,
@@ -15,145 +15,286 @@ vi.mock('@/services/processos', () => ({
   listarProcessos: vi.fn(),
 }));
 
-const createProcess = (index = 1, overrides = {}) => ({
+const responsaveis = [{ value: '3', label: 'Ana Paula' }];
+
+const createView = (index = 1, overrides = {}) => ({
   id: `006123${index}-56.2026.8.26.0100`,
   titulo: `Caso ${index}`,
-  cliente: `Cliente ${index}`,
+  cliente: `Cliente nº ${index}`,
   status: 'Ativo',
   tribunal: 'TJDFT',
   area: 'Civil',
-  responsavel: 'Ana',
+  responsavel: 'Ana Paula',
   prazo: '2026-10-05',
-  diasRestantes: 8,
   ...overrides,
 });
+
+const createApiProcess = (index = 1, overrides = {}) => ({
+  processo_id: index,
+  cnj: `006123${index}-56.2026.8.26.0100`,
+  titulo_proc: `Caso ${index}`,
+  status: 'Ativo',
+  tribunal: 'TJDFT',
+  area: 'Civil',
+  data_prazo: '2026-10-05T00:00:00',
+  cliente_id: null,
+  responsavel_id: 3,
+  ...overrides,
+});
+
+const apiPage = (itens, { total = itens.length, page = 1 } = {}) => ({
+  itens,
+  total,
+  page,
+  page_size: 5,
+  total_pages: Math.max(1, Math.ceil(total / 5)),
+});
+
+const initialPageOf = (itens, total = itens.length, page = 1) => ({
+  itens,
+  total,
+  page,
+  pageSize: 5,
+  totalPages: Math.max(1, Math.ceil(total / 5)),
+});
+
+const renderProcessos = (initialPage, initialError = '') =>
+  renderHook(() => useProcessos({ initialPage, initialError, responsaveis }));
 
 describe('useProcessos', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('inicializa dados, erro e paginação', () => {
-    const processes = Array.from({ length: 6 }, (_, index) =>
-      createProcess(index + 1)
-    );
-    const { result } = renderHook(() =>
-      useProcessos(processes, 'Falha inicial')
+  it('inicia com a página entregue pelo servidor sem buscar novamente', () => {
+    const { result } = renderProcessos(
+      initialPageOf([createView(1)], 7),
+      'Falha inicial'
     );
 
-    expect(result.current.processos).toEqual(processes);
-    expect(result.current.visibleProcesses).toEqual(processes.slice(0, 5));
+    expect(result.current.processos).toEqual([createView(1)]);
+    expect(result.current.totalItems).toBe(7);
     expect(result.current.totalPages).toBe(2);
     expect(result.current.loadError).toBe('Falha inicial');
+    expect(result.current.currentPage).toBe(1);
+    expect(listarProcessos).not.toHaveBeenCalled();
   });
 
-  it('recarrega a lista e volta à primeira página', async () => {
-    const processes = Array.from({ length: 6 }, (_, index) =>
-      createProcess(index + 1)
+  it('busca a página solicitada quando a paginação muda', async () => {
+    listarProcessos.mockResolvedValue(
+      apiPage([createApiProcess(6)], { total: 6, page: 2 })
     );
-    const received = [createProcess(8)];
-    listarProcessos.mockResolvedValue(received);
-    const { result } = renderHook(() => useProcessos(processes, 'Erro'));
+    const { result } = renderProcessos(initialPageOf([createView(1)], 6));
 
     act(() => result.current.setCurrentPage(2));
-    await act(async () => result.current.reloadProcesses());
 
-    expect(result.current.processos).toEqual(received);
-    expect(result.current.currentPage).toBe(1);
-    expect(result.current.loadError).toBe('');
-    expect(result.current.isReloading).toBe(false);
+    await waitFor(() => {
+      expect(result.current.processos).toEqual([
+        createView(6, { cliente: 'Não informado' }),
+      ]);
+    });
+    expect(listarProcessos).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 2, pageSize: 5 })
+    );
+    expect(result.current.currentPage).toBe(2);
+  });
+
+  it('volta à primeira página e envia o status ao trocar um filtro', async () => {
+    listarProcessos.mockResolvedValue(apiPage([]));
+    const { result } = renderProcessos(initialPageOf([createView(1)], 6));
+
+    act(() => result.current.setCurrentPage(2));
+    act(() => result.current.setFilter('status', 'Concluído'));
+
+    await waitFor(() => {
+      expect(listarProcessos).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: 'Concluído', page: 1 })
+      );
+    });
+    expect(result.current.filters.status).toBe('Concluído');
+    expect(result.current.hasActiveFilters).toBe(true);
+  });
+
+  it('aplica a busca por texto somente após a pausa de digitação', async () => {
+    listarProcessos.mockResolvedValue(apiPage([createApiProcess(1)]));
+    const { result } = renderProcessos(initialPageOf([]));
+
+    act(() => result.current.setFilter('busca', '0061'));
+
+    expect(listarProcessos).not.toHaveBeenCalledWith(
+      expect.objectContaining({ busca: '0061' })
+    );
+
+    await waitFor(() => {
+      expect(listarProcessos).toHaveBeenCalledWith(
+        expect.objectContaining({ busca: '0061' })
+      );
+    });
+  });
+
+  it('não consulta o servidor com intervalo de prazo inválido', () => {
+    const { result } = renderProcessos(initialPageOf([]));
+
+    act(() => {
+      result.current.setFilter('prazoInicio', '2026-10-10');
+      result.current.setFilter('prazoFim', '2026-10-01');
+    });
+
+    expect(result.current.dateRangeError).toBe(
+      'A data inicial não pode ser posterior à data final.'
+    );
+    expect(listarProcessos).not.toHaveBeenCalled();
+  });
+
+  it('envia o intervalo de prazo válido ao servidor', async () => {
+    listarProcessos.mockResolvedValue(apiPage([]));
+    const { result } = renderProcessos(initialPageOf([]));
+
+    act(() => {
+      result.current.setFilter('prazoInicio', '2026-09-01');
+      result.current.setFilter('prazoFim', '2026-09-30');
+    });
+
+    await waitFor(() => {
+      expect(listarProcessos).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          prazoInicio: '2026-09-01',
+          prazoFim: '2026-09-30',
+        })
+      );
+    });
+    expect(result.current.dateRangeError).toBe('');
   });
 
   it('mantém os dados e exibe erro quando a recarga falha', async () => {
-    const process = createProcess();
-    listarProcessos.mockRejectedValue(new Error('API indisponível'));
-    const { result } = renderHook(() => useProcessos([process]));
+    listarProcessos.mockRejectedValue(new Error('Backend fora do ar'));
+    const { result } = renderProcessos(initialPageOf([createView(1)]));
 
-    await act(async () => result.current.reloadProcesses());
+    act(() => result.current.reloadProcesses());
 
-    expect(result.current.processos).toEqual([process]);
-    expect(result.current.loadError).toBe('API indisponível');
+    await waitFor(() => {
+      expect(result.current.loadError).toBe('Backend fora do ar');
+    });
+    expect(result.current.isReloading).toBe(false);
   });
 
-  it('abre o cadastro, cria no início da lista e fecha o formulário', async () => {
-    const existing = createProcess(1);
-    const created = createProcess(2);
-    criarProcesso.mockResolvedValue(created);
-    const { result } = renderHook(() => useProcessos([existing]));
+  it('cadastra, volta à primeira página e recarrega do servidor', async () => {
+    criarProcesso.mockResolvedValue(createApiProcess(9));
+    listarProcessos.mockResolvedValue(
+      apiPage([createApiProcess(9)], { total: 1 })
+    );
+    const { result } = renderProcessos(initialPageOf([createView(1)], 6, 2));
 
+    act(() => result.current.setCurrentPage(2));
     act(() => result.current.openCreateForm());
-    expect(result.current.isFormOpen).toBe(true);
-    expect(result.current.editingProcess).toBeNull();
 
-    await act(async () => result.current.saveProcess(created));
-    act(() => result.current.closeForm());
+    await act(async () => {
+      await result.current.saveProcess({ titulo: 'Novo' });
+    });
 
-    expect(criarProcesso).toHaveBeenCalledWith(created);
-    expect(result.current.processos).toEqual([created, existing]);
-    expect(result.current.isFormOpen).toBe(false);
+    expect(criarProcesso).toHaveBeenCalledWith({ titulo: 'Novo' });
+    await waitFor(() => {
+      expect(listarProcessos).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 1 })
+      );
+    });
+    expect(result.current.currentPage).toBe(1);
   });
 
-  it('edita somente o processo selecionado e atualiza o detalhe aberto', async () => {
-    const selected = createProcess(1);
-    const other = createProcess(2);
-    const updated = { ...selected, titulo: 'Caso atualizado' };
-    atualizarProcesso.mockResolvedValue(updated);
-    const { result } = renderHook(() => useProcessos([selected, other]));
+  it('edita o processo selecionado e atualiza o detalhe aberto', async () => {
+    const selected = createView(1);
+    atualizarProcesso.mockResolvedValue(
+      createApiProcess(1, { titulo_proc: 'Caso editado' })
+    );
+    listarProcessos.mockResolvedValue(
+      apiPage([createApiProcess(1, { titulo_proc: 'Caso editado' })])
+    );
+    const { result } = renderProcessos(initialPageOf([selected]));
 
     act(() => {
       result.current.setDetailProcess(selected);
       result.current.openEditForm(selected);
     });
-    await act(async () =>
-      result.current.saveProcess({
-        titulo: updated.titulo,
-      })
-    );
+
+    await act(async () => {
+      await result.current.saveProcess({ titulo: 'Caso editado' });
+    });
 
     expect(atualizarProcesso).toHaveBeenCalledWith(selected.id, {
-      titulo: updated.titulo,
+      titulo: 'Caso editado',
     });
-    expect(result.current.processos).toEqual([updated, other]);
-    expect(result.current.detailProcess).toEqual(updated);
+    expect(result.current.detailProcess).toMatchObject({
+      id: selected.id,
+      titulo: 'Caso editado',
+    });
+    await waitFor(() => {
+      expect(listarProcessos).toHaveBeenCalled();
+    });
   });
 
-  it('exclui o selecionado e ajusta uma última página vazia', async () => {
-    const processes = Array.from({ length: 6 }, (_, index) =>
-      createProcess(index + 1)
-    );
+  it('exclui o selecionado e recua para uma página que ainda existe', async () => {
     excluirProcesso.mockResolvedValue(undefined);
-    const { result } = renderHook(() => useProcessos(processes));
+    listarProcessos.mockResolvedValue(
+      apiPage([createApiProcess(1)], { total: 5 })
+    );
+    const { result } = renderProcessos(initialPageOf([createView(6)], 6, 2));
 
-    act(() => {
-      result.current.setCurrentPage(2);
-      result.current.openDeleteModal(processes[5]);
+    act(() => result.current.setCurrentPage(2));
+    act(() => result.current.openDeleteModal(createView(6)));
+
+    await act(async () => {
+      await result.current.deleteSelectedProcess();
     });
-    await act(async () => result.current.deleteSelectedProcess());
 
-    expect(excluirProcesso).toHaveBeenCalledWith(processes[5].id);
-    expect(result.current.processos).toEqual(processes.slice(0, 5));
-    expect(result.current.currentPage).toBe(1);
+    expect(excluirProcesso).toHaveBeenCalledWith(createView(6).id);
     expect(result.current.deletingProcess).toBeNull();
+    await waitFor(() => {
+      expect(result.current.currentPage).toBe(1);
+    });
   });
 
   it('preserva o processo e o modal quando a exclusão falha', async () => {
-    const process = createProcess();
-    excluirProcesso.mockRejectedValue(new Error('Processo não encontrado'));
-    const { result } = renderHook(() => useProcessos([process]));
+    const process = createView(1);
+    excluirProcesso.mockRejectedValue(new Error('Não pode excluir'));
+    const { result } = renderProcessos(initialPageOf([process]));
 
     act(() => result.current.openDeleteModal(process));
-    await act(async () => result.current.deleteSelectedProcess());
 
-    expect(result.current.processos).toEqual([process]);
+    await act(async () => {
+      await result.current.deleteSelectedProcess();
+    });
+
     expect(result.current.deletingProcess).toEqual(process);
-    expect(result.current.deleteError).toBe('Processo não encontrado');
+    expect(result.current.deleteError).toBe('Não pode excluir');
     expect(result.current.isDeleting).toBe(false);
+    expect(listarProcessos).not.toHaveBeenCalled();
+  });
+
+  it('indica a recarga enquanto a requisição de página está pendente', async () => {
+    let resolvePage;
+    listarProcessos.mockReturnValue(
+      new Promise((resolve) => {
+        resolvePage = resolve;
+      })
+    );
+    const { result } = renderProcessos(initialPageOf([createView(1)], 6));
+
+    act(() => result.current.setCurrentPage(2));
+    expect(result.current.isReloading).toBe(true);
+
+    await act(async () => {
+      resolvePage(apiPage([createApiProcess(6)], { total: 6, page: 2 }));
+    });
+
+    expect(result.current.isReloading).toBe(false);
   });
 
   it('não exclui nada sem processo selecionado', async () => {
-    const { result } = renderHook(() => useProcessos([]));
+    const { result } = renderProcessos(initialPageOf([]));
 
-    await act(async () => result.current.deleteSelectedProcess());
+    await act(async () => {
+      await result.current.deleteSelectedProcess();
+    });
 
     expect(excluirProcesso).not.toHaveBeenCalled();
   });

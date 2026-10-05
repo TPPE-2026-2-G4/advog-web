@@ -1,3 +1,4 @@
+import { buildProcessQuery } from '@/utils/processo';
 import { API_URL } from './api';
 
 const validationFieldLabels = {
@@ -60,9 +61,11 @@ const request = async (path, options, fallbackMessage) => {
   }
 };
 
-export function listarProcessos() {
+export function listarProcessos(filtros = {}) {
+  const query = buildProcessQuery(filtros);
+
   return request(
-    '/processos/',
+    `/processos/${query ? `?${query}` : ''}`,
     { cache: 'no-store' },
     'Não foi possível carregar os processos.'
   );

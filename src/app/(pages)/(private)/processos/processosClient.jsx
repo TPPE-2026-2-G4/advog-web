@@ -3,28 +3,35 @@
 import { Plus, RefreshCw } from 'lucide-react';
 import DeleteProcessModal from '@/components/features/processos/DeleteProcessModal/DeleteProcessModal';
 import ProcessDetailsModal from '@/components/features/processos/ProcessDetailsModal/ProcessDetailsModal';
+import ProcessFilters from '@/components/features/processos/ProcessFilters/ProcessFilters';
 import ProcessFormModal from '@/components/features/processos/ProcessFormModal/ProcessFormModal';
 import ProcessTable from '@/components/features/processos/ProcessTable/ProcessTable';
 import { useProcessos } from '@/hooks/useProcessos';
 import styles from './processos.module.css';
 
 export default function ProcessosClient({
-  initialData = [],
+  initialPage,
   initialError = '',
+  responsaveis = [],
 }) {
   const {
     processos,
-    visibleProcesses,
+    totalItems,
+    pageSize,
     loadError,
     isReloading,
     currentPage,
     totalPages,
+    filters,
+    dateRangeError,
+    hasActiveFilters,
     isFormOpen,
     editingProcess,
     detailProcess,
     deletingProcess,
     isDeleting,
     deleteError,
+    setFilter,
     setCurrentPage,
     setDetailProcess,
     reloadProcesses,
@@ -35,7 +42,7 @@ export default function ProcessosClient({
     openDeleteModal,
     closeDeleteModal,
     deleteSelectedProcess,
-  } = useProcessos(initialData, initialError);
+  } = useProcessos({ initialPage, initialError, responsaveis });
 
   return (
     <div className={styles.container}>
@@ -43,10 +50,8 @@ export default function ProcessosClient({
         <div className={styles.titleArea}>
           <h1 className={styles.title}>Gestão de Processos</h1>
           <p className={styles.subtitle} aria-live="polite">
-            {processos.length}{' '}
-            {processos.length === 1
-              ? 'processo encontrado'
-              : 'processos encontrados'}
+            {totalItems}{' '}
+            {totalItems === 1 ? 'processo encontrado' : 'processos encontrados'}
           </p>
         </div>
 
@@ -59,6 +64,13 @@ export default function ProcessosClient({
           Novo Processo
         </button>
       </div>
+
+      <ProcessFilters
+        filters={filters}
+        responsaveis={responsaveis}
+        dateRangeError={dateRangeError}
+        onFilterChange={setFilter}
+      />
 
       {loadError ? (
         <div className={styles.errorState} role="alert">
@@ -82,10 +94,12 @@ export default function ProcessosClient({
         </div>
       ) : (
         <ProcessTable
-          processes={visibleProcesses}
-          totalItems={processos.length}
+          processes={processos}
+          totalItems={totalItems}
           currentPage={currentPage}
           totalPages={totalPages}
+          pageSize={pageSize}
+          hasActiveFilters={hasActiveFilters}
           onPageChange={setCurrentPage}
           onView={setDetailProcess}
           onEdit={openEditForm}
