@@ -289,6 +289,94 @@ describe('useProcessos', () => {
     expect(result.current.isReloading).toBe(false);
   });
 
+  it('ignora respostas antigas quando uma página mais recente já foi carregada', async () => {
+    const pending = [];
+    listarProcessos.mockImplementation(
+      () => new Promise((resolve, reject) => pending.push({ resolve, reject }))
+    );
+    const { result } = renderProcessos(initialPageOf([createView(1)], 12));
+
+    act(() => result.current.setCurrentPage(2));
+    act(() => result.current.setCurrentPage(3));
+
+    await act(async () => {
+      pending[1].resolve(
+        apiPage([createApiProcess(12)], { total: 12, page: 3 })
+      );
+    });
+    await act(async () => {
+      pending[0].reject(new Error('Falha antiga'));
+    });
+
+    expect(result.current.loadError).toBe('');
+    expect(result.current.processos[0].id).toBe(createApiProcess(12).cnj);
+  });
+
+  it('não fecha o modal de exclusão enquanto a exclusão está em andamento', async () => {
+    let resolveDelete;
+    excluirProcesso.mockReturnValue(
+      new Promise((resolve) => {
+        resolveDelete = resolve;
+      })
+    );
+    listarProcessos.mockResolvedValue(apiPage([]));
+    const process = createView(1);
+    const { result } = renderProcessos(initialPageOf([process]));
+
+    act(() => result.current.openDeleteModal(process));
+    act(() => {
+      result.current.deleteSelectedProcess();
+    });
+    await waitFor(() => expect(result.current.isDeleting).toBe(true));
+
+    act(() => result.current.closeDeleteModal());
+    expect(result.current.deletingProcess).toEqual(process);
+
+    await act(async () => {
+      resolveDelete();
+    });
+  });
+
+  it('fecha o modal de exclusão quando nenhuma exclusão está em andamento', () => {
+    const process = createView(1);
+    const { result } = renderProcessos(initialPageOf([process]));
+
+    act(() => result.current.openDeleteModal(process));
+    act(() => result.current.closeDeleteModal());
+
+    expect(result.current.deletingProcess).toBeNull();
+  });
+
+  it('fecha o detalhe do processo quando ele é excluído', async () => {
+    excluirProcesso.mockResolvedValue(undefined);
+    listarProcessos.mockResolvedValue(apiPage([]));
+    const process = createView(1);
+    const { result } = renderProcessos(initialPageOf([process]));
+
+    act(() => {
+      result.current.setDetailProcess(process);
+      result.current.openDeleteModal(process);
+    });
+    await act(async () => {
+      await result.current.deleteSelectedProcess();
+    });
+
+    expect(result.current.detailProcess).toBeNull();
+  });
+
+  it('usa a mensagem padrão quando a listagem rejeita com um valor que não é erro', async () => {
+    listarProcessos.mockRejectedValue('falha');
+    const { result } = renderProcessos(initialPageOf([createView(1)]));
+
+    act(() => result.current.reloadProcesses());
+
+    await waitFor(() => {
+      expect(result.current.loadError).toBe(
+        'Não foi possível carregar os processos.'
+      );
+    });
+  });
+
   it('não exclui nada sem processo selecionado', async () => {
     const { result } = renderProcessos(initialPageOf([]));
 

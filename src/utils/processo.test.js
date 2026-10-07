@@ -251,3 +251,15 @@ describe('nomes de responsáveis', () => {
     expect(names.get('9')).toBeUndefined();
   });
 });
+
+describe('página de processos com dados incompletos', () => {
+  it('usa valores padrão quando a página da API vem incompleta', () => {
+    expect(toProcessPage({}, new Map())).toEqual({
+      itens: [],
+      total: 0,
+      page: 1,
+      pageSize: 0,
+      totalPages: 1,
+    });
+  });
+});

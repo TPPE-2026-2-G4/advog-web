@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   atualizarProcesso,
@@ -6,6 +12,7 @@ import {
   excluirProcesso,
   listarProcessos,
 } from '@/services/processos';
+import { toProcessPage, toResponsavelNames } from '@/utils/processo';
 import ProcessosClient from './processosClient';
 
 vi.mock('@/services/processos', () => ({
@@ -74,13 +81,10 @@ const fillCreationForm = (process) => {
 const renderClient = (overrides = {}) =>
   render(
     <ProcessosClient
-      initialPage={{
-        itens: [{ ...apiProcess }],
-        total: 1,
-        page: 1,
-        pageSize: 5,
-        totalPages: 1,
-      }}
+      initialPage={toProcessPage(
+        apiPage([apiProcess]),
+        toResponsavelNames(responsaveis)
+      )}
       initialError=""
       responsaveis={responsaveis}
       {...overrides}
@@ -96,7 +100,9 @@ describe('ProcessosClient', () => {
     renderClient();
 
     expect(screen.getByText('1 processo encontrado')).toBeInTheDocument();
-    expect(screen.getByText('Ana Paula Ribeiro')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('table')).getByText('Ana Paula Ribeiro')
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('combobox', { name: /filtrar por status/i })
     ).toBeInTheDocument();
@@ -131,7 +137,7 @@ describe('ProcessosClient', () => {
     renderClient();
 
     fireEvent.change(
-      screen.getByPlaceholderText(/buscar por número ou título/i),
+      screen.getByPlaceholderText(/buscar por número, cliente ou título/i),
       { target: { value: '0061234' } }
     );
 
@@ -170,6 +176,24 @@ describe('ProcessosClient', () => {
     expect(
       screen.getByRole('combobox', { name: /filtrar por status/i })
     ).toBeInTheDocument();
+  });
+
+  it('fecha o detalhe do processo visualizado', () => {
+    renderClient();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `Visualizar processo ${apiProcess.cnj}`,
+      })
+    );
+    expect(
+      screen.getByRole('heading', { name: apiProcess.titulo_proc })
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(
+      screen.queryByRole('heading', { name: apiProcess.titulo_proc })
+    ).not.toBeInTheDocument();
   });
 
   it('cadastra, edita e exclui recarregando a página do servidor', async () => {

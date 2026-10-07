@@ -118,6 +118,19 @@ describe('ProcessTable', () => {
     expect(props.onPageChange).toHaveBeenCalledWith(1);
   });
 
+  it('avança para a próxima página ao clicar em Próxima página', () => {
+    const props = renderTable({
+      processes: [processes[0]],
+      totalItems: 12,
+      currentPage: 1,
+      totalPages: 3,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
+
+    expect(props.onPageChange).toHaveBeenCalledWith(2);
+  });
+
   it('informa que nenhum resultado corresponde aos filtros ativos', () => {
     renderTable({ processes: [], totalItems: 0, hasActiveFilters: true });
 
