@@ -2,21 +2,39 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import ProcessFormModal from './ProcessFormModal';
 
+const clientes = [{ cliente_id: 10, nome: 'Maria Silva' }];
+const funcionarios = [{ funcionario_id: 5, nome: 'Ana Paula' }];
 const processData = {
-  id: '0061234-56.2026.8.26.0100',
+  processo_id: 1,
+  cnj: '0061234-56.2026.8.26.0100',
   titulo: 'Caso Teste',
-  cliente: 'Maria Silva',
+  descricao: 'Descrição',
   status: 'Ativo',
   tribunal: 'TJDFT',
   area: 'Civil',
-  responsavel: 'Ana Paula',
-  prazo: '05/10/2026',
-  diasRestantes: 4,
+  data_inicio: '2026-01-01T00:00:00',
+  data_realizado: null,
+  data_prazo: '2026-10-05T00:00:00',
+  cliente_id: 10,
+  funcionario_id: 5,
 };
+
+const renderForm = (overrides = {}) =>
+  render(
+    <ProcessFormModal
+      isOpen
+      process={null}
+      clientes={clientes}
+      funcionarios={funcionarios}
+      onClose={vi.fn()}
+      onSave={vi.fn()}
+      {...overrides}
+    />
+  );
 
 const fillCreationForm = () => {
   fireEvent.change(screen.getByLabelText('Número do Processo'), {
-    target: { value: processData.id.replace(/\D/g, '') },
+    target: { value: processData.cnj.replace(/\D/g, '') },
   });
   fireEvent.change(screen.getByLabelText('Tribunal'), {
     target: { value: ` ${processData.tribunal} ` },
@@ -24,17 +42,23 @@ const fillCreationForm = () => {
   fireEvent.change(screen.getByLabelText('Título do Caso'), {
     target: { value: processData.titulo },
   });
+  fireEvent.change(screen.getByLabelText('Descrição'), {
+    target: { value: processData.descricao },
+  });
   fireEvent.change(screen.getByLabelText('Cliente'), {
-    target: { value: processData.cliente },
+    target: { value: String(processData.cliente_id) },
   });
   fireEvent.change(screen.getByLabelText('Área de Atuação'), {
     target: { value: processData.area },
   });
   fireEvent.change(screen.getByLabelText('Responsável'), {
-    target: { value: processData.responsavel },
+    target: { value: String(processData.funcionario_id) },
   });
   fireEvent.change(screen.getByLabelText('Status'), {
     target: { value: processData.status },
+  });
+  fireEvent.change(screen.getByLabelText('Data de Início'), {
+    target: { value: '2026-01-01' },
   });
   fireEvent.change(screen.getByLabelText('Próximo Prazo'), {
     target: { value: '2026-10-05' },
@@ -43,85 +67,71 @@ const fillCreationForm = () => {
 
 describe('ProcessFormModal', () => {
   it('não renderiza quando está fechado', () => {
-    render(
-      <ProcessFormModal
-        isOpen={false}
-        process={null}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />
-    );
-
+    renderForm({ isOpen: false });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('indica os campos obrigatórios e formata a digitação do CNJ', () => {
-    const { container } = render(
-      <ProcessFormModal
-        isOpen
-        process={null}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />
-    );
+  it('marca somente os campos obrigatórios e formata o CNJ', () => {
+    const { container } = renderForm();
 
     expect(screen.getByText(/Campos obrigatórios/)).toBeInTheDocument();
-    const requiredFields = container.querySelectorAll('[required]');
-    expect(requiredFields).toHaveLength(8);
-    requiredFields.forEach((field) => expect(field).toBeRequired());
+    expect(container.querySelectorAll('[required]')).toHaveLength(6);
+    expect(screen.getByLabelText('Responsável')).not.toBeRequired();
+    expect(screen.getByLabelText('Próximo Prazo')).not.toBeRequired();
 
     const cnjInput = screen.getByLabelText('Número do Processo');
-    expect(cnjInput).toHaveAttribute('inputmode', 'numeric');
     fireEvent.change(cnjInput, {
       target: { value: '0061234abc562026x8y2601009999' },
     });
-    expect(cnjInput).toHaveValue('0061234-56.2026.8.26.0100');
+    expect(cnjInput).toHaveValue(processData.cnj);
   });
 
-  it('cadastra um processo com valores normalizados', async () => {
+  it('oferece os quatro status aceitos pelo backend', () => {
+    renderForm();
+    const options = screen
+      .getAllByRole('option')
+      .map((option) => option.textContent);
+
+    expect(options).toEqual(
+      expect.arrayContaining(['Em Análise', 'Ativo', 'Concluído', 'Arquivado'])
+    );
+    expect(options).not.toContain('Pendente');
+  });
+
+  it('cadastra usando IDs e datas no formato datetime', async () => {
     const onSave = vi.fn().mockResolvedValue(processData);
     const onClose = vi.fn();
-    render(
-      <ProcessFormModal
-        isOpen
-        process={null}
-        onClose={onClose}
-        onSave={onSave}
-      />
-    );
+    renderForm({ onSave, onClose });
     fillCreationForm();
 
     fireEvent.submit(screen.getByRole('dialog'));
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
 
     expect(onSave).toHaveBeenCalledWith({
-      id: processData.id,
+      cnj: processData.cnj,
       titulo: processData.titulo,
-      cliente: processData.cliente,
+      descricao: processData.descricao,
       status: processData.status,
       tribunal: processData.tribunal,
       area: processData.area,
-      responsavel: processData.responsavel,
-      prazo: '2026-10-05',
-      diasRestantes: expect.any(Number),
+      data_inicio: '2026-01-01T00:00:00',
+      data_realizado: null,
+      data_prazo: '2026-10-05T00:00:00',
+      cliente_id: 10,
+      funcionario_id: 5,
     });
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('edita sem permitir ou enviar alteração do CNJ', async () => {
+  it('edita sem reenviar o CNJ', async () => {
     const onSave = vi.fn().mockResolvedValue(processData);
-    render(
-      <ProcessFormModal
-        isOpen
-        process={processData}
-        onClose={vi.fn()}
-        onSave={onSave}
-      />
-    );
+    renderForm({ process: processData, onSave });
 
     expect(screen.getByLabelText('Número do Processo')).toHaveAttribute(
       'readonly'
     );
+    expect(screen.getByLabelText('Cliente')).toHaveValue('10');
+    expect(screen.getByLabelText('Responsável')).toHaveValue('5');
     expect(screen.getByLabelText('Próximo Prazo')).toHaveValue('2026-10-05');
     fireEvent.change(screen.getByLabelText('Título do Caso'), {
       target: { value: 'Caso atualizado' },
@@ -129,20 +139,35 @@ describe('ProcessFormModal', () => {
     fireEvent.submit(screen.getByRole('dialog'));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
-    expect(onSave.mock.calls[0][0]).not.toHaveProperty('id');
-    expect(onSave.mock.calls[0][0].titulo).toBe('Caso atualizado');
+    expect(onSave).toHaveBeenCalledWith({ titulo: 'Caso atualizado' });
   });
 
-  it('rejeita CNJ, campos vazios e prazo inválidos antes da API', () => {
+  it('aceita responsável e datas opcionais vazios', async () => {
+    const onSave = vi.fn().mockResolvedValue(processData);
+    renderForm({ onSave });
+    fillCreationForm();
+    fireEvent.change(screen.getByLabelText('Responsável'), {
+      target: { value: '' },
+    });
+    fireEvent.change(screen.getByLabelText('Data de Início'), {
+      target: { value: '' },
+    });
+    fireEvent.change(screen.getByLabelText('Próximo Prazo'), {
+      target: { value: '' },
+    });
+
+    fireEvent.submit(screen.getByRole('dialog'));
+    await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      funcionario_id: null,
+      data_inicio: null,
+      data_prazo: null,
+    });
+  });
+
+  it('rejeita CNJ inválido e campos obrigatórios vazios', () => {
     const onSave = vi.fn();
-    const { rerender } = render(
-      <ProcessFormModal
-        isOpen
-        process={null}
-        onClose={vi.fn()}
-        onSave={onSave}
-      />
-    );
+    const { rerender } = renderForm({ onSave });
 
     fireEvent.change(screen.getByLabelText('Número do Processo'), {
       target: { value: '123' },
@@ -154,22 +179,16 @@ describe('ProcessFormModal', () => {
 
     rerender(
       <ProcessFormModal
-        isOpen={false}
-        process={null}
-        onClose={vi.fn()}
-        onSave={onSave}
-      />
-    );
-    rerender(
-      <ProcessFormModal
         isOpen
         process={null}
+        clientes={clientes}
+        funcionarios={funcionarios}
         onClose={vi.fn()}
         onSave={onSave}
       />
     );
     fireEvent.change(screen.getByLabelText('Número do Processo'), {
-      target: { value: processData.id },
+      target: { value: processData.cnj },
     });
     fireEvent.submit(screen.getByRole('dialog'));
     expect(screen.getByRole('alert')).toHaveTextContent(
@@ -182,18 +201,10 @@ describe('ProcessFormModal', () => {
     const onSave = vi
       .fn()
       .mockRejectedValue(new Error('Processo já cadastrado'));
-    render(
-      <ProcessFormModal
-        isOpen
-        process={null}
-        onClose={vi.fn()}
-        onSave={onSave}
-      />
-    );
+    renderForm({ onSave });
     fillCreationForm();
 
     fireEvent.submit(screen.getByRole('dialog'));
-
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Processo já cadastrado'
     );
@@ -208,20 +219,13 @@ describe('ProcessFormModal', () => {
           resolveSave = resolve;
         })
     );
-    render(
-      <ProcessFormModal
-        isOpen
-        process={null}
-        onClose={vi.fn()}
-        onSave={onSave}
-      />
-    );
+    renderForm({ onSave });
     fillCreationForm();
 
     fireEvent.submit(screen.getByRole('dialog'));
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
-    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled()
+    );
 
     resolveSave(processData);
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
