@@ -1,6 +1,7 @@
 .form {
   width: 100%;
   max-width: 450px;
+  min-height: 450px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -40,6 +41,24 @@
 
 .select option {
   color: #172133;
+}
+
+.oabOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: #172133;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #172133;
+  cursor: pointer;
 }
 
 .rowOab {
@@ -97,6 +116,7 @@
 @media (max-width: 1024px) and (min-width: 769px) {
   .form {
     max-width: 380px;
+    min-height: 450px;
   }
 
   .input {
@@ -118,6 +138,7 @@
   .form {
     width: 100%;
     max-width: 450px;
+    min-height: 0;
   }
 
   .label {
