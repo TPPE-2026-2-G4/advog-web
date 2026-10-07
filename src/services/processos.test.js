@@ -5,17 +5,25 @@ import {
   excluirProcesso,
   listarProcessos,
 } from './processos';
+import { getAccessToken } from '@/utils/authSession';
+
+vi.mock('@/utils/authSession', () => ({
+  getAccessToken: vi.fn(),
+}));
 
 const processData = {
-  id: '0061234-56.2026.8.26.0100',
+  processo_id: 1,
+  cnj: '0061234-56.2026.8.26.0100',
   titulo: 'Caso Teste',
-  cliente: 'Maria',
+  descricao: null,
   status: 'Ativo',
   tribunal: 'TJDFT',
   area: 'Civil',
-  responsavel: 'Ana',
-  prazo: '2026-10-05',
-  diasRestantes: 8,
+  data_inicio: null,
+  data_realizado: null,
+  data_prazo: '2026-10-05T00:00:00',
+  cliente_id: 10,
+  funcionario_id: 5,
 };
 
 const jsonResponse = (data, overrides = {}) => ({
@@ -35,6 +43,7 @@ describe('serviço de processos', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.stubGlobal('fetch', vi.fn());
+    getAccessToken.mockReturnValue('token-jwt');
   });
 
   it('lista processos sem usar cache', async () => {
@@ -43,7 +52,26 @@ describe('serviço de processos', () => {
     await expect(listarProcessos()).resolves.toEqual([processData]);
     expect(fetch).toHaveBeenCalledWith('http://localhost:8000/processos/', {
       cache: 'no-store',
+      headers: { Authorization: 'Bearer token-jwt' },
     });
+  });
+
+  it('serializa somente filtros preenchidos', async () => {
+    fetch.mockResolvedValue(jsonResponse([processData]));
+
+    await listarProcessos({
+      status: 'Em Análise',
+      cliente_id: 10,
+      tribunal: '',
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/processos/?status=Em+An%C3%A1lise&cliente_id=10',
+      {
+        cache: 'no-store',
+        headers: { Authorization: 'Bearer token-jwt' },
+      }
+    );
   });
 
   it('envia o cadastro por POST', async () => {
@@ -52,7 +80,10 @@ describe('serviço de processos', () => {
     await expect(criarProcesso(processData)).resolves.toEqual(processData);
     expect(fetch).toHaveBeenCalledWith('http://localhost:8000/processos/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token-jwt',
+      },
       body: JSON.stringify(processData),
     });
   });
@@ -66,7 +97,10 @@ describe('serviço de processos', () => {
       'http://localhost:8000/processos/processo%2Fcom%20barra',
       {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer token-jwt',
+        },
         body: JSON.stringify({ status: 'Concluído' }),
       }
     );
@@ -76,11 +110,16 @@ describe('serviço de processos', () => {
     const response = jsonResponse(null, { status: 204 });
     fetch.mockResolvedValue(response);
 
-    await expect(excluirProcesso(processData.id)).resolves.toBeUndefined();
+    await expect(
+      excluirProcesso(processData.processo_id)
+    ).resolves.toBeUndefined();
     expect(response.json).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledWith(
-      `http://localhost:8000/processos/${processData.id}`,
-      { method: 'DELETE' }
+      `http://localhost:8000/processos/${processData.processo_id}`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer token-jwt' },
+      }
     );
   });
 
@@ -102,12 +141,12 @@ describe('serviço de processos', () => {
           [
             {
               type: 'missing',
-              loc: ['body', 'cliente'],
+              loc: ['body', 'cliente_id'],
               msg: 'Field required',
             },
             {
               type: 'string_pattern_mismatch',
-              loc: ['body', 'id'],
+              loc: ['body', 'cnj'],
               msg: 'String should match pattern',
             },
           ],
@@ -154,6 +193,23 @@ describe('serviço de processos', () => {
 
     await expect(criarProcesso(processData)).rejects.toThrow(
       'Não foi possível cadastrar o processo.'
+    );
+  });
+
+  it('exige sessão e traduz respostas de autorização', async () => {
+    getAccessToken.mockReturnValueOnce(null);
+    await expect(listarProcessos()).rejects.toThrow(
+      'Sessão expirada. Faça login novamente.'
+    );
+
+    fetch.mockResolvedValueOnce(errorResponse('Not authenticated', 401));
+    await expect(listarProcessos()).rejects.toThrow(
+      'Sessão expirada. Faça login novamente.'
+    );
+
+    fetch.mockResolvedValueOnce(errorResponse('Forbidden', 403));
+    await expect(criarProcesso(processData)).rejects.toThrow(
+      'Você não possui permissão para realizar esta ação.'
     );
   });
 });

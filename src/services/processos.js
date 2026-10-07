@@ -1,19 +1,27 @@
 import { API_URL } from './api';
+import { getAccessToken } from '@/utils/authSession';
 
 const validationFieldLabels = {
-  id: 'Número do processo',
+  cnj: 'Número do processo',
   titulo: 'Título do caso',
-  cliente: 'Cliente',
+  descricao: 'Descrição',
   status: 'Status',
   tribunal: 'Tribunal',
   area: 'Área de atuação',
-  responsavel: 'Responsável',
-  prazo: 'Próximo prazo',
-  diasRestantes: 'Dias restantes',
+  data_inicio: 'Data de início',
+  data_realizado: 'Data de realização',
+  data_prazo: 'Próximo prazo',
+  cliente_id: 'Cliente',
+  funcionario_id: 'Responsável',
 };
 
 const getErrorMessage = async (response, fallbackMessage) => {
   const error = await response.json().catch(() => null);
+
+  if (response.status === 401) return 'Sessão expirada. Faça login novamente.';
+  if (response.status === 403) {
+    return 'Você não possui permissão para realizar esta ação.';
+  }
 
   if (typeof error?.detail === 'string') return error.detail;
 
@@ -39,10 +47,19 @@ const getErrorMessage = async (response, fallbackMessage) => {
 };
 
 const request = async (path, options, fallbackMessage) => {
+  const token = getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
   let response;
 
   try {
-    response = await fetch(`${API_URL}${path}`, options);
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        ...options?.headers,
+        Authorization: `Bearer ${token}`,
+      },
+    });
   } catch {
     throw new Error(fallbackMessage);
   }
@@ -60,9 +77,17 @@ const request = async (path, options, fallbackMessage) => {
   }
 };
 
-export function listarProcessos() {
+export function listarProcessos(filtros = {}) {
+  const query = new URLSearchParams();
+  Object.entries(filtros).forEach(([field, value]) => {
+    if (value !== '' && value !== null && value !== undefined) {
+      query.set(field, String(value));
+    }
+  });
+  const suffix = query.size > 0 ? `?${query.toString()}` : '';
+
   return request(
-    '/processos/',
+    `/processos/${suffix}`,
     { cache: 'no-store' },
     'Não foi possível carregar os processos.'
   );
