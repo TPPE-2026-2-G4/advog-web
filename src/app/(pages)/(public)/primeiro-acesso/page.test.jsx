@@ -3,15 +3,24 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { firstLogin as mockFirstLogin } from '@/services/auth';
 import FirstLoginPage from './page';
 
+const { mockPush, mockGetSearchParam } = vi.hoisted(() => ({
+  mockPush: vi.fn(),
+  mockGetSearchParam: vi.fn(),
+}));
+
 vi.mock('@/services/auth', () => ({
   firstLogin: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+  useSearchParams: () => ({ get: mockGetSearchParam }),
 }));
 
 describe('FirstLoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
-    localStorage.setItem('token', 'fake-token');
+    mockGetSearchParam.mockReturnValue('fake-token');
   });
 
   it('renderiza o título e subtítulo do primeiro acesso', () => {
@@ -176,6 +185,7 @@ describe('FirstLoginPage', () => {
         uf: 'DF',
         numeroOab: '123456',
       });
+      expect(mockPush).toHaveBeenCalledWith('/login?cadastro=sucesso');
     });
 
     expect(submitButton).not.toBeDisabled();
@@ -221,6 +231,7 @@ describe('FirstLoginPage', () => {
         nome: 'Maria Souza Lima',
         senha: 'senha-segura',
       });
+      expect(mockPush).toHaveBeenCalledWith('/login?cadastro=sucesso');
     });
   });
 
