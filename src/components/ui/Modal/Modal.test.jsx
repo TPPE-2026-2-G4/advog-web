@@ -113,6 +113,15 @@ describe('Modal', () => {
     );
     removeEventListenerSpy.mockRestore();
   });
+  it('não possui aria-modal quando ariaModal é falso', () => {
+    render(
+      <Modal isOpen onClose={vi.fn()} ariaModal={false}>
+        <div>Modal sem aria-modal</div>
+      </Modal>
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).not.toHaveAttribute('aria-modal');
+  });
 });
 
 describe('ModalCloseButton', () => {
