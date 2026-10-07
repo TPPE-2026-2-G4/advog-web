@@ -31,7 +31,6 @@ export default function ClientesClient({
     statusFilter,
     setStatusFilter,
     filteredClientes,
-    // Modals
     isAddOpen,
     handleOpenAdd,
     handleCloseAdd,
@@ -47,7 +46,6 @@ export default function ClientesClient({
     deletingClient,
     handleOpenDelete,
     handleCloseDelete,
-    // CRUD
     handleCreateClient,
     handleUpdateClient,
     handleDeleteClient,
@@ -61,7 +59,6 @@ export default function ClientesClient({
 
   return (
     <div className={styles.container}>
-      {/* Topo / Cabeçalho */}
       <div className={styles.headerRow}>
         <div className={styles.titleArea}>
           <h1 className={styles.title}>Clientes</h1>
@@ -83,7 +80,6 @@ export default function ClientesClient({
         </button>
       </div>
 
-      {/* Alertas */}
       {feedbackMessage && (
         <div className={styles.alertSuccess} role="status">
           <CheckCircle2 size={18} />
@@ -98,7 +94,6 @@ export default function ClientesClient({
         </div>
       )}
 
-      {/* Barra de Filtros */}
       <div className={styles.filtersBar} role="search">
         <div className={styles.searchWrapper}>
           <Search size={18} className={styles.searchIcon} />
@@ -155,7 +150,6 @@ export default function ClientesClient({
         )}
       </div>
 
-      {/* Tabela de Clientes */}
       <ClientTable
         clientes={filteredClientes}
         funcionarios={funcionarios}
@@ -164,7 +158,6 @@ export default function ClientesClient({
         onDelete={handleOpenDelete}
       />
 
-      {/* Modais */}
       <AddClientModal
         isOpen={isAddOpen}
         onClose={handleCloseAdd}

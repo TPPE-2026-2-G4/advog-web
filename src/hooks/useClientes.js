@@ -50,7 +50,6 @@ export function useClientes({
     };
   }, [initialClientes.length, initialFuncionarios.length]);
 
-  // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [viewingClient, setViewingClient] = useState(null);
@@ -59,7 +58,6 @@ export function useClientes({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingClient, setDeletingClient] = useState(null);
 
-  // Operation state
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
@@ -74,7 +72,6 @@ export function useClientes({
 
   const filteredClientes = useMemo(() => {
     return clientes.filter((c) => {
-      // 1. Busca textual
       if (searchTerm.trim()) {
         const termo = searchTerm.toLowerCase();
         const nomeMatch = c.nome?.toLowerCase().includes(termo);
@@ -91,7 +88,6 @@ export function useClientes({
         }
       }
 
-      // 2. Filtro de responsável
       if (responsavelFilter) {
         const respIdNum = Number(responsavelFilter);
         const cRespId = Number(c.responsavel_id);
@@ -99,7 +95,6 @@ export function useClientes({
         if (respIdNum && cRespId) {
           if (cRespId !== respIdNum) return false;
         } else {
-          // Comparação por nome se ID não bater
           const func = funcionarios.find(
             (f) =>
               String(f.funcionario_id || f.id) === String(responsavelFilter)
@@ -119,7 +114,6 @@ export function useClientes({
         }
       }
 
-      // 3. Filtro de status / etapa
       if (statusFilter) {
         const statusIdNum = Number(statusFilter);
         const cEtapaId = Number(c.etapa_id || c.status_id);
@@ -236,7 +230,6 @@ export function useClientes({
     statusFilter,
     setStatusFilter,
     filteredClientes,
-    // Modals
     isAddOpen,
     handleOpenAdd,
     handleCloseAdd,
@@ -252,7 +245,6 @@ export function useClientes({
     deletingClient,
     handleOpenDelete,
     handleCloseDelete,
-    // CRUD
     handleCreateClient,
     handleUpdateClient,
     handleDeleteClient,
