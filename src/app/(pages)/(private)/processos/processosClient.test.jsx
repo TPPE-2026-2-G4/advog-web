@@ -1,13 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  atualizarProcesso,
-  criarProcesso,
-  excluirProcesso,
-  listarProcessos,
-} from '@/services/processos';
+import { listarClientes } from '@/services/clientes';
+import { listarFuncionarios } from '@/services/funcionarios';
+import { listarProcessos } from '@/services/processos';
 import ProcessosClient from './processosClient';
 
+vi.mock('@/services/clientes', () => ({ listarClientes: vi.fn() }));
+vi.mock('@/services/funcionarios', () => ({ listarFuncionarios: vi.fn() }));
 vi.mock('@/services/processos', () => ({
   atualizarProcesso: vi.fn(),
   criarProcesso: vi.fn(),
@@ -15,158 +14,130 @@ vi.mock('@/services/processos', () => ({
   listarProcessos: vi.fn(),
 }));
 
-const existingProcess = {
-  id: '0061234-56.2026.8.26.0100',
+const processData = {
+  processo_id: 1,
+  cnj: '0061234-56.2026.8.26.0100',
   titulo: 'Caso existente',
-  cliente: 'Maria Silva',
+  descricao: null,
   status: 'Ativo',
   tribunal: 'TJDFT',
   area: 'Civil',
-  responsavel: 'Ana Paula',
-  prazo: '2026-10-05',
-  diasRestantes: 8,
+  data_inicio: null,
+  data_realizado: null,
+  data_prazo: '2026-10-05T00:00:00',
+  cliente_id: 10,
+  funcionario_id: 5,
 };
+const clientes = [{ cliente_id: 10, nome: 'Maria Silva' }];
+const funcionarios = [{ funcionario_id: 5, nome: 'Ana Paula' }];
 
-const createdProcess = {
-  ...existingProcess,
-  id: '0061235-56.2026.8.26.0100',
-  titulo: 'Novo caso',
-  status: 'Em Análise',
-};
-
-const fillCreationForm = () => {
-  fireEvent.change(screen.getByLabelText('Número do Processo'), {
-    target: { value: createdProcess.id },
-  });
-  fireEvent.change(screen.getByLabelText('Tribunal'), {
-    target: { value: createdProcess.tribunal },
-  });
-  fireEvent.change(screen.getByLabelText('Título do Caso'), {
-    target: { value: createdProcess.titulo },
-  });
-  fireEvent.change(screen.getByLabelText('Cliente'), {
-    target: { value: createdProcess.cliente },
-  });
-  fireEvent.change(screen.getByLabelText('Área de Atuação'), {
-    target: { value: createdProcess.area },
-  });
-  fireEvent.change(screen.getByLabelText('Responsável'), {
-    target: { value: createdProcess.responsavel },
-  });
-  fireEvent.change(screen.getByLabelText('Próximo Prazo'), {
-    target: { value: createdProcess.prazo },
-  });
+const setPermissions = (permissions) => {
+  sessionStorage.setItem(
+    'current_user',
+    JSON.stringify({ cargo: { permissao: permissions } })
+  );
 };
 
 describe('ProcessosClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    sessionStorage.clear();
+    listarProcessos.mockResolvedValue([processData]);
+    listarClientes.mockResolvedValue(clientes);
+    listarFuncionarios.mockResolvedValue(funcionarios);
   });
 
-  it('executa o fluxo cadastrar, visualizar, editar e excluir', async () => {
-    criarProcesso.mockResolvedValue(createdProcess);
-    atualizarProcesso.mockImplementation(async (_id, data) => ({
-      ...createdProcess,
-      ...data,
-    }));
-    excluirProcesso.mockResolvedValue(undefined);
-    render(<ProcessosClient initialData={[existingProcess]} />);
+  it('bloqueia a tela sem permissão de visualização', () => {
+    setPermissions({ visualizar_processos: false });
+    render(<ProcessosClient />);
 
-    expect(screen.getByText('1 processo encontrado')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Novo Processo' }));
-    fillCreationForm();
-    fireEvent.submit(screen.getByRole('dialog'));
+    expect(screen.getByRole('alert')).toHaveTextContent('Acesso negado');
+    expect(listarProcessos).not.toHaveBeenCalled();
+  });
 
-    expect(
-      await screen.findByText('2 processos encontrados')
-    ).toBeInTheDocument();
-    expect(criarProcesso).toHaveBeenCalledOnce();
-    expect(
-      screen.getByRole('button', { name: createdProcess.titulo })
-    ).toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: `Visualizar processo ${createdProcess.id}`,
-      })
-    );
-    expect(
-      screen.getByRole('heading', { name: createdProcess.titulo })
-    ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: `Editar processo ${createdProcess.id}`,
-      })
-    );
-    fireEvent.change(screen.getByLabelText('Título do Caso'), {
-      target: { value: 'Caso atualizado' },
+  it('carrega processos e resolve os nomes pelos IDs', async () => {
+    setPermissions({
+      visualizar_processos: true,
+      criar_processos: true,
+      editar_processos: true,
+      excluir_processos: true,
     });
-    fireEvent.submit(screen.getByRole('dialog'));
+    render(<ProcessosClient />);
 
-    expect(await screen.findByText('Caso atualizado')).toBeInTheDocument();
-    expect(atualizarProcesso).toHaveBeenCalledWith(
-      createdProcess.id,
-      expect.not.objectContaining({ id: expect.anything() })
+    expect(
+      await screen.findByRole('button', { name: processData.titulo })
+    ).toBeInTheDocument();
+    expect(await screen.findByText('Maria Silva')).toBeInTheDocument();
+    expect(await screen.findByText('Ana Paula')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Novo Processo' })).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: `Editar processo ${processData.cnj}` })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: `Excluir processo ${processData.cnj}`,
+      })
+    ).toBeInTheDocument();
+    expect(listarClientes).toHaveBeenCalledOnce();
+    expect(listarFuncionarios).toHaveBeenCalledOnce();
+  });
+
+  it('oculta criação, edição e exclusão sem permissão', async () => {
+    setPermissions({ visualizar_processos: true });
+    render(<ProcessosClient />);
+
+    await screen.findByRole('button', { name: processData.titulo });
+    expect(
+      screen.queryByRole('button', { name: 'Novo Processo' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Editar processo/ })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Excluir processo/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it('envia filtros compatíveis com a API', async () => {
+    setPermissions({ visualizar_processos: true });
+    render(<ProcessosClient />);
+    await screen.findByRole('button', { name: processData.titulo });
+
+    fireEvent.change(screen.getByLabelText('Buscar por CNJ ou título'), {
+      target: { value: 'trabalhista' },
+    });
+    fireEvent.change(screen.getByLabelText('Status'), {
+      target: { value: 'Ativo' },
+    });
+    fireEvent.change(screen.getByLabelText('Cliente'), {
+      target: { value: '10' },
+    });
+    fireEvent.submit(
+      screen.getByRole('button', { name: 'Aplicar filtros' }).closest('form')
     );
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: `Excluir processo ${createdProcess.id}`,
+    await waitFor(() =>
+      expect(listarProcessos).toHaveBeenLastCalledWith({
+        titulo: 'trabalhista',
+        status: 'Ativo',
+        tribunal: '',
+        area: '',
+        cliente_id: '10',
+        funcionario_id: '',
       })
     );
-    expect(
-      screen.getByRole('heading', { name: 'Excluir processo?' })
-    ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Excluir processo' }));
+  });
+
+  it('apresenta falhas ao carregar processos e referências', async () => {
+    setPermissions({ visualizar_processos: true });
+    listarProcessos.mockRejectedValue(new Error('Backend fora do ar'));
+    listarClientes.mockRejectedValue(new Error('Falha nos clientes'));
+    render(<ProcessosClient />);
 
     await waitFor(() => {
-      expect(screen.getByText('1 processo encontrado')).toBeInTheDocument();
+      expect(screen.getByText('Backend fora do ar')).toBeInTheDocument();
+      expect(screen.getByText('Falha nos clientes')).toBeInTheDocument();
     });
-    expect(excluirProcesso).toHaveBeenCalledWith(createdProcess.id);
-    expect(screen.queryByText('Caso atualizado')).not.toBeInTheDocument();
-  });
-
-  it('mostra falha inicial e recarrega a lista', async () => {
-    listarProcessos.mockResolvedValue([existingProcess]);
-    render(
-      <ProcessosClient initialData={[]} initialError="API indisponível" />
-    );
-
-    expect(screen.getByRole('alert')).toHaveTextContent('API indisponível');
-    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
-
-    expect(
-      await screen.findByRole('button', { name: existingProcess.titulo })
-    ).toBeInTheDocument();
-    expect(listarProcessos).toHaveBeenCalledOnce();
-  });
-
-  it('mantém o erro e indica a recarga enquanto a requisição está pendente', async () => {
-    listarProcessos.mockReturnValue(new Promise(() => {}));
-    render(
-      <ProcessosClient initialData={[]} initialError="API indisponível" />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
-
-    expect(
-      await screen.findByRole('button', { name: 'Tentando novamente' })
-    ).toBeDisabled();
-    expect(screen.getByRole('alert')).toHaveTextContent('API indisponível');
-  });
-
-  it('mantém o estado de erro quando a recarga falha novamente', async () => {
-    listarProcessos.mockRejectedValue(new Error('Backend fora do ar'));
-    render(
-      <ProcessosClient initialData={[]} initialError="API indisponível" />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Backend fora do ar'
-    );
   });
 });
