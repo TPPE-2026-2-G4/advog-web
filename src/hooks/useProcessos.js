@@ -33,11 +33,11 @@ export function useProcessos(initialData = [], initialError = '') {
     pageStart + PROCESS_PAGE_SIZE
   );
 
-  const reloadProcesses = async () => {
+  const reloadProcesses = async (filters = {}) => {
     setIsReloading(true);
 
     try {
-      const receivedProcesses = await listarProcessos();
+      const receivedProcesses = await listarProcessos(filters);
       setProcessos(receivedProcesses);
       setLoadError('');
       setCurrentPage(1);
@@ -67,15 +67,22 @@ export function useProcessos(initialData = [], initialError = '') {
 
   const saveProcess = async (dados) => {
     if (editingProcess) {
-      const updatedProcess = await atualizarProcesso(editingProcess.id, dados);
+      const updatedProcess = await atualizarProcesso(
+        editingProcess.processo_id,
+        dados
+      );
 
       setProcessos((current) =>
         current.map((processo) =>
-          processo.id === updatedProcess.id ? updatedProcess : processo
+          processo.processo_id === updatedProcess.processo_id
+            ? updatedProcess
+            : processo
         )
       );
       setDetailProcess((current) =>
-        current?.id === updatedProcess.id ? updatedProcess : current
+        current?.processo_id === updatedProcess.processo_id
+          ? updatedProcess
+          : current
       );
       return updatedProcess;
     }
@@ -103,7 +110,7 @@ export function useProcessos(initialData = [], initialError = '') {
     setIsDeleting(true);
 
     try {
-      await excluirProcesso(deletingProcess.id);
+      await excluirProcesso(deletingProcess.processo_id);
       const remainingCount = Math.max(0, processos.length - 1);
       const remainingPages = Math.max(
         1,
@@ -111,11 +118,13 @@ export function useProcessos(initialData = [], initialError = '') {
       );
 
       setProcessos((current) =>
-        current.filter((processo) => processo.id !== deletingProcess.id)
+        current.filter(
+          (processo) => processo.processo_id !== deletingProcess.processo_id
+        )
       );
       setCurrentPage((page) => Math.min(page, remainingPages));
       setDetailProcess((current) =>
-        current?.id === deletingProcess.id ? null : current
+        current?.processo_id === deletingProcess.processo_id ? null : current
       );
       setDeletingProcess(null);
     } catch (error) {

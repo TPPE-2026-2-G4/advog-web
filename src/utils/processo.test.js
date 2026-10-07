@@ -6,19 +6,24 @@ import {
   formatProcessDate,
   isOverdueDeadline,
   normalizeProcessDate,
+  toProcessApiDate,
   toProcessFormData,
   toProcessPayload,
+  toProcessUpdatePayload,
 } from './processo';
 
 const formData = {
-  id: '0061234-56.2026.8.26.0100',
+  cnj: '0061234-56.2026.8.26.0100',
   titulo: '  Ação indenizatória  ',
-  cliente: '  Maria Silva ',
+  descricao: '  Descrição do caso  ',
   status: 'Ativo',
   tribunal: ' TJDFT ',
   area: ' Civil ',
-  responsavel: ' Ana Paula ',
-  prazo: '2026-10-05',
+  data_inicio: '2026-01-01',
+  data_realizado: '',
+  data_prazo: '2026-10-05',
+  cliente_id: '10',
+  funcionario_id: '5',
 };
 
 describe('utilitários de processo', () => {
@@ -83,46 +88,87 @@ describe('utilitários de processo', () => {
     const payload = toProcessPayload(formData);
 
     expect(payload).toMatchObject({
-      id: formData.id,
+      cnj: formData.cnj,
       titulo: 'Ação indenizatória',
-      cliente: 'Maria Silva',
+      descricao: 'Descrição do caso',
       status: 'Ativo',
       tribunal: 'TJDFT',
       area: 'Civil',
-      responsavel: 'Ana Paula',
-      prazo: '2026-10-05',
+      data_inicio: '2026-01-01T00:00:00',
+      data_realizado: null,
+      data_prazo: '2026-10-05T00:00:00',
+      cliente_id: 10,
+      funcionario_id: 5,
     });
-    expect(payload.diasRestantes).toEqual(expect.any(Number));
   });
 
-  it('omite o identificador no payload de edição', () => {
-    expect(toProcessPayload(formData, { includeId: false })).not.toHaveProperty(
-      'id'
-    );
+  it('converte datas para datetime e permite valores opcionais nulos', () => {
+    expect(toProcessApiDate('05/10/2026')).toBe('2026-10-05T00:00:00');
+    expect(toProcessApiDate('')).toBeNull();
+  });
+
+  it('omite o CNJ no payload de edição', () => {
+    expect(
+      toProcessPayload(formData, { includeCnj: false })
+    ).not.toHaveProperty('cnj');
+  });
+
+  it('monta um PATCH somente com os campos alterados', () => {
+    const original = {
+      processo_id: 1,
+      cnj: formData.cnj,
+      titulo: 'Ação indenizatória',
+      descricao: 'Descrição do caso',
+      status: 'Ativo',
+      tribunal: 'TJDFT',
+      area: 'Civil',
+      data_inicio: '2026-01-01T00:00:00',
+      data_realizado: null,
+      data_prazo: '2026-10-05T00:00:00',
+      cliente_id: 10,
+      funcionario_id: 5,
+    };
+
+    expect(
+      toProcessUpdatePayload(
+        { ...toProcessFormData(original), titulo: 'Novo título' },
+        original
+      )
+    ).toEqual({ titulo: 'Novo título' });
   });
 
   it('converte uma resposta da API em dados de formulário', () => {
     expect(
       toProcessFormData({
         ...formData,
-        prazo: '05/10/2026',
+        cliente_id: 10,
+        funcionario_id: null,
+        data_inicio: '2026-01-01T00:00:00',
+        data_prazo: '05/10/2026',
       })
     ).toEqual({
       ...formData,
-      prazo: '2026-10-05',
+      descricao: formData.descricao,
+      cliente_id: '10',
+      funcionario_id: '',
+      data_inicio: '2026-01-01',
+      data_prazo: '2026-10-05',
     });
   });
 
   it('fornece valores padrão para um novo processo', () => {
     expect(toProcessFormData()).toEqual({
-      id: '',
+      cnj: '',
       titulo: '',
-      cliente: '',
+      descricao: '',
       status: 'Em Análise',
       tribunal: '',
       area: '',
-      responsavel: '',
-      prazo: '',
+      data_inicio: '',
+      data_realizado: '',
+      data_prazo: '',
+      cliente_id: '',
+      funcionario_id: '',
     });
   });
 });

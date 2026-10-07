@@ -16,15 +16,18 @@ vi.mock('@/services/processos', () => ({
 }));
 
 const createProcess = (index = 1, overrides = {}) => ({
-  id: `006123${index}-56.2026.8.26.0100`,
+  processo_id: index,
+  cnj: `006123${index}-56.2026.8.26.0100`,
   titulo: `Caso ${index}`,
-  cliente: `Cliente ${index}`,
+  descricao: null,
   status: 'Ativo',
   tribunal: 'TJDFT',
   area: 'Civil',
-  responsavel: 'Ana',
-  prazo: '2026-10-05',
-  diasRestantes: 8,
+  data_inicio: null,
+  data_realizado: null,
+  data_prazo: '2026-10-05T00:00:00',
+  cliente_id: index,
+  funcionario_id: 1,
   ...overrides,
 });
 
@@ -110,7 +113,7 @@ describe('useProcessos', () => {
       })
     );
 
-    expect(atualizarProcesso).toHaveBeenCalledWith(selected.id, {
+    expect(atualizarProcesso).toHaveBeenCalledWith(selected.processo_id, {
       titulo: updated.titulo,
     });
     expect(result.current.processos).toEqual([updated, other]);
@@ -130,7 +133,7 @@ describe('useProcessos', () => {
     });
     await act(async () => result.current.deleteSelectedProcess());
 
-    expect(excluirProcesso).toHaveBeenCalledWith(processes[5].id);
+    expect(excluirProcesso).toHaveBeenCalledWith(processes[5].processo_id);
     expect(result.current.processos).toEqual(processes.slice(0, 5));
     expect(result.current.currentPage).toBe(1);
     expect(result.current.deletingProcess).toBeNull();

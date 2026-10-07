@@ -1,8 +1,8 @@
 export const PROCESS_STATUS = Object.freeze([
-  'Ativo',
   'Em Análise',
+  'Ativo',
   'Concluído',
-  'Pendente',
+  'Arquivado',
 ]);
 
 export const CNJ_PATTERN = '^\\d{7}-\\d{2}\\.\\d{4}\\.\\d\\.\\d{2}\\.\\d{4}$';
@@ -72,6 +72,11 @@ export function isOverdueDeadline(value, now = new Date()) {
   return remainingDays !== null && remainingDays < 0;
 }
 
+export function toProcessApiDate(value) {
+  const normalizedDate = normalizeProcessDate(value);
+  return normalizedDate ? `${normalizedDate}T00:00:00` : null;
+}
+
 export function formatCnjInput(value) {
   const digits = String(value ?? '')
     .replace(/\D/g, '')
@@ -88,34 +93,54 @@ export function formatCnjInput(value) {
   return formatted;
 }
 
-export function toProcessPayload(formData, { includeId = true } = {}) {
-  const prazo = normalizeProcessDate(formData.prazo);
+export function toProcessPayload(formData, { includeCnj = true } = {}) {
   const payload = {
     titulo: formData.titulo.trim(),
-    cliente: formData.cliente.trim(),
+    descricao: formData.descricao.trim() || null,
     status: formData.status,
     tribunal: formData.tribunal.trim(),
     area: formData.area.trim(),
-    responsavel: formData.responsavel.trim(),
-    prazo,
-    diasRestantes: calculateRemainingDays(prazo),
+    data_inicio: toProcessApiDate(formData.data_inicio),
+    data_realizado: toProcessApiDate(formData.data_realizado),
+    data_prazo: toProcessApiDate(formData.data_prazo),
+    cliente_id: Number(formData.cliente_id),
+    funcionario_id: formData.funcionario_id
+      ? Number(formData.funcionario_id)
+      : null,
   };
 
-  if (includeId) payload.id = formData.id.trim();
+  if (includeCnj) payload.cnj = formData.cnj.trim();
   return payload;
+}
+
+export function toProcessUpdatePayload(formData, originalProcess) {
+  const currentPayload = toProcessPayload(formData, { includeCnj: false });
+  const originalPayload = toProcessPayload(toProcessFormData(originalProcess), {
+    includeCnj: false,
+  });
+
+  return Object.fromEntries(
+    Object.entries(currentPayload).filter(
+      ([field, value]) => value !== originalPayload[field]
+    )
+  );
 }
 
 export function toProcessFormData(processo) {
   const data = processo ?? {};
 
   return {
-    id: data.id ?? '',
+    cnj: data.cnj ?? '',
     titulo: data.titulo ?? '',
-    cliente: data.cliente ?? '',
+    descricao: data.descricao ?? '',
     status: data.status ?? 'Em Análise',
     tribunal: data.tribunal ?? '',
     area: data.area ?? '',
-    responsavel: data.responsavel ?? '',
-    prazo: normalizeProcessDate(data.prazo),
+    data_inicio: normalizeProcessDate(data.data_inicio),
+    data_realizado: normalizeProcessDate(data.data_realizado),
+    data_prazo: normalizeProcessDate(data.data_prazo),
+    cliente_id: data.cliente_id == null ? '' : String(data.cliente_id),
+    funcionario_id:
+      data.funcionario_id == null ? '' : String(data.funcionario_id),
   };
 }
