@@ -125,6 +125,12 @@
   border-color: #fef08a;
 }
 
+.statusArchived {
+  color: #4b5563;
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
 .criticalDeadline {
   color: #b91c1c;
   font-size: 14px;

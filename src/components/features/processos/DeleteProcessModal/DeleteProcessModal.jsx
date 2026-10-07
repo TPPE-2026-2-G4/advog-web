@@ -37,7 +37,7 @@ export default function DeleteProcessModal({
         </h2>
         <p className={styles.message}>
           Tem certeza que deseja excluir <strong>{process.titulo}</strong> (
-          {process.id})? Esta ação não poderá ser desfeita.
+          {process.cnj})? Esta ação não poderá ser desfeita.
         </p>
         {error && (
           <p className={styles.error} role="alert">

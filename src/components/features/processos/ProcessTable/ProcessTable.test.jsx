@@ -4,21 +4,22 @@ import ProcessTable from './ProcessTable';
 import styles from './ProcessTable.module.css';
 
 const createProcess = (index, status, prazo = '2099-10-05') => ({
-  id: `006123${index}-56.2026.8.26.0100`,
+  processo_id: index,
+  cnj: `006123${index}-56.2026.8.26.0100`,
   titulo: `Caso ${index}`,
   cliente: `Cliente ${index}`,
   status,
   tribunal: 'TJDFT',
   area: 'Civil',
   responsavel: 'Ana Paula',
-  prazo,
+  data_prazo: prazo,
 });
 
 const processes = [
   createProcess(1, 'Ativo'),
   createProcess(2, 'Em Análise'),
   createProcess(3, 'Concluído'),
-  createProcess(4, 'Pendente', '2000-01-01'),
+  createProcess(4, 'Arquivado', '2000-01-01'),
 ];
 
 const renderTable = (overrides = {}) => {
@@ -31,6 +32,8 @@ const renderTable = (overrides = {}) => {
     onView: vi.fn(),
     onEdit: vi.fn(),
     onDelete: vi.fn(),
+    canEdit: true,
+    canDelete: true,
     ...overrides,
   };
 
@@ -43,9 +46,9 @@ describe('ProcessTable', () => {
     renderTable();
 
     expect(screen.getByRole('table', { name: '' })).toBeInTheDocument();
-    expect(screen.getByText(processes[0].id)).toBeInTheDocument();
+    expect(screen.getByText(processes[0].cnj)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Caso 1' })).toBeInTheDocument();
-    ['Ativo', 'Em Análise', 'Concluído', 'Pendente'].forEach((status) => {
+    ['Ativo', 'Em Análise', 'Concluído', 'Arquivado'].forEach((status) => {
       expect(screen.getByText(status)).toBeInTheDocument();
     });
     const futureDeadlines = screen.getAllByText('05/10/2099');
@@ -61,23 +64,39 @@ describe('ProcessTable', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: `Visualizar processo ${processes[0].id}`,
+        name: `Visualizar processo ${processes[0].cnj}`,
       })
     );
     fireEvent.click(
       screen.getByRole('button', {
-        name: `Editar processo ${processes[0].id}`,
+        name: `Editar processo ${processes[0].cnj}`,
       })
     );
     fireEvent.click(
       screen.getByRole('button', {
-        name: `Excluir processo ${processes[0].id}`,
+        name: `Excluir processo ${processes[0].cnj}`,
       })
     );
 
     expect(props.onView).toHaveBeenCalledWith(processes[0]);
     expect(props.onEdit).toHaveBeenCalledWith(processes[0]);
     expect(props.onDelete).toHaveBeenCalledWith(processes[0]);
+  });
+
+  it('oculta edição e exclusão sem as permissões correspondentes', () => {
+    renderTable({
+      processes: [processes[0]],
+      totalItems: 1,
+      canEdit: false,
+      canDelete: false,
+    });
+
+    expect(
+      screen.queryByRole('button', { name: /Editar processo/ })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Excluir processo/ })
+    ).not.toBeInTheDocument();
   });
 
   it('também abre o detalhe pelo título do caso', () => {

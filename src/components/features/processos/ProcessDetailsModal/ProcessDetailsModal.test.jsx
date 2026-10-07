@@ -3,14 +3,18 @@ import { describe, expect, it, vi } from 'vitest';
 import ProcessDetailsModal from './ProcessDetailsModal';
 
 const processData = {
-  id: '0061234-56.2026.8.26.0100',
+  processo_id: 1,
+  cnj: '0061234-56.2026.8.26.0100',
   titulo: 'Caso Teste',
+  descricao: 'Descrição do processo',
   cliente: 'Maria Silva',
   status: 'Ativo',
   tribunal: 'TJDFT',
   area: 'Civil',
   responsavel: 'Ana Paula',
-  prazo: '2026-10-05',
+  data_inicio: '2026-01-01T00:00:00',
+  data_realizado: null,
+  data_prazo: '2026-10-05T00:00:00',
 };
 
 describe('ProcessDetailsModal', () => {
@@ -26,10 +30,13 @@ describe('ProcessDetailsModal', () => {
     expect(
       screen.getByRole('heading', { name: processData.titulo })
     ).toBeInTheDocument();
-    expect(screen.getByText(processData.id)).toBeInTheDocument();
+    expect(screen.getByText(processData.cnj)).toBeInTheDocument();
+    expect(screen.getByText(processData.descricao)).toBeInTheDocument();
     expect(screen.getByText(processData.cliente)).toBeInTheDocument();
     expect(screen.getByText(processData.tribunal)).toBeInTheDocument();
     expect(screen.getByText(processData.responsavel)).toBeInTheDocument();
+    expect(screen.getByText('01/01/2026')).toBeInTheDocument();
+    expect(screen.getByText('Não informado')).toBeInTheDocument();
     expect(screen.getByText('05/10/2026')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));

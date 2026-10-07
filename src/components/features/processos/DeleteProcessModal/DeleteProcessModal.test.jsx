@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import DeleteProcessModal from './DeleteProcessModal';
 
 const processData = {
-  id: '0061234-56.2026.8.26.0100',
+  processo_id: 1,
+  cnj: '0061234-56.2026.8.26.0100',
   titulo: 'Caso Teste',
 };
 
