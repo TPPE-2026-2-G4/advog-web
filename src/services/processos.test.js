@@ -56,24 +56,6 @@ describe('serviço de processos', () => {
     });
   });
 
-  it('serializa somente filtros preenchidos', async () => {
-    fetch.mockResolvedValue(jsonResponse([processData]));
-
-    await listarProcessos({
-      status: 'Em Análise',
-      cliente_id: 10,
-      tribunal: '',
-    });
-
-    expect(fetch).toHaveBeenCalledWith(
-      'http://localhost:8000/processos/?status=Em+An%C3%A1lise&cliente_id=10',
-      {
-        cache: 'no-store',
-        headers: { Authorization: 'Bearer token-jwt' },
-      }
-    );
-  });
-
   it('envia o cadastro por POST', async () => {
     fetch.mockResolvedValue(jsonResponse(processData, { status: 201 }));
 

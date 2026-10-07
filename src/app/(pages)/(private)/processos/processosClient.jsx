@@ -13,14 +13,6 @@ import { getCurrentUser } from '@/utils/authSession';
 import styles from './processos.module.css';
 
 const emptySubscribe = () => () => {};
-const EMPTY_FILTERS = {
-  busca: '',
-  status: '',
-  tribunal: '',
-  area: '',
-  cliente_id: '',
-  funcionario_id: '',
-};
 
 export default function ProcessosClient({
   initialData = [],
@@ -41,7 +33,6 @@ export default function ProcessosClient({
   const [clientes, setClientes] = useState(initialClientes);
   const [funcionarios, setFuncionarios] = useState(initialFuncionarios);
   const [referenceError, setReferenceError] = useState('');
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
 
   const {
     processos,
@@ -110,27 +101,6 @@ export default function ProcessosClient({
   const enrichedProcesses = visibleProcesses.map(enrichProcess);
   const enrichedDetails = enrichProcess(detailProcess);
 
-  const handleFilterChange = (event) => {
-    const { name, value } = event.target;
-    setFilters((current) => ({ ...current, [name]: value }));
-  };
-
-  const handleFilterSubmit = (event) => {
-    event.preventDefault();
-    const { busca, ...selectedFilters } = filters;
-    const normalizedSearch = busca.trim();
-    if (normalizedSearch) {
-      const field = /^[\d.\-/]+$/.test(normalizedSearch) ? 'cnj' : 'titulo';
-      selectedFilters[field] = normalizedSearch;
-    }
-    reloadProcesses(selectedFilters);
-  };
-
-  const clearFilters = () => {
-    setFilters(EMPTY_FILTERS);
-    reloadProcesses();
-  };
-
   if (!canView) {
     return (
       <div className={styles.container}>
@@ -175,93 +145,6 @@ export default function ProcessosClient({
           {referenceError}
         </p>
       )}
-
-      <form className={styles.filters} onSubmit={handleFilterSubmit}>
-        <label className={styles.filterGroup}>
-          <span>Buscar por CNJ ou título</span>
-          <input
-            name="busca"
-            value={filters.busca}
-            onChange={handleFilterChange}
-            placeholder="Digite o CNJ ou título"
-          />
-        </label>
-        <label className={styles.filterGroup}>
-          <span>Status</span>
-          <select
-            name="status"
-            value={filters.status}
-            onChange={handleFilterChange}
-          >
-            <option value="">Todos</option>
-            <option value="Em Análise">Em Análise</option>
-            <option value="Ativo">Ativo</option>
-            <option value="Concluído">Concluído</option>
-            <option value="Arquivado">Arquivado</option>
-          </select>
-        </label>
-        <label className={styles.filterGroup}>
-          <span>Cliente</span>
-          <select
-            name="cliente_id"
-            value={filters.cliente_id}
-            onChange={handleFilterChange}
-          >
-            <option value="">Todos</option>
-            {clientes.map((cliente) => (
-              <option key={cliente.cliente_id} value={cliente.cliente_id}>
-                {cliente.nome}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.filterGroup}>
-          <span>Responsável</span>
-          <select
-            name="funcionario_id"
-            value={filters.funcionario_id}
-            onChange={handleFilterChange}
-          >
-            <option value="">Todos</option>
-            {funcionarios.map((funcionario) => (
-              <option
-                key={funcionario.funcionario_id}
-                value={funcionario.funcionario_id}
-              >
-                {funcionario.nome}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.filterGroup}>
-          <span>Tribunal</span>
-          <input
-            name="tribunal"
-            value={filters.tribunal}
-            onChange={handleFilterChange}
-          />
-        </label>
-        <label className={styles.filterGroup}>
-          <span>Área</span>
-          <input
-            name="area"
-            value={filters.area}
-            onChange={handleFilterChange}
-          />
-        </label>
-        <div className={styles.filterActions}>
-          <button type="submit" className={styles.applyFilterButton}>
-            Aplicar filtros
-          </button>
-          <button
-            type="button"
-            className={styles.clearFilterButton}
-            onClick={clearFilters}
-          >
-            Limpar
-          </button>
-        </div>
-      </form>
 
       {loadError ? (
         <div className={styles.errorState} role="alert">

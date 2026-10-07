@@ -33,11 +33,11 @@ export function useProcessos(initialData = [], initialError = '') {
     pageStart + PROCESS_PAGE_SIZE
   );
 
-  const reloadProcesses = async (filters = {}) => {
+  const reloadProcesses = async () => {
     setIsReloading(true);
 
     try {
-      const receivedProcesses = await listarProcessos(filters);
+      const receivedProcesses = await listarProcessos();
       setProcessos(receivedProcesses);
       setLoadError('');
       setCurrentPage(1);

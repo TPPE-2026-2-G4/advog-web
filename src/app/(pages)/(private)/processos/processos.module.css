@@ -91,70 +91,6 @@
   border-radius: 8px;
 }
 
-.filters {
-  display: grid;
-  grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(140px, 1fr));
-  gap: 14px;
-  padding: 18px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-}
-
-.filterGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: #374151;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.filterGroup input,
-.filterGroup select {
-  min-height: 40px;
-  padding: 8px 10px;
-  color: #111827;
-  font: inherit;
-  font-weight: 400;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 7px;
-}
-
-.filterGroup input:focus,
-.filterGroup select:focus {
-  border-color: #c1a077;
-  outline: 2px solid rgba(193, 160, 119, 0.2);
-}
-
-.filterActions {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.applyFilterButton,
-.clearFilterButton {
-  min-height: 40px;
-  padding: 8px 14px;
-  font-weight: 600;
-  cursor: pointer;
-  border-radius: 7px;
-}
-
-.applyFilterButton {
-  color: #172133;
-  background: #c1a077;
-  border: 1px solid #c1a077;
-}
-
-.clearFilterButton {
-  color: #374151;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-}
-
 .retryButton {
   flex-shrink: 0;
   color: #172133;
@@ -188,10 +124,6 @@
 }
 
 @media (max-width: 640px) {
-  .filters {
-    grid-template-columns: 1fr;
-  }
-
   .headerRow {
     align-items: stretch;
     flex-direction: column;

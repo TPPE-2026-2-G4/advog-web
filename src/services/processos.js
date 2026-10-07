@@ -77,17 +77,9 @@ const request = async (path, options, fallbackMessage) => {
   }
 };
 
-export function listarProcessos(filtros = {}) {
-  const query = new URLSearchParams();
-  Object.entries(filtros).forEach(([field, value]) => {
-    if (value !== '' && value !== null && value !== undefined) {
-      query.set(field, String(value));
-    }
-  });
-  const suffix = query.size > 0 ? `?${query.toString()}` : '';
-
+export function listarProcessos() {
   return request(
-    `/processos/${suffix}`,
+    '/processos/',
     { cache: 'no-store' },
     'Não foi possível carregar os processos.'
   );

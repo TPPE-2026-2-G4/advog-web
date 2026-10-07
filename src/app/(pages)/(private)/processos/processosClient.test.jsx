@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
@@ -97,36 +97,6 @@ describe('ProcessosClient', () => {
     expect(
       screen.queryByRole('button', { name: /Excluir processo/ })
     ).not.toBeInTheDocument();
-  });
-
-  it('envia filtros compatíveis com a API', async () => {
-    setPermissions({ visualizar_processos: true });
-    render(<ProcessosClient />);
-    await screen.findByRole('button', { name: processData.titulo });
-
-    fireEvent.change(screen.getByLabelText('Buscar por CNJ ou título'), {
-      target: { value: 'trabalhista' },
-    });
-    fireEvent.change(screen.getByLabelText('Status'), {
-      target: { value: 'Ativo' },
-    });
-    fireEvent.change(screen.getByLabelText('Cliente'), {
-      target: { value: '10' },
-    });
-    fireEvent.submit(
-      screen.getByRole('button', { name: 'Aplicar filtros' }).closest('form')
-    );
-
-    await waitFor(() =>
-      expect(listarProcessos).toHaveBeenLastCalledWith({
-        titulo: 'trabalhista',
-        status: 'Ativo',
-        tribunal: '',
-        area: '',
-        cliente_id: '10',
-        funcionario_id: '',
-      })
-    );
   });
 
   it('apresenta falhas ao carregar processos e referências', async () => {
