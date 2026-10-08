@@ -1,6 +1,14 @@
 'use client';
 
-import { Briefcase, FileText, History, Mail, Pencil, Phone, User } from 'lucide-react';
+import {
+  Briefcase,
+  FileText,
+  History,
+  Mail,
+  Pencil,
+  Phone,
+  User,
+} from 'lucide-react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import {
   formatarCpfCnpj,
