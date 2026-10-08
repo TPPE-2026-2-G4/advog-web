@@ -54,7 +54,7 @@ const fillCreationForm = () => {
   fireEvent.change(screen.getByLabelText('Responsável'), {
     target: { value: String(processData.funcionario_id) },
   });
-  fireEvent.change(screen.getByLabelText('Status'), {
+  fireEvent.change(screen.getByLabelText('Status Inicial'), {
     target: { value: processData.status },
   });
   fireEvent.change(screen.getByLabelText('Data de Início'), {
@@ -88,6 +88,7 @@ describe('ProcessFormModal', () => {
 
   it('oferece os quatro status aceitos pelo backend', () => {
     renderForm();
+    expect(screen.getByLabelText('Status Inicial')).toHaveValue('Em Análise');
     const options = screen
       .getAllByRole('option')
       .map((option) => option.textContent);

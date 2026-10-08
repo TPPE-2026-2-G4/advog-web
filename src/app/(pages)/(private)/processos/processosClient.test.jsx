@@ -1,4 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
@@ -65,11 +71,14 @@ describe('ProcessosClient', () => {
     });
     render(<ProcessosClient />);
 
-    expect(
-      await screen.findByRole('button', { name: processData.titulo })
-    ).toBeInTheDocument();
-    expect(await screen.findByText('Maria Silva')).toBeInTheDocument();
-    expect(await screen.findByText('Ana Paula')).toBeInTheDocument();
+    const processTitle = await screen.findByRole('button', {
+      name: processData.titulo,
+    });
+    const processRow = processTitle.closest('tr');
+
+    expect(processRow).toBeInTheDocument();
+    expect(within(processRow).getByText('Maria Silva')).toBeInTheDocument();
+    expect(within(processRow).getByText('Ana Paula')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Novo Processo' })).toBeEnabled();
     expect(
       screen.getByRole('button', { name: `Editar processo ${processData.cnj}` })
@@ -81,6 +90,28 @@ describe('ProcessosClient', () => {
     ).toBeInTheDocument();
     expect(listarClientes).toHaveBeenCalledOnce();
     expect(listarFuncionarios).toHaveBeenCalledOnce();
+  });
+
+  it('abre o formulário pelo botão Novo Processo', async () => {
+    setPermissions({
+      visualizar_processos: true,
+      criar_processos: true,
+    });
+    render(<ProcessosClient />);
+
+    const button = screen.getByRole('button', { name: 'Novo Processo' });
+    expect(button).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(button).toHaveAttribute('aria-controls', 'process-form-dialog');
+
+    fireEvent.click(button);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Novo Processo' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toHaveAttribute(
+      'id',
+      'process-form-dialog'
+    );
   });
 
   it('oculta criação, edição e exclusão sem permissão', async () => {

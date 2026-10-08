@@ -1,8 +1,14 @@
+.overlay {
+  background-color: rgba(22, 34, 56, 0.6);
+}
+
 .modal {
   display: flex;
   flex-direction: column;
-  max-width: 720px;
+  max-width: 672px;
   overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(22, 34, 56, 0.18);
 }
 
 .header {
@@ -18,7 +24,7 @@
 .title {
   margin: 0;
   color: #172133;
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 600;
 }
 
@@ -44,6 +50,7 @@
   flex-direction: column;
   gap: 18px;
   min-height: 0;
+  max-height: 60vh;
   padding: 24px;
   overflow-y: auto;
 }
@@ -157,14 +164,14 @@
   align-items: center;
   justify-content: center;
   min-width: 144px;
-  color: #172133;
-  background-color: #c1a077;
-  border: 1px solid #c1a077;
+  color: #162238;
+  background-color: #b79a63;
+  border: 1px solid #b79a63;
 }
 
 .saveButton:hover:not(:disabled) {
-  background-color: #b08d60;
-  border-color: #b08d60;
+  background-color: #a98b54;
+  border-color: #a98b54;
 }
 
 .cancelButton:focus-visible,
@@ -187,7 +194,7 @@
   }
 
   .title {
-    font-size: 23px;
+    font-size: 20px;
   }
 
   .grid {

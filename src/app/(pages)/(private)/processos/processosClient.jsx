@@ -132,9 +132,10 @@ export default function ProcessosClient({
             type="button"
             className={styles.addButton}
             onClick={openCreateForm}
-            disabled={clientes.length === 0}
+            aria-haspopup="dialog"
+            aria-controls="process-form-dialog"
           >
-            <Plus size={18} aria-hidden="true" />
+            <Plus size={16} strokeWidth={2.25} aria-hidden="true" />
             Novo Processo
           </button>
         )}

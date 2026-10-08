@@ -6,7 +6,7 @@
 
 .headerRow {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
@@ -46,14 +46,27 @@
 }
 
 .addButton {
-  color: #172133;
-  background-color: #c1a077;
-  border: 1px solid #c1a077;
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 20px;
+  color: #162238;
+  background-color: #b79a63;
+  border: 1px solid #b79a63;
+  border-radius: 8px;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 
-.addButton:hover {
-  background-color: #b08d60;
-  border-color: #b08d60;
+.addButton:hover:not(:disabled) {
+  background-color: #a98b54;
+  border-color: #a98b54;
+}
+
+.addButton:active:not(:disabled) {
+  background-color: #9a7d4b;
+  border-color: #9a7d4b;
 }
 
 .errorState {

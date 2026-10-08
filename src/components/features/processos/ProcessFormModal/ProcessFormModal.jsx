@@ -114,11 +114,13 @@ function ProcessFormDialog({
   return (
     <Modal
       isOpen
+      id="process-form-dialog"
       onClose={onClose}
       preventClose={isSubmitting}
       as="form"
       onSubmit={handleSubmit}
       className={styles.modal}
+      overlayClassName={styles.overlay}
       ariaLabelledBy={titleId}
     >
       <div className={styles.header}>
@@ -288,7 +290,7 @@ function ProcessFormDialog({
 
           <div className={styles.inputGroup}>
             <label className={styles.label} htmlFor={fieldId('status')}>
-              Status
+              {isEditing ? 'Status' : 'Status Inicial'}
             </label>
             <select
               id={fieldId('status')}
@@ -389,7 +391,7 @@ function ProcessFormDialog({
           ) : isEditing ? (
             'Salvar alterações'
           ) : (
-            'Salvar processo'
+            'Salvar Processo'
           )}
         </button>
       </div>
