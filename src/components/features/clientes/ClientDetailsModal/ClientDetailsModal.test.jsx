@@ -12,6 +12,8 @@ const mockCliente = {
   responsavel_nome: 'Pedro',
   ultima_interacao: '2026-08-18T00:00:00Z',
   etapa_id: 2,
+  area_interesse: 'Direito do Consumidor',
+  descricao: 'Contestação de cobrança indevida',
 };
 
 describe('ClientDetailsModal', () => {
@@ -39,6 +41,10 @@ describe('ClientDetailsModal', () => {
     expect(screen.getByText('(61) 3456-7890')).toBeInTheDocument();
     expect(screen.getByText('contato@techsolutions.com')).toBeInTheDocument();
     expect(screen.getByText('Pedro')).toBeInTheDocument();
+    expect(screen.getByText('Direito do Consumidor')).toBeInTheDocument();
+    expect(
+      screen.getByText('Contestação de cobrança indevida')
+    ).toBeInTheDocument();
     expect(
       screen.getByText(formatarDataInteracao(mockCliente.ultima_interacao))
     ).toBeInTheDocument();

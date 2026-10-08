@@ -25,6 +25,14 @@ describe('AddClientModal', () => {
     expect(
       screen.getByPlaceholderText('email@exemplo.com')
     ).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText('Ex: Cível, Trabalhista...')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText(
+        'Descreva a demanda ou necessidade do cliente...'
+      )
+    ).toBeInTheDocument();
     expect(screen.getByText('Salvar Cadastro')).toBeInTheDocument();
   });
 
@@ -75,6 +83,17 @@ describe('AddClientModal', () => {
     fireEvent.change(screen.getByPlaceholderText('email@exemplo.com'), {
       target: { value: 'contato@techsolutions.com' },
     });
+    fireEvent.change(screen.getByPlaceholderText('Ex: Cível, Trabalhista...'), {
+      target: { value: 'Direito Empresarial' },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        'Descreva a demanda ou necessidade do cliente...'
+      ),
+      {
+        target: { value: 'Contrato social e assessoria jurídica contínua' },
+      }
+    );
     fireEvent.change(screen.getByLabelText(/status/i), {
       target: { value: '2' },
     });
@@ -96,6 +115,8 @@ describe('AddClientModal', () => {
         email: 'contato@techsolutions.com',
         responsavel_id: 1,
         etapa_id: 2,
+        area_interesse: 'Direito Empresarial',
+        descricao: 'Contrato social e assessoria jurídica contínua',
       })
     );
   });

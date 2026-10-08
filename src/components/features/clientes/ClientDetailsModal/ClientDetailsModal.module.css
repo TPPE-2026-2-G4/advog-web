@@ -192,6 +192,43 @@
   background-color: #b08d60;
 }
 
+.descriptionSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: #f9fafb;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid #f3f4f6;
+}
+
+.descriptionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+}
+
+.descriptionIcon {
+  color: #9ca3af;
+}
+
+.descriptionTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.descriptionText {
+  margin: 0;
+  font-size: 14px;
+  color: #374151;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
 @media (max-width: 640px) {
   .infoGrid {
     grid-template-columns: 1fr;

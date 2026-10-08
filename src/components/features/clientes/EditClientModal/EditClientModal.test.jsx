@@ -15,6 +15,8 @@ const mockCliente = {
   email: 'contato@techsolutions.com',
   responsavel_id: 1,
   etapa_id: 2,
+  area_interesse: 'Trabalhista',
+  descricao: 'Processo trabalhista referente a horas extras',
 };
 
 describe('EditClientModal', () => {
@@ -49,6 +51,10 @@ describe('EditClientModal', () => {
     expect(
       screen.getByDisplayValue('contato@techsolutions.com')
     ).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Trabalhista')).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue('Processo trabalhista referente a horas extras')
+    ).toBeInTheDocument();
     expect(screen.getByText('Salvar Alterações')).toBeInTheDocument();
   });
 
@@ -71,6 +77,14 @@ describe('EditClientModal', () => {
 
     const emailInput = screen.getByDisplayValue('contato@techsolutions.com');
     fireEvent.change(emailInput, { target: { value: 'novo@tech.com' } });
+
+    const areaInput = screen.getByDisplayValue('Trabalhista');
+    fireEvent.change(areaInput, { target: { value: 'Cível' } });
+
+    const descInput = screen.getByDisplayValue(
+      'Processo trabalhista referente a horas extras'
+    );
+    fireEvent.change(descInput, { target: { value: 'Demanda cível' } });
 
     const statusSelect = screen.getByLabelText(/status/i);
     fireEvent.change(statusSelect, { target: { value: '4' } });
@@ -107,6 +121,8 @@ describe('EditClientModal', () => {
       expect.objectContaining({
         nome: 'Tech Solutions S.A.',
         email: 'contato@techsolutions.com',
+        area_interesse: 'Trabalhista',
+        descricao: 'Processo trabalhista referente a horas extras',
       })
     );
   });

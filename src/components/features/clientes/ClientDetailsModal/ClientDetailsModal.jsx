@@ -1,6 +1,6 @@
 'use client';
 
-import { History, Mail, Pencil, Phone, User } from 'lucide-react';
+import { Briefcase, FileText, History, Mail, Pencil, Phone, User } from 'lucide-react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import {
   formatarCpfCnpj,
@@ -95,6 +95,16 @@ export default function ClientDetailsModal({
           </div>
 
           <div className={styles.infoItem}>
+            <Briefcase size={18} className={styles.infoIcon} />
+            <div className={styles.infoContent}>
+              <span className={styles.infoLabel}>Área de interesse</span>
+              <span className={styles.infoValue}>
+                {cliente.area_interesse || '-'}
+              </span>
+            </div>
+          </div>
+
+          <div className={styles.infoItem}>
             <History size={18} className={styles.infoIcon} />
             <div className={styles.infoContent}>
               <span className={styles.infoLabel}>Última interação</span>
@@ -103,6 +113,18 @@ export default function ClientDetailsModal({
               </span>
             </div>
           </div>
+        </div>
+
+        <div className={styles.descriptionSection}>
+          <div className={styles.descriptionHeader}>
+            <FileText size={16} className={styles.descriptionIcon} />
+            <span className={styles.descriptionTitle}>
+              Descrição da necessidade
+            </span>
+          </div>
+          <p className={styles.descriptionText}>
+            {cliente.descricao || 'Nenhuma descrição detalhada informada.'}
+          </p>
         </div>
       </div>
 

@@ -19,6 +19,8 @@ export default function AddClientModal({
   const [email, setEmail] = useState('');
   const [responsavelId, setResponsavelId] = useState(null);
   const [etapaId, setEtapaId] = useState(1);
+  const [areaInteresse, setAreaInteresse] = useState('');
+  const [descricao, setDescricao] = useState('');
   const [error, setError] = useState('');
 
   const resetForm = () => {
@@ -28,6 +30,8 @@ export default function AddClientModal({
     setEmail('');
     setResponsavelId(null);
     setEtapaId(1);
+    setAreaInteresse('');
+    setDescricao('');
     setError('');
   };
 
@@ -56,10 +60,12 @@ export default function AddClientModal({
         nome: nome.trim(),
         cpf: cpfCnpj.replace(/\D/g, '') || null,
         documento: cpfCnpj || null,
-        telefone: telefone.trim(),
+        telefone: telefone.trim() || null,
         email: email.trim(),
         responsavel_id: responsavelId ? Number(responsavelId) : null,
         etapa_id: Number(etapaId) || 1,
+        area_interesse: areaInteresse.trim() || null,
+        descricao: descricao.trim() || null,
         ultima_interacao: new Date().toISOString(),
       });
       resetForm();
@@ -147,16 +153,31 @@ export default function AddClientModal({
             />
           </div>
 
+          <div className={styles.formGroup}>
+            <label htmlFor="add-client-responsavel" className={styles.label}>
+              Responsável
+            </label>
+            <AutocompleteResponsible
+              id="add-client-responsavel"
+              responsavelId={responsavelId}
+              onChange={(id) => setResponsavelId(id)}
+              funcionarios={funcionarios}
+              disabled={isSaving}
+            />
+          </div>
+
           <div className={styles.gridTwo}>
             <div className={styles.formGroup}>
-              <label htmlFor="add-client-responsavel" className={styles.label}>
-                Responsável
+              <label htmlFor="add-client-area" className={styles.label}>
+                Área de Interesse
               </label>
-              <AutocompleteResponsible
-                id="add-client-responsavel"
-                responsavelId={responsavelId}
-                onChange={(id) => setResponsavelId(id)}
-                funcionarios={funcionarios}
+              <input
+                id="add-client-area"
+                type="text"
+                className={styles.input}
+                placeholder="Ex: Cível, Trabalhista..."
+                value={areaInteresse}
+                onChange={(e) => setAreaInteresse(e.target.value)}
                 disabled={isSaving}
               />
             </div>
@@ -179,6 +200,21 @@ export default function AddClientModal({
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="add-client-descricao" className={styles.label}>
+              Descrição da Necessidade / Demanda
+            </label>
+            <textarea
+              id="add-client-descricao"
+              className={styles.textarea}
+              placeholder="Descreva a demanda ou necessidade do cliente..."
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              disabled={isSaving}
+              rows={3}
+            />
           </div>
         </div>
 

@@ -34,7 +34,8 @@
 }
 
 .input,
-.select {
+.select,
+.textarea {
   width: 100%;
   padding: 10px 14px;
   font-size: 14px;
@@ -47,8 +48,14 @@
   font-family: inherit;
 }
 
+.textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
 .input:focus,
-.select:focus {
+.select:focus,
+.textarea:focus {
   border-color: #c1a077;
   box-shadow: 0 0 0 3px rgba(193, 160, 119, 0.2);
 }

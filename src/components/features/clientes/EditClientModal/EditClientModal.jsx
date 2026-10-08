@@ -28,6 +28,10 @@ function EditClientDialog({
   const [etapaId, setEtapaId] = useState(
     cliente?.etapa_id || cliente?.status_id || 1
   );
+  const [areaInteresse, setAreaInteresse] = useState(
+    cliente?.area_interesse || ''
+  );
+  const [descricao, setDescricao] = useState(cliente?.descricao || '');
   const [error, setError] = useState('');
 
   const handleClose = () => {
@@ -57,8 +61,11 @@ function EditClientDialog({
         cpf: cpfCnpj ? formatarCpfCnpj(cpfCnpj) : null,
         telefone: telefone ? formatarTelefone(telefone) : null,
         email: email.trim(),
-        responsavel_id: responsavelId,
+        responsavel_id: responsavelId ? Number(responsavelId) : null,
         etapa_id: etapaId,
+        area_interesse: areaInteresse.trim() || null,
+        descricao: descricao.trim() || null,
+        ultima_interacao: cliente.ultima_interacao || new Date().toISOString(),
       });
     } catch (err) {
       setError(err.message || 'Erro ao atualizar cliente.');
@@ -144,16 +151,31 @@ function EditClientDialog({
             />
           </div>
 
+          <div className={styles.formGroup}>
+            <label htmlFor="edit-client-responsavel" className={styles.label}>
+              Responsável
+            </label>
+            <AutocompleteResponsible
+              id="edit-client-responsavel"
+              responsavelId={responsavelId}
+              onChange={(id) => setResponsavelId(id)}
+              funcionarios={funcionarios}
+              disabled={isSaving}
+            />
+          </div>
+
           <div className={styles.gridTwo}>
             <div className={styles.formGroup}>
-              <label htmlFor="edit-client-responsavel" className={styles.label}>
-                Responsável
+              <label htmlFor="edit-client-area" className={styles.label}>
+                Área de Interesse
               </label>
-              <AutocompleteResponsible
-                id="edit-client-responsavel"
-                responsavelId={responsavelId}
-                onChange={(id) => setResponsavelId(id)}
-                funcionarios={funcionarios}
+              <input
+                id="edit-client-area"
+                type="text"
+                className={styles.input}
+                placeholder="Ex: Cível, Trabalhista..."
+                value={areaInteresse}
+                onChange={(e) => setAreaInteresse(e.target.value)}
                 disabled={isSaving}
               />
             </div>
@@ -176,6 +198,21 @@ function EditClientDialog({
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="edit-client-descricao" className={styles.label}>
+              Descrição da Necessidade / Demanda
+            </label>
+            <textarea
+              id="edit-client-descricao"
+              className={styles.textarea}
+              placeholder="Descreva a demanda ou necessidade do cliente..."
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              disabled={isSaving}
+              rows={3}
+            />
           </div>
         </div>
 
