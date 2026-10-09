@@ -77,9 +77,14 @@ const request = async (path, options, fallbackMessage) => {
   }
 };
 
-export function listarProcessos() {
+export function listarProcessos({ page = 1, pageSize = 5 } = {}) {
+  const query = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+
   return request(
-    '/processos/',
+    `/processos/?${query}`,
     { cache: 'no-store' },
     'Não foi possível carregar os processos.'
   );
