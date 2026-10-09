@@ -4,7 +4,7 @@
 import { useRef } from 'react';
 import { Scale, Upload, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import styles from './site.module.css';
-import { getImageUrl } from '@/utils/institucionalUtils';
+import { getImageUrl } from '@/utils/institucional';
 
 export default function VisualIdentityTab({
   logoPreview,

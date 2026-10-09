@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { Scale, X, Phone, Mail, MapPin } from 'lucide-react';
 import { getLawyerInitials } from '@/utils/funcionario';
 import styles from './site.module.css';
-import { getImageUrl } from '@/utils/institucionalUtils';
+import { getImageUrl } from '@/utils/institucional';
 
 export default function PreviewModal({ isOpen, onClose, formData, team = [] }) {
   useEffect(() => {

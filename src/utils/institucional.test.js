@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatParagraphs } from './institucionalUtils';
+import { formatParagraphs } from './institucional';
 
 describe('formatParagraphs', () => {
   it('should split text into paragraphs and remove empty ones', () => {

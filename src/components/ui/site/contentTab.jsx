@@ -4,7 +4,7 @@
 import { useRef } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 import styles from './site.module.css';
-import { getImageUrl } from '@/utils/institucionalUtils';
+import { getImageUrl } from '@/utils/institucional';
 
 export default function ContentTab({
   formData,

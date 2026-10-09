@@ -2,7 +2,7 @@ import { buscarDadosInstitucionais } from '@/services/institucional';
 import { Scale } from 'lucide-react';
 import styles from './page.module.css';
 
-import { getImageUrl, formatParagraphs } from '@/utils/institucionalUtils';
+import { getImageUrl, formatParagraphs } from '@/utils/institucional';
 
 export default async function Home() {
   const dados = await buscarDadosInstitucionais();
