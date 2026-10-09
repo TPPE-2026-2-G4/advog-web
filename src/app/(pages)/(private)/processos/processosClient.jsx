@@ -35,8 +35,8 @@ export default function ProcessosClient({
   const [referenceError, setReferenceError] = useState('');
 
   const {
-    processos,
     visibleProcesses,
+    totalItems,
     loadError,
     isReloading,
     currentPage,
@@ -47,7 +47,7 @@ export default function ProcessosClient({
     deletingProcess,
     isDeleting,
     deleteError,
-    setCurrentPage,
+    changePage,
     setDetailProcess,
     reloadProcesses,
     openCreateForm,
@@ -120,10 +120,8 @@ export default function ProcessosClient({
         <div className={styles.titleArea}>
           <h1 className={styles.title}>Gestão de Processos</h1>
           <p className={styles.subtitle} aria-live="polite">
-            {processos.length}{' '}
-            {processos.length === 1
-              ? 'processo encontrado'
-              : 'processos encontrados'}
+            {totalItems}{' '}
+            {totalItems === 1 ? 'processo encontrado' : 'processos encontrados'}
           </p>
         </div>
 
@@ -170,10 +168,10 @@ export default function ProcessosClient({
       ) : (
         <ProcessTable
           processes={enrichedProcesses}
-          totalItems={processos.length}
+          totalItems={totalItems}
           currentPage={currentPage}
           totalPages={totalPages}
-          onPageChange={setCurrentPage}
+          onPageChange={changePage}
           onView={setDetailProcess}
           onEdit={openEditForm}
           onDelete={openDeleteModal}

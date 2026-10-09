@@ -46,14 +46,45 @@ describe('serviço de processos', () => {
     getAccessToken.mockReturnValue('token-jwt');
   });
 
-  it('lista processos sem usar cache', async () => {
-    fetch.mockResolvedValue(jsonResponse([processData]));
+  it('lista processos paginados sem usar cache', async () => {
+    const paginatedResponse = {
+      itens: [processData],
+      total: 6,
+      page: 2,
+      page_size: 5,
+      total_pages: 2,
+    };
+    fetch.mockResolvedValue(jsonResponse(paginatedResponse));
 
-    await expect(listarProcessos()).resolves.toEqual([processData]);
-    expect(fetch).toHaveBeenCalledWith('http://localhost:8000/processos/', {
-      cache: 'no-store',
-      headers: { Authorization: 'Bearer token-jwt' },
-    });
+    await expect(listarProcessos({ page: 2, pageSize: 5 })).resolves.toEqual(
+      paginatedResponse
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/processos/?page=2&page_size=5',
+      {
+        cache: 'no-store',
+        headers: { Authorization: 'Bearer token-jwt' },
+      }
+    );
+  });
+
+  it('usa a primeira página com cinco itens por padrão', async () => {
+    fetch.mockResolvedValue(
+      jsonResponse({
+        itens: [processData],
+        total: 1,
+        page: 1,
+        page_size: 5,
+        total_pages: 1,
+      })
+    );
+
+    await listarProcessos();
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/processos/?page=1&page_size=5',
+      expect.any(Object)
+    );
   });
 
   it('envia o cadastro por POST', async () => {

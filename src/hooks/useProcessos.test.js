@@ -31,6 +31,17 @@ const createProcess = (index = 1, overrides = {}) => ({
   ...overrides,
 });
 
+const pageResponse = (
+  itens,
+  { total = itens.length, page = 1, totalPages = 1 } = {}
+) => ({
+  itens,
+  total,
+  page,
+  page_size: 5,
+  total_pages: totalPages,
+});
+
 describe('useProcessos', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,11 +52,20 @@ describe('useProcessos', () => {
       createProcess(index + 1)
     );
     const { result } = renderHook(() =>
-      useProcessos(processes, 'Falha inicial')
+      useProcessos(
+        pageResponse([processes[5]], {
+          total: 6,
+          page: 2,
+          totalPages: 2,
+        }),
+        'Falha inicial'
+      )
     );
 
-    expect(result.current.processos).toEqual(processes);
-    expect(result.current.visibleProcesses).toEqual(processes.slice(0, 5));
+    expect(result.current.processos).toEqual([processes[5]]);
+    expect(result.current.visibleProcesses).toEqual([processes[5]]);
+    expect(result.current.totalItems).toBe(6);
+    expect(result.current.currentPage).toBe(2);
     expect(result.current.totalPages).toBe(2);
     expect(result.current.loadError).toBe('Falha inicial');
   });
@@ -55,16 +75,40 @@ describe('useProcessos', () => {
       createProcess(index + 1)
     );
     const received = [createProcess(8)];
-    listarProcessos.mockResolvedValue(received);
-    const { result } = renderHook(() => useProcessos(processes, 'Erro'));
+    listarProcessos.mockResolvedValue(pageResponse(received));
+    const { result } = renderHook(() =>
+      useProcessos(
+        pageResponse([processes[5]], {
+          total: 6,
+          page: 2,
+          totalPages: 2,
+        }),
+        'Erro'
+      )
+    );
 
-    act(() => result.current.setCurrentPage(2));
     await act(async () => result.current.reloadProcesses());
 
     expect(result.current.processos).toEqual(received);
     expect(result.current.currentPage).toBe(1);
     expect(result.current.loadError).toBe('');
     expect(result.current.isReloading).toBe(false);
+    expect(listarProcessos).toHaveBeenCalledWith({ page: 1, pageSize: 5 });
+  });
+
+  it('busca a página selecionada no backend', async () => {
+    const secondPage = [createProcess(6)];
+    listarProcessos.mockResolvedValue(
+      pageResponse(secondPage, { total: 6, page: 2, totalPages: 2 })
+    );
+    const { result } = renderHook(() => useProcessos());
+
+    await act(async () => result.current.changePage(2));
+
+    expect(listarProcessos).toHaveBeenCalledWith({ page: 2, pageSize: 5 });
+    expect(result.current.visibleProcesses).toEqual(secondPage);
+    expect(result.current.currentPage).toBe(2);
+    expect(result.current.totalItems).toBe(6);
   });
 
   it('mantém os dados e exibe erro quando a recarga falha', async () => {
@@ -82,6 +126,9 @@ describe('useProcessos', () => {
     const existing = createProcess(1);
     const created = createProcess(2);
     criarProcesso.mockResolvedValue(created);
+    listarProcessos.mockResolvedValue(
+      pageResponse([created, existing], { total: 2 })
+    );
     const { result } = renderHook(() => useProcessos([existing]));
 
     act(() => result.current.openCreateForm());
@@ -93,6 +140,7 @@ describe('useProcessos', () => {
 
     expect(criarProcesso).toHaveBeenCalledWith(created);
     expect(result.current.processos).toEqual([created, existing]);
+    expect(listarProcessos).toHaveBeenCalledWith({ page: 1, pageSize: 5 });
     expect(result.current.isFormOpen).toBe(false);
   });
 
@@ -125,17 +173,26 @@ describe('useProcessos', () => {
       createProcess(index + 1)
     );
     excluirProcesso.mockResolvedValue(undefined);
-    const { result } = renderHook(() => useProcessos(processes));
+    listarProcessos.mockResolvedValue(
+      pageResponse(processes.slice(0, 5), { total: 5 })
+    );
+    const { result } = renderHook(() =>
+      useProcessos(
+        pageResponse([processes[5]], {
+          total: 6,
+          page: 2,
+          totalPages: 2,
+        })
+      )
+    );
 
-    act(() => {
-      result.current.setCurrentPage(2);
-      result.current.openDeleteModal(processes[5]);
-    });
+    act(() => result.current.openDeleteModal(processes[5]));
     await act(async () => result.current.deleteSelectedProcess());
 
     expect(excluirProcesso).toHaveBeenCalledWith(processes[5].processo_id);
     expect(result.current.processos).toEqual(processes.slice(0, 5));
     expect(result.current.currentPage).toBe(1);
+    expect(result.current.totalItems).toBe(5);
     expect(result.current.deletingProcess).toBeNull();
   });
 

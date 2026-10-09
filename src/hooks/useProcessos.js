@@ -11,11 +11,32 @@ export const PROCESS_PAGE_SIZE = 5;
 const getErrorMessage = (error, fallbackMessage) =>
   error instanceof Error ? error.message : fallbackMessage;
 
+const normalizeInitialData = (data) => {
+  if (Array.isArray(data)) {
+    return {
+      itens: data.slice(0, PROCESS_PAGE_SIZE),
+      total: data.length,
+      page: 1,
+      total_pages: Math.max(1, Math.ceil(data.length / PROCESS_PAGE_SIZE)),
+    };
+  }
+
+  return {
+    itens: Array.isArray(data?.itens) ? data.itens : [],
+    total: data?.total ?? 0,
+    page: data?.page ?? 1,
+    total_pages: data?.total_pages ?? 1,
+  };
+};
+
 export function useProcessos(initialData = [], initialError = '') {
-  const [processos, setProcessos] = useState(initialData);
+  const initialPage = normalizeInitialData(initialData);
+  const [processos, setProcessos] = useState(initialPage.itens);
+  const [totalItems, setTotalItems] = useState(initialPage.total);
   const [loadError, setLoadError] = useState(initialError);
   const [isReloading, setIsReloading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage.page);
+  const [totalPages, setTotalPages] = useState(initialPage.total_pages);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProcess, setEditingProcess] = useState(null);
   const [detailProcess, setDetailProcess] = useState(null);
@@ -23,24 +44,21 @@ export function useProcessos(initialData = [], initialError = '') {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(processos.length / PROCESS_PAGE_SIZE)
-  );
-  const pageStart = (currentPage - 1) * PROCESS_PAGE_SIZE;
-  const visibleProcesses = processos.slice(
-    pageStart,
-    pageStart + PROCESS_PAGE_SIZE
-  );
+  const visibleProcesses = processos;
 
-  const reloadProcesses = async () => {
+  const reloadProcesses = async (page = 1) => {
     setIsReloading(true);
 
     try {
-      const receivedProcesses = await listarProcessos();
-      setProcessos(receivedProcesses);
+      const response = await listarProcessos({
+        page,
+        pageSize: PROCESS_PAGE_SIZE,
+      });
+      setProcessos(response.itens);
+      setTotalItems(response.total);
+      setCurrentPage(response.page);
+      setTotalPages(response.total_pages);
       setLoadError('');
-      setCurrentPage(1);
     } catch (error) {
       setLoadError(
         getErrorMessage(error, 'Não foi possível carregar os processos.')
@@ -49,6 +67,8 @@ export function useProcessos(initialData = [], initialError = '') {
       setIsReloading(false);
     }
   };
+
+  const changePage = (page) => reloadProcesses(page);
 
   const openCreateForm = () => {
     setEditingProcess(null);
@@ -88,9 +108,7 @@ export function useProcessos(initialData = [], initialError = '') {
     }
 
     const createdProcess = await criarProcesso(dados);
-    setProcessos((current) => [createdProcess, ...current]);
-    setLoadError('');
-    setCurrentPage(1);
+    await reloadProcesses(1);
     return createdProcess;
   };
 
@@ -111,22 +129,15 @@ export function useProcessos(initialData = [], initialError = '') {
 
     try {
       await excluirProcesso(deletingProcess.processo_id);
-      const remainingCount = Math.max(0, processos.length - 1);
-      const remainingPages = Math.max(
-        1,
-        Math.ceil(remainingCount / PROCESS_PAGE_SIZE)
-      );
-
-      setProcessos((current) =>
-        current.filter(
-          (processo) => processo.processo_id !== deletingProcess.processo_id
-        )
-      );
-      setCurrentPage((page) => Math.min(page, remainingPages));
+      const targetPage =
+        processos.length === 1 && currentPage > 1
+          ? currentPage - 1
+          : currentPage;
       setDetailProcess((current) =>
         current?.processo_id === deletingProcess.processo_id ? null : current
       );
       setDeletingProcess(null);
+      await reloadProcesses(targetPage);
     } catch (error) {
       setDeleteError(
         getErrorMessage(error, 'Não foi possível excluir o processo.')
@@ -139,6 +150,7 @@ export function useProcessos(initialData = [], initialError = '') {
   return {
     processos,
     visibleProcesses,
+    totalItems,
     loadError,
     isReloading,
     currentPage,
@@ -149,7 +161,7 @@ export function useProcessos(initialData = [], initialError = '') {
     deletingProcess,
     isDeleting,
     deleteError,
-    setCurrentPage,
+    changePage,
     setDetailProcess,
     reloadProcesses,
     openCreateForm,

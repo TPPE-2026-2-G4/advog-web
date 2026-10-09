@@ -37,6 +37,17 @@ const processData = {
 const clientes = [{ cliente_id: 10, nome: 'Maria Silva' }];
 const funcionarios = [{ funcionario_id: 5, nome: 'Ana Paula' }];
 
+const pageResponse = (
+  itens,
+  { total = itens.length, page = 1, totalPages = 1 } = {}
+) => ({
+  itens,
+  total,
+  page,
+  page_size: 5,
+  total_pages: totalPages,
+});
+
 const setPermissions = (permissions) => {
   sessionStorage.setItem(
     'current_user',
@@ -49,7 +60,7 @@ describe('ProcessosClient', () => {
     vi.clearAllMocks();
     localStorage.clear();
     sessionStorage.clear();
-    listarProcessos.mockResolvedValue([processData]);
+    listarProcessos.mockResolvedValue(pageResponse([processData]));
     listarClientes.mockResolvedValue(clientes);
     listarFuncionarios.mockResolvedValue(funcionarios);
   });
@@ -90,6 +101,47 @@ describe('ProcessosClient', () => {
     ).toBeInTheDocument();
     expect(listarClientes).toHaveBeenCalledOnce();
     expect(listarFuncionarios).toHaveBeenCalledOnce();
+    expect(listarProcessos).toHaveBeenCalledWith({ page: 1, pageSize: 5 });
+  });
+
+  it('busca no backend ao navegar entre páginas', async () => {
+    const firstPage = Array.from({ length: 5 }, (_, index) => ({
+      ...processData,
+      processo_id: index + 1,
+      cnj: `006123${index + 1}-56.2026.8.26.0100`,
+      titulo: `Caso ${index + 1}`,
+    }));
+    const lastProcess = {
+      ...processData,
+      processo_id: 6,
+      cnj: '0061236-56.2026.8.26.0100',
+      titulo: 'Caso 6',
+    };
+    listarProcessos
+      .mockResolvedValueOnce(
+        pageResponse(firstPage, { total: 6, totalPages: 2 })
+      )
+      .mockResolvedValueOnce(
+        pageResponse([lastProcess], { total: 6, page: 2, totalPages: 2 })
+      );
+    setPermissions({ visualizar_processos: true });
+    render(<ProcessosClient />);
+
+    const navigation = await screen.findByRole('navigation', {
+      name: 'Paginação',
+    });
+    fireEvent.click(
+      within(navigation).getByRole('button', { name: 'Próxima página' })
+    );
+
+    expect(
+      await screen.findByRole('button', { name: lastProcess.titulo })
+    ).toBeInTheDocument();
+    expect(screen.getByText('6 processos encontrados')).toBeInTheDocument();
+    expect(listarProcessos).toHaveBeenLastCalledWith({
+      page: 2,
+      pageSize: 5,
+    });
   });
 
   it('abre o formulário pelo botão Novo Processo', async () => {
