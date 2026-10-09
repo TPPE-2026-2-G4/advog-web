@@ -40,16 +40,16 @@ describe('serviço de finanças', () => {
           lancamento_id: 1,
           titulo: 'Honorários',
           valor: 5000,
-          tipo: 'Entrada',
+          tipo: 'e',
           data_vencimento: '2026-08-05',
           categoria: 'Honorários',
-          status: 'Pago',
+          status: 'Realizado',
         },
         {
           lancamento_id: 2,
           titulo: 'Custas',
           valor: 250,
-          tipo: 'Saída',
+          tipo: 's',
           data_vencimento: '2026-08-10',
           categoria: 'Custas',
           status: 'Pendente',
@@ -61,7 +61,7 @@ describe('serviço de finanças', () => {
       expect(resultado).toHaveLength(2);
       expect(resultado[0].id).toBe(1);
       expect(resultado[0].tipo).toBe('entrada');
-      expect(resultado[0].status).toBe('pago');
+      expect(resultado[0].status).toBe('realizado');
       expect(resultado[1].id).toBe(2);
       expect(resultado[1].tipo).toBe('saida');
       expect(resultado[1].status).toBe('pendente');
@@ -108,7 +108,7 @@ describe('serviço de finanças', () => {
     it('envia os dados com POST e retorna o lançamento cadastrado formatado', async () => {
       const respostaApi = {
         lancamento_id: 10,
-        tipo: 'Entrada',
+        tipo: 'e',
         titulo: 'Honorários Iniciais',
         valor: 5000,
         data_vencimento: '2026-10-15',
@@ -127,13 +127,15 @@ describe('serviço de finanças', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tipo: 'Entrada',
+          tipo: 'e',
           titulo: 'Honorários Iniciais',
           descricao: null,
           valor: 5000,
           data_vencimento: '2026-10-15',
           data_pagamento: null,
           categoria: 'Honorários',
+          categoria_id: null,
+          cliente_id: null,
           status: 'Pendente',
           recorrente: false,
         }),
@@ -188,7 +190,7 @@ describe('serviço de finanças', () => {
     it('envia os dados com PUT e retorna o lançamento atualizado', async () => {
       const respostaApi = {
         lancamento_id: 1,
-        tipo: 'Entrada',
+        tipo: 'e',
         titulo: 'Honorários Atualizados',
         valor: 7000,
         data_vencimento: '2026-10-15',
@@ -208,13 +210,15 @@ describe('serviço de finanças', () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            tipo: 'Entrada',
+            tipo: 'e',
             titulo: 'Honorários Atualizados',
             descricao: null,
             valor: 7000,
             data_vencimento: '2026-10-15',
             data_pagamento: null,
             categoria: 'Honorários',
+            categoria_id: null,
+            cliente_id: null,
             status: 'Pendente',
             recorrente: false,
           }),
@@ -231,17 +235,17 @@ describe('serviço de finanças', () => {
         data_vencimento: '2026-10-25',
         data_pagamento: '2026-10-20',
         categoria: 'Honorários',
-        status: 'Recebido',
+        status: 'Realizado',
       };
       const respostaApi = {
         lancamento_id: 5,
-        tipo: 'Entrada',
+        tipo: 'e',
         titulo: 'Honorários Atualizados',
         valor: 4500,
         data_vencimento: '2026-10-25',
         data_pagamento: '2026-10-20',
         categoria: 'Honorários',
-        status: 'Recebido',
+        status: 'Realizado',
       };
       fetch.mockResolvedValue(respostaJson(respostaApi));
 
@@ -259,14 +263,16 @@ describe('serviço de finanças', () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            tipo: 'Entrada',
+            tipo: 'e',
             titulo: 'Honorários Atualizados',
             descricao: null,
             valor: 4500,
             data_vencimento: '2026-10-25',
             data_pagamento: '2026-10-20',
             categoria: 'Honorários',
-            status: 'Recebido',
+            categoria_id: null,
+            cliente_id: null,
+            status: 'Realizado',
             recorrente: false,
           }),
         }
@@ -330,14 +336,14 @@ describe('serviço de finanças', () => {
     it('envia status formatado via PATCH e retorna o lançamento atualizado', async () => {
       const respostaApi = {
         lancamento_id: 1,
-        tipo: 'Entrada',
-        status: 'Pago',
+        tipo: 'e',
+        status: 'Realizado',
       };
       fetch.mockResolvedValue(respostaJson(respostaApi));
 
-      const atualizado = await mudarStatusLancamento(1, 'pago');
+      const atualizado = await mudarStatusLancamento(1, 'realizado');
       expect(atualizado.id).toBe(1);
-      expect(atualizado.status).toBe('pago');
+      expect(atualizado.status).toBe('realizado');
       expect(fetch).toHaveBeenCalledWith(
         'http://localhost:8000/lancamentos/1/status',
         {
@@ -345,7 +351,7 @@ describe('serviço de finanças', () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ status: 'Pago' }),
+          body: JSON.stringify({ status: 'Realizado' }),
         }
       );
     });
@@ -353,7 +359,7 @@ describe('serviço de finanças', () => {
     it('suporta passar o payload já como objeto', async () => {
       const respostaApi = {
         lancamento_id: 2,
-        tipo: 'Saída',
+        tipo: 's',
         status: 'Atrasado',
       };
       fetch.mockResolvedValue(respostaJson(respostaApi));
@@ -366,7 +372,7 @@ describe('serviço de finanças', () => {
     it('lança erro com mensagem da API quando a requisição falha', async () => {
       fetch.mockResolvedValue(respostaComErro('Erro de validação.'));
 
-      await expect(mudarStatusLancamento(1, 'recebido')).rejects.toThrow(
+      await expect(mudarStatusLancamento(1, 'realizado')).rejects.toThrow(
         'Erro de validação.'
       );
     });
@@ -374,7 +380,7 @@ describe('serviço de finanças', () => {
     it('lança erro padrão se o erro não contiver JSON legível', async () => {
       fetch.mockResolvedValue(respostaComErroSemJson());
 
-      await expect(mudarStatusLancamento(1, 'recebido')).rejects.toThrow(
+      await expect(mudarStatusLancamento(1, 'realizado')).rejects.toThrow(
         'Não foi possível atualizar o status do lançamento.'
       );
     });

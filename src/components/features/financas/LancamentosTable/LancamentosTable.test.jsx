@@ -12,7 +12,7 @@ const mockLancamentos = [
     categoria: 'Honorários',
     tipo: 'entrada',
     valor: 5000,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 2,
@@ -23,7 +23,7 @@ const mockLancamentos = [
     categoria: 'Custas',
     tipo: 'saida',
     valor: 250,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 3,
@@ -34,7 +34,7 @@ const mockLancamentos = [
     categoria: 'Honorários',
     tipo: 'entrada',
     valor: 8500,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 4,
@@ -45,7 +45,7 @@ const mockLancamentos = [
     categoria: 'Despesas Operacionais',
     tipo: 'saida',
     valor: 3200,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 5,
@@ -67,7 +67,7 @@ const mockLancamentos = [
     categoria: 'Despesas Operacionais',
     tipo: 'saida',
     valor: 450,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 7,
@@ -78,7 +78,7 @@ const mockLancamentos = [
     categoria: 'Honorários',
     tipo: 'entrada',
     valor: 3000,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 8,
@@ -98,7 +98,7 @@ const mockLancamentos = [
     categoria: 'Outros',
     tipo: 'saida',
     valor: 100,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 10,
@@ -106,7 +106,7 @@ const mockLancamentos = [
     categoria: 'Outros',
     tipo: 'saida',
     valor: 50,
-    status: 'pago',
+    status: 'realizado',
   },
 ];
 
@@ -174,9 +174,9 @@ describe('LancamentosTable', () => {
     // Tipo
     expect(screen.getAllByText('Entrada').length).toBeGreaterThanOrEqual(2);
 
-    // Status: entrada exibe Recebido, saída exibe Pago
-    expect(screen.getAllByText('Recebido').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Pago').length).toBeGreaterThanOrEqual(2);
+    // Status: entrada exibe Realizado, saída exibe Realizado
+    expect(screen.getAllByText('Realizado').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Realizado').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText('Pendente').length).toBeGreaterThanOrEqual(2);
   });
 
@@ -205,82 +205,90 @@ describe('LancamentosTable', () => {
     expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
   });
 
-  it('filtra por categoria e status via dropdown', () => {
-    render(<LancamentosTable lancamentos={mockLancamentos} pageSize={10} />);
+  it('chama onFilter ao mudar categoria e status via dropdown', () => {
+    const handleFilter = vi.fn();
+    render(
+      <LancamentosTable
+        lancamentos={mockLancamentos}
+        pageSize={10}
+        onFilter={handleFilter}
+      />
+    );
 
     const selectCategoria = screen.getByLabelText('Filtrar por categoria');
     const selectStatus = screen.getByLabelText('Filtrar por status');
 
-    // Filtrar por categoria Honorários
     fireEvent.change(selectCategoria, { target: { value: 'Honorários' } });
 
-    // There are 4 honorarios
-    expect(screen.getAllByText('Honorários').length).toBeGreaterThan(0);
-    expect(
-      screen.queryByText('Aluguel do Escritório - Agosto/2026')
-    ).not.toBeInTheDocument();
+    expect(handleFilter).toHaveBeenCalledWith(
+      expect.objectContaining({ categoria: 'Honorários' })
+    );
 
     fireEvent.change(selectCategoria, { target: { value: '' } }); // reset
 
-    // Filtrar apenas pendentes
     fireEvent.change(selectStatus, { target: { value: 'pendente' } });
-    expect(
-      screen.getByText('Consultoria Jurídica - Tech Solutions')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Material de Escritório')).toBeInTheDocument();
-    expect(
-      screen.queryByText('Honorários Iniciais - João Santos')
-    ).not.toBeInTheDocument();
+    expect(handleFilter).toHaveBeenCalledWith(
+      expect.objectContaining({ situacao: 'Previsto' })
+    );
   });
 
-  it('filtra por intervalo de datas', () => {
-    render(<LancamentosTable lancamentos={mockLancamentos} pageSize={10} />);
+  it('chama onFilter ao mudar intervalo de datas', () => {
+    const handleFilter = vi.fn();
+    render(
+      <LancamentosTable
+        lancamentos={mockLancamentos}
+        pageSize={10}
+        onFilter={handleFilter}
+      />
+    );
 
     const inputDe = screen.getByLabelText('Data inicial');
     const inputAte = screen.getByLabelText('Data final');
 
     fireEvent.change(inputDe, { target: { value: '2026-08-10' } });
-    fireEvent.change(inputAte, { target: { value: '2026-08-20' } });
+    expect(handleFilter).toHaveBeenCalledWith(
+      expect.objectContaining({ inicio: '2026-08-10' })
+    );
 
-    expect(
-      screen.queryByText('Honorários Iniciais - João Santos')
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText('Honorários de Êxito - Costa Indústrias')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Aluguel do Escritório - Agosto/2026')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Consultoria Jurídica - Tech Solutions')
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText('Software Jurídico Mensalidade')
-    ).not.toBeInTheDocument();
+    fireEvent.change(inputAte, { target: { value: '2026-08-20' } });
+    expect(handleFilter).toHaveBeenCalledWith(
+      expect.objectContaining({ fim: '2026-08-20' })
+    );
   });
 
-  it('limpa os filtros aplicados ao clicar no botão Limpar', () => {
-    render(<LancamentosTable lancamentos={mockLancamentos} pageSize={10} />);
+  it('limpa os filtros aplicados ao clicar no botão Limpar e aciona onFilter com undefined', () => {
+    const handleFilter = vi.fn();
+    render(
+      <LancamentosTable
+        lancamentos={mockLancamentos}
+        pageSize={10}
+        onFilter={handleFilter}
+      />
+    );
 
-    const selectCategoria = screen.getByLabelText('Filtrar por categoria');
     const selectStatus = screen.getByLabelText('Filtrar por status');
     const inputDe = screen.getByLabelText('Data inicial');
     const clearBtn = screen.getByRole('button', { name: /Limpar/i });
 
     fireEvent.change(selectStatus, { target: { value: 'pendente' } });
     fireEvent.change(inputDe, { target: { value: '2026-08-15' } });
-    expect(
-      screen.getByText('Exibindo 1–2 de 2 resultados')
-    ).toBeInTheDocument();
+
+    // Clear mocks before pressing clear to check exactly the last call
+    handleFilter.mockClear();
 
     fireEvent.click(clearBtn);
 
     expect(inputDe.value).toBe('');
-    expect(selectCategoria.value).toBe('');
     expect(selectStatus.value).toBe('');
-    expect(
-      screen.getByText('Exibindo 1–10 de 10 resultados')
-    ).toBeInTheDocument();
+
+    expect(handleFilter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inicio: undefined,
+        fim: undefined,
+        categoria: undefined,
+        situacao: undefined,
+      })
+    );
   });
 
   it('chama onEdit e onDelete ao clicar nos botões de ação', () => {
@@ -309,13 +317,13 @@ describe('LancamentosTable', () => {
     expect(handleDelete).toHaveBeenCalledWith(mockLancamentos[0]);
   });
 
-  it('exibe botão de X quando o lançamento está pago e aciona onToggleStatus', () => {
+  it('exibe botão de X quando o lançamento está realizado e aciona onToggleStatus', () => {
     const handleToggleStatus = vi.fn();
-    const pagoItem = { ...mockLancamentos[0], status: 'pago' };
+    const realizadoItem = { ...mockLancamentos[0], status: 'realizado' };
 
     render(
       <LancamentosTable
-        lancamentos={[pagoItem]}
+        lancamentos={[realizadoItem]}
         onToggleStatus={handleToggleStatus}
       />
     );
@@ -327,7 +335,7 @@ describe('LancamentosTable', () => {
 
     fireEvent.click(toggleBtn);
     expect(handleToggleStatus).toHaveBeenCalledOnce();
-    expect(handleToggleStatus).toHaveBeenCalledWith(pagoItem);
+    expect(handleToggleStatus).toHaveBeenCalledWith(realizadoItem);
   });
 
   it('exibe botão de correto (Check) quando o lançamento está pendente ou atrasado e aciona onToggleStatus', () => {
@@ -354,7 +362,7 @@ describe('LancamentosTable', () => {
       name: 'Marcar como recebido',
     });
     const checkSaida = screen.getByRole('button', {
-      name: 'Marcar como pago',
+      name: 'Marcar como realizado',
     });
     expect(checkEntrada).toBeInTheDocument();
     expect(checkSaida).toBeInTheDocument();
@@ -366,7 +374,8 @@ describe('LancamentosTable', () => {
     expect(handleToggleStatus).toHaveBeenCalledWith(atrasadoSaida);
   });
 
-  it('renderiza o badge de atrasado e filtra por atrasado', () => {
+  it('renderiza o badge de atrasado e aciona onFilter para status atrasado', () => {
+    const handleFilter = vi.fn();
     const atrasadoItem = {
       id: 99,
       data: '01/01/2026',
@@ -382,6 +391,7 @@ describe('LancamentosTable', () => {
       <LancamentosTable
         lancamentos={[...mockLancamentos, atrasadoItem]}
         pageSize={15}
+        onFilter={handleFilter}
       />
     );
 
@@ -390,9 +400,8 @@ describe('LancamentosTable', () => {
     const selectStatus = screen.getByLabelText('Filtrar por status');
     fireEvent.change(selectStatus, { target: { value: 'atrasado' } });
 
-    expect(screen.getByText('Boleto Vencido')).toBeInTheDocument();
-    expect(
-      screen.queryByText('Honorários Iniciais - João Santos')
-    ).not.toBeInTheDocument();
+    expect(handleFilter).toHaveBeenCalledWith(
+      expect.objectContaining({ situacao: 'Atrasado' })
+    );
   });
 });

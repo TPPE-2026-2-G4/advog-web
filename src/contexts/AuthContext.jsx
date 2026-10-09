@@ -10,15 +10,19 @@ export function AuthProvider({ children }) {
   async function login(email, senha) {
     const data = await loginService(email, senha);
 
-    setUser(data.user);
+    setUser(data.funcionario);
 
-    localStorage.setItem('token', data.token);
+    localStorage.setItem('token', data.access_token);
+    sessionStorage.setItem('current_user', JSON.stringify(data.funcionario));
 
     return data;
   }
 
   function logout() {
     setUser(null);
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('current_user');
   }
 
   return (

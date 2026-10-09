@@ -2,6 +2,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import LancamentoModal from './LancamentoModal';
 
+vi.mock('@/services/financas', () => ({
+  listarCategorias: vi.fn().mockResolvedValue([
+    { categoria_id: 1, nome: 'Honorários' },
+    { categoria_id: 2, nome: 'Custas' },
+    { categoria_id: 3, nome: 'Despesas Operacionais' },
+    { categoria_id: 4, nome: 'Consultoria' },
+    { categoria_id: 5, nome: 'Outros' },
+  ]),
+  criarCategoria: vi
+    .fn()
+    .mockResolvedValue({ categoria_id: 99, nome: 'Nova Categoria' }),
+  excluirCategoria: vi.fn().mockResolvedValue(true),
+  obterResumoFinancas: vi.fn(),
+}));
+
 const renderModal = (props = {}) =>
   render(
     <LancamentoModal
@@ -182,7 +197,7 @@ describe('LancamentoModal', () => {
       valor: 1000,
       data: '01/09/2026',
       dataIso: '2026-09-01',
-      status: 'recebido',
+      status: 'realizado',
     };
 
     renderModal({ initialItem: mockItem, onSave, onClose });
@@ -202,7 +217,7 @@ describe('LancamentoModal', () => {
           id: 99,
           titulo: 'Título Atualizado',
           valor: 2500,
-          status: 'recebido',
+          status: 'realizado',
         })
       );
       expect(onClose).toHaveBeenCalledOnce();
@@ -223,7 +238,7 @@ describe('LancamentoModal', () => {
       dataVencimento: '05/09/2026',
       dataVencimentoIso: '2026-09-05',
       data_vencimento: '2026-09-05',
-      status: 'recebido',
+      status: 'realizado',
     };
 
     renderModal({ initialItem: mockItem, onSave, onClose });

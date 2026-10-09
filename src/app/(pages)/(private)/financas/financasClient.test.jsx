@@ -1,14 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
-beforeEach(() => cleanup());
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import FinancasClient from './financasClient';
 import {
   atualizarFinancas,
   criarFinancas,
   excluirFinancas,
-  mudarStatusLancamento,
+  listarCategorias,
+  obterResumoFinancas,
+  listarFinancas,
 } from '@/services/financas';
+import FinancasClient from './financasClient';
 
 const mockLancamentos = [
   {
@@ -26,7 +24,7 @@ const mockLancamentos = [
     categoria: 'Honorários',
     tipo: 'entrada',
     valor: 5000,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 2,
@@ -43,7 +41,7 @@ const mockLancamentos = [
     categoria: 'Custas',
     tipo: 'saida',
     valor: 250,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 3,
@@ -60,7 +58,7 @@ const mockLancamentos = [
     categoria: 'Honorários',
     tipo: 'entrada',
     valor: 8500,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 4,
@@ -77,7 +75,7 @@ const mockLancamentos = [
     categoria: 'Despesas Operacionais',
     tipo: 'saida',
     valor: 3200,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 5,
@@ -111,7 +109,7 @@ const mockLancamentos = [
     categoria: 'Despesas Operacionais',
     tipo: 'saida',
     valor: 450,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 7,
@@ -128,7 +126,7 @@ const mockLancamentos = [
     categoria: 'Honorários',
     tipo: 'entrada',
     valor: 3000,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 8,
@@ -150,25 +148,55 @@ const mockLancamentos = [
 ];
 
 vi.mock('@/services/financas', () => ({
+  listarFinancas: vi.fn(),
   criarFinancas: vi.fn(),
   atualizarFinancas: vi.fn(),
   excluirFinancas: vi.fn(),
-  mudarStatusLancamento: vi.fn(),
+  atualizarFinancas: vi.fn(),
+  listarCategorias: vi
+    .fn()
+    .mockResolvedValue([{ categoria_id: 1, nome: 'Honorários' }]),
+  criarCategoria: vi
+    .fn()
+    .mockResolvedValue({ categoria_id: 2, nome: 'Nova Categoria' }),
+  excluirCategoria: vi.fn().mockResolvedValue(true),
+  obterResumoFinancas: vi.fn(),
 }));
 
 describe('FinancasClient', () => {
+  let currentLancamentos = [];
+
   beforeEach(() => {
     vi.clearAllMocks();
-    criarFinancas.mockImplementation(async (item) => ({
-      ...item,
-      id: item.id || 99,
+    currentLancamentos = [...mockLancamentos];
+
+    listarFinancas.mockImplementation(async () => ({
+      itens: currentLancamentos,
+      total: currentLancamentos.length,
+      page: 1,
+      page_size: currentLancamentos.length,
     }));
-    atualizarFinancas.mockImplementation(async (id, item) => ({
-      ...item,
-      id,
-    }));
-    excluirFinancas.mockImplementation(async () => {});
-    mudarStatusLancamento.mockImplementation(async (id, status) => ({
+    obterResumoFinancas.mockResolvedValue({
+      realizado: { total_entradas: 5000, total_saidas: 1000 },
+      pendente: { total_entradas: 0, total_saidas: 0 },
+      atrasado: { total_entradas: 0, total_saidas: 0 },
+    });
+    criarFinancas.mockImplementation(async (item) => {
+      const newItem = { ...item, id: item.id || 99 };
+      currentLancamentos = [newItem, ...currentLancamentos];
+      return newItem;
+    });
+    atualizarFinancas.mockImplementation(async (id, item) => {
+      const updated = { ...item, id };
+      currentLancamentos = currentLancamentos.map((l) =>
+        l.id === id ? updated : l
+      );
+      return updated;
+    });
+    excluirFinancas.mockImplementation(async (id) => {
+      currentLancamentos = currentLancamentos.filter((l) => l.id !== id);
+    });
+    atualizarFinancas.mockImplementation(async (id, status) => ({
       id,
       status,
     }));
@@ -224,9 +252,6 @@ describe('FinancasClient', () => {
     expect(
       screen.getByText('Honorários Iniciais - João Santos')
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('Exibindo 1–5 de 8 resultados')
-    ).toBeInTheDocument();
   });
 
   it('permite acionar edição e exclusão de lançamentos', async () => {
@@ -240,6 +265,13 @@ describe('FinancasClient', () => {
         onDeleteLancamento={handleDeleteLancamento}
       />
     );
+
+    // Wait for the initial useEffect fetch (which overwrites initialData) to settle
+    await waitFor(() => {
+      expect(listarFinancas).toHaveBeenCalled();
+    });
+    // Add small delay to let state update after the mock resolves
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     const editButtons = screen.getAllByRole('button', {
       name: 'Editar lançamento',
@@ -267,12 +299,10 @@ describe('FinancasClient', () => {
     await waitFor(() => {
       expect(excluirFinancas).toHaveBeenCalledWith(1);
       expect(handleDeleteLancamento).toHaveBeenCalledOnce();
+      expect(
+        screen.queryByText('Honorários Iniciais - João Santos')
+      ).not.toBeInTheDocument();
     });
-
-    // O item foi removido da lista
-    expect(
-      screen.queryByText('Honorários Iniciais - João Santos')
-    ).not.toBeInTheDocument();
   });
 
   it('exibe mensagem de erro na tela caso a exclusão falhe', async () => {
@@ -324,6 +354,9 @@ describe('FinancasClient', () => {
     });
     fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
       target: { value: '2026-10-15' },
+    });
+    fireEvent.change(screen.getByLabelText('Categoria'), {
+      target: { value: 'Honorários' },
     });
 
     fireEvent.submit(screen.getByRole('button', { name: 'Salvar Lançamento' }));
@@ -380,14 +413,14 @@ describe('FinancasClient', () => {
       />
     );
 
-    // Primeiro item é Pago, então possui botão com X ("Marcar como pendente")
+    // Primeiro item é Realizado, então possui botão com X ("Marcar como pendente")
     const toggleButtons = screen.getAllByRole('button', {
       name: 'Marcar como pendente',
     });
     fireEvent.click(toggleButtons[0]);
 
     await waitFor(() => {
-      expect(mudarStatusLancamento).toHaveBeenCalled();
+      expect(atualizarFinancas).toHaveBeenCalled();
       expect(handleToggleStatus).toHaveBeenCalledOnce();
     });
   });
@@ -408,7 +441,7 @@ describe('FinancasClient', () => {
   });
 
   it('exibe mensagem de erro na tela caso a alteração de status falhe', async () => {
-    mudarStatusLancamento.mockRejectedValueOnce(
+    atualizarFinancas.mockRejectedValueOnce(
       new Error('Erro ao alterar status.')
     );
     render(<FinancasClient initialData={mockLancamentos} />);

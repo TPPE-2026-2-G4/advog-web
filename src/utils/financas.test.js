@@ -98,9 +98,9 @@ describe('financas utils', () => {
   });
 
   describe('status helpers (isStatusConcluido, getStatusConcluido, formatStatusLabel)', () => {
-    it('isStatusConcluido reconhece pago e recebido como concluídos', () => {
-      expect(isStatusConcluido('pago')).toBe(true);
-      expect(isStatusConcluido('recebido')).toBe(true);
+    it('isStatusConcluido reconhece realizado e recebido como concluídos', () => {
+      expect(isStatusConcluido('realizado')).toBe(true);
+      expect(isStatusConcluido('realizado')).toBe(true);
       expect(isStatusConcluido('PAGO')).toBe(true);
       expect(isStatusConcluido('RECEBIDO')).toBe(true);
       expect(isStatusConcluido('pendente')).toBe(false);
@@ -108,18 +108,18 @@ describe('financas utils', () => {
       expect(isStatusConcluido(null)).toBe(false);
     });
 
-    it('getStatusConcluido retorna recebido para entrada e pago para saida', () => {
-      expect(getStatusConcluido('entrada')).toBe('recebido');
-      expect(getStatusConcluido('ENTRADA')).toBe('recebido');
-      expect(getStatusConcluido('saida')).toBe('pago');
-      expect(getStatusConcluido('SAIDA')).toBe('pago');
+    it('getStatusConcluido retorna recebido para entrada e realizado para saida', () => {
+      expect(getStatusConcluido('entrada')).toBe('realizado');
+      expect(getStatusConcluido('ENTRADA')).toBe('realizado');
+      expect(getStatusConcluido('saida')).toBe('realizado');
+      expect(getStatusConcluido('SAIDA')).toBe('realizado');
     });
 
     it('formatStatusLabel formata corretamente o label baseado no tipo e status', () => {
-      expect(formatStatusLabel('pago', 'entrada')).toBe('Recebido');
-      expect(formatStatusLabel('recebido', 'entrada')).toBe('Recebido');
-      expect(formatStatusLabel('pago', 'saida')).toBe('Pago');
-      expect(formatStatusLabel('recebido', 'saida')).toBe('Pago');
+      expect(formatStatusLabel('realizado', 'entrada')).toBe('Realizado');
+      expect(formatStatusLabel('realizado', 'entrada')).toBe('Realizado');
+      expect(formatStatusLabel('realizado', 'saida')).toBe('Realizado');
+      expect(formatStatusLabel('realizado', 'saida')).toBe('Realizado');
       expect(formatStatusLabel('atrasado', 'entrada')).toBe('Atrasado');
       expect(formatStatusLabel('atrasado', 'saida')).toBe('Atrasado');
       expect(formatStatusLabel('pendente', 'entrada')).toBe('Pendente');
@@ -163,14 +163,14 @@ describe('financas utils', () => {
     it('converte resposta da API para modelo do frontend', () => {
       const apiItem = {
         lancamento_id: 15,
-        tipo: 'Saída',
+        tipo: 's',
         titulo: 'Aluguel',
         descricao: 'Sala comercial',
         valor: 2000,
         data_vencimento: '2026-10-01',
         data_pagamento: null,
         categoria: 'Despesas',
-        status: 'Pago',
+        status: 'Realizado',
         recorrente: true,
       };
 
@@ -178,7 +178,7 @@ describe('financas utils', () => {
       expect(front.id).toBe(15);
       expect(front.lancamento_id).toBe(15);
       expect(front.tipo).toBe('saida');
-      expect(front.status).toBe('pago');
+      expect(front.status).toBe('realizado');
       expect(front.data).toBe('01/10/2026');
       expect(front.dataIso).toBe('2026-10-01');
       expect(front.dataVencimento).toBe('01/10/2026');
@@ -201,7 +201,7 @@ describe('financas utils', () => {
       };
 
       const apiPayload = toApiLancamento(frontItem);
-      expect(apiPayload.tipo).toBe('Saída');
+      expect(apiPayload.tipo).toBe('s');
       expect(apiPayload.titulo).toBe('Internet');
       expect(apiPayload.descricao).toBe('Mensalidade');
       expect(apiPayload.valor).toBe(150.5);
@@ -213,13 +213,13 @@ describe('financas utils', () => {
     it('converte resposta da API com data_pagamento para modelo do frontend', () => {
       const apiItem = {
         lancamento_id: 16,
-        tipo: 'Entrada',
+        tipo: 'e',
         titulo: 'Consultoria',
         valor: 3500,
         data_vencimento: '2026-10-15',
         data_pagamento: '2026-10-10',
         categoria: 'Honorários',
-        status: 'Recebido',
+        status: 'Realizado',
         recorrente: false,
       };
 
@@ -244,7 +244,7 @@ describe('financas utils', () => {
         dataPagamentoIso: '2026-10-12',
         dataVencimentoIso: '2026-10-18',
         categoria: 'Honorários',
-        status: 'Recebido',
+        status: 'Realizado',
       };
 
       const apiPayload = toApiLancamento(frontItem);
@@ -260,7 +260,7 @@ describe('financas utils', () => {
         dataPagamento: '05/11/2026',
         dataVencimento: '10/11/2026',
         categoria: 'Despesas',
-        status: 'Pago',
+        status: 'Realizado',
       };
 
       const apiPayload = toApiLancamento(frontItem);

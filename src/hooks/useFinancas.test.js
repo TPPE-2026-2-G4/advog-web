@@ -1,18 +1,26 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
-import { useFinancas } from './useFinancas';
 import {
   atualizarFinancas,
   criarFinancas,
   excluirFinancas,
-  mudarStatusLancamento,
+  listarCategorias,
+  criarCategoria,
+  excluirCategoria,
+  obterResumoFinancas,
+  listarFinancas,
 } from '@/services/financas';
 
 vi.mock('@/services/financas', () => ({
   criarFinancas: vi.fn(),
-  atualizarFinancas: vi.fn(),
   excluirFinancas: vi.fn(),
-  mudarStatusLancamento: vi.fn(),
+  listarCategorias: vi
+    .fn()
+    .mockResolvedValue([{ categoria_id: 1, nome: 'Honorários' }]),
+  criarCategoria: vi
+    .fn()
+    .mockResolvedValue({ categoria_id: 2, nome: 'Nova Categoria' }),
+  excluirCategoria: vi.fn().mockResolvedValue(true),
+  obterResumoFinancas: vi.fn(),
+  listarFinancas: vi.fn(),
 }));
 
 const mockData = [
@@ -23,7 +31,7 @@ const mockData = [
     categoria: 'Honorários',
     tipo: 'entrada',
     valor: 5000,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 2,
@@ -32,7 +40,7 @@ const mockData = [
     categoria: 'Custas',
     tipo: 'saida',
     valor: 250,
-    status: 'pago',
+    status: 'realizado',
   },
 ];
 
@@ -48,7 +56,7 @@ describe('useFinancas', () => {
       id,
     }));
     excluirFinancas.mockImplementation(async () => {});
-    mudarStatusLancamento.mockImplementation(async (id, status) => ({
+    atualizarFinancas.mockImplementation(async (id, status) => ({
       id,
       status,
     }));
@@ -124,7 +132,7 @@ describe('useFinancas', () => {
       titulo: 'Novo Recebimento',
       tipo: 'entrada',
       valor: 1000,
-      status: 'pago',
+      status: 'realizado',
     };
 
     await act(async () => {
@@ -230,24 +238,24 @@ describe('useFinancas', () => {
     await act(async () => {
       await result.current.handleToggleStatus(pendenteEntrada);
     });
-    expect(mudarStatusLancamento).toHaveBeenCalledWith(3, 'recebido');
-    expect(result.current.lancamentos[0].status).toBe('recebido');
+    expect(atualizarFinancas).toHaveBeenCalledWith(3, 'realizado');
+    expect(result.current.lancamentos[0].status).toBe('realizado');
     expect(onToggleStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 3, status: 'recebido' })
+      expect.objectContaining({ id: 3, status: 'realizado' })
     );
 
     await act(async () => {
       await result.current.handleToggleStatus(pendenteSaida);
     });
-    expect(mudarStatusLancamento).toHaveBeenCalledWith(4, 'pago');
-    expect(result.current.lancamentos[1].status).toBe('pago');
+    expect(atualizarFinancas).toHaveBeenCalledWith(4, 'realizado');
+    expect(result.current.lancamentos[1].status).toBe('realizado');
     expect(onToggleStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 4, status: 'pago' })
+      expect.objectContaining({ id: 4, status: 'realizado' })
     );
   });
 
   it('armazena statusError quando a alternância de status na API falha', async () => {
-    mudarStatusLancamento.mockRejectedValueOnce(new Error('Falha no status'));
+    atualizarFinancas.mockRejectedValueOnce(new Error('Falha no status'));
     const { result } = renderHook(() => useFinancas(mockData));
 
     await act(async () => {
@@ -259,12 +267,12 @@ describe('useFinancas', () => {
     expect(result.current.statusError).toBe('Falha no status');
   });
 
-  it('alterna status de pago/recebido para atrasado quando vencimento expirou', async () => {
+  it('alterna status de realizado/recebido para atrasado quando vencimento expirou', async () => {
     const recebidoVencido = {
       id: 4,
       tipo: 'entrada',
       dataVencimentoIso: '2020-01-01',
-      status: 'recebido',
+      status: 'realizado',
       valor: 200,
     };
     const { result } = renderHook(() => useFinancas([recebidoVencido]));
@@ -273,25 +281,25 @@ describe('useFinancas', () => {
       await result.current.handleToggleStatus(recebidoVencido);
     });
 
-    expect(mudarStatusLancamento).toHaveBeenCalledWith(4, 'atrasado');
+    expect(atualizarFinancas).toHaveBeenCalledWith(4, 'atrasado');
     expect(result.current.lancamentos[0].status).toBe('atrasado');
   });
 
-  it('alterna status de pago para pendente quando vencimento é futuro', async () => {
-    const pagoFuturo = {
+  it('alterna status de realizado para pendente quando vencimento é futuro', async () => {
+    const realizadoFuturo = {
       id: 5,
       tipo: 'saida',
       dataVencimentoIso: '2099-01-01',
-      status: 'pago',
+      status: 'realizado',
       valor: 300,
     };
-    const { result } = renderHook(() => useFinancas([pagoFuturo]));
+    const { result } = renderHook(() => useFinancas([realizadoFuturo]));
 
     await act(async () => {
-      await result.current.handleToggleStatus(pagoFuturo);
+      await result.current.handleToggleStatus(realizadoFuturo);
     });
 
-    expect(mudarStatusLancamento).toHaveBeenCalledWith(5, 'pendente');
+    expect(atualizarFinancas).toHaveBeenCalledWith(5, 'pendente');
     expect(result.current.lancamentos[0].status).toBe('pendente');
   });
   it('cobre ramificações de fallback em manipulações (branches)', async () => {
@@ -337,12 +345,12 @@ describe('useFinancas', () => {
     expect(result.current.saveError).toBe('Erro ao atualizar lançamento.');
 
     // 6. response null no toggle e error fallback
-    mudarStatusLancamento.mockResolvedValueOnce(null);
+    atualizarFinancas.mockResolvedValueOnce(null);
     await act(async () => {
       await result.current.handleToggleStatus(mockData[0]);
     });
 
-    mudarStatusLancamento.mockRejectedValueOnce('String de erro toggle');
+    atualizarFinancas.mockRejectedValueOnce('String de erro toggle');
     await act(async () => {
       try {
         await result.current.handleToggleStatus(mockData[0]);
