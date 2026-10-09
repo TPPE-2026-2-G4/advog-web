@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('token', token);
       localStorage.setItem('access_token', token);
       sessionStorage.setItem('access_token', token);
+      document.cookie = `access_token=${token}; path=/; max-age=86400; SameSite=Lax`;
     }
 
     if (currentUser) {
@@ -38,6 +39,8 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('current_user');
     sessionStorage.removeItem('access_token');
     sessionStorage.removeItem('current_user');
+    document.cookie =
+      'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
   }
 
   return (
