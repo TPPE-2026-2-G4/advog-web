@@ -15,13 +15,19 @@ describe('Modal', () => {
 
   it('renderiza o conteúdo e atributos de diálogo quando isOpen é verdadeiro', () => {
     render(
-      <Modal isOpen onClose={vi.fn()} ariaLabel="Diálogo de Teste">
+      <Modal
+        isOpen
+        id="modal-de-teste"
+        onClose={vi.fn()}
+        ariaLabel="Diálogo de Teste"
+      >
         <div>Conteúdo do Modal</div>
       </Modal>
     );
 
     const dialog = screen.getByRole('dialog', { name: 'Diálogo de Teste' });
     expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute('id', 'modal-de-teste');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(screen.getByText('Conteúdo do Modal')).toBeInTheDocument();
   });
@@ -134,6 +140,15 @@ describe('Modal', () => {
       expect.any(Function)
     );
     removeEventListenerSpy.mockRestore();
+  });
+  it('não possui aria-modal quando ariaModal é falso', () => {
+    render(
+      <Modal isOpen onClose={vi.fn()} ariaModal={false}>
+        <div>Modal sem aria-modal</div>
+      </Modal>
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).not.toHaveAttribute('aria-modal');
   });
 });
 
