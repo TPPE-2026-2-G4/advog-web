@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { Scale, X, Phone, Mail, MapPin } from 'lucide-react';
 import { getLawyerInitials } from '@/utils/funcionario';
 import styles from './site.module.css';
+import { getImageUrl } from '@/utils/institucionalUtils';
 
 export default function PreviewModal({ isOpen, onClose, formData, team = [] }) {
   useEffect(() => {
@@ -80,7 +81,7 @@ export default function PreviewModal({ isOpen, onClose, formData, team = [] }) {
             <div className={styles.previewNavBrand}>
               {formData.logotipo ? (
                 <img
-                  src={formData.logotipo}
+                  src={getImageUrl(formData.logotipo)}
                   alt={nomeEscritorio}
                   style={{ height: '32px', width: 'auto' }}
                 />
@@ -108,7 +109,7 @@ export default function PreviewModal({ isOpen, onClose, formData, team = [] }) {
             style={{
               backgroundColor: corPrimaria,
               backgroundImage: formData.bannerHero
-                ? `url(${formData.bannerHero})`
+                ? `url(${getImageUrl(formData.bannerHero)})`
                 : undefined,
             }}
           >
@@ -136,7 +137,7 @@ export default function PreviewModal({ isOpen, onClose, formData, team = [] }) {
             <h2 className={styles.previewSectionTitle}>Sobre o Escritório</h2>
             {formData.imagemSobre && (
               <img
-                src={formData.imagemSobre}
+                src={getImageUrl(formData.imagemSobre)}
                 alt="Sobre o Escritório"
                 className={styles.previewAboutImage}
               />

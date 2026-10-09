@@ -2,20 +2,30 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import UserMenu from './userMenu';
 
+vi.mock('@/utils/authSession', () => ({
+  getCurrentUser: vi.fn(() => ({
+    nome: 'Alexandre Carreiro',
+    cargo: 'Advogado(a)',
+    email: 'alexandre@carreiro.adv.br',
+  })),
+}));
+
 describe('UserMenu', () => {
-  it('renderiza o usuário e mantém o menu fechado inicialmente', () => {
+  it('renderiza o usuário e mantém o menu fechado inicialmente', async () => {
     render(<UserMenu />);
 
-    expect(screen.getByText('Alexandre C.')).toBeInTheDocument();
+    expect(await screen.findByText('Alexandre C.')).toBeInTheDocument();
     expect(screen.getByText('Advogado(a)')).toBeInTheDocument();
     expect(screen.queryByText('Alexandre Carreiro')).not.toBeInTheDocument();
   });
 
-  it('abre o menu ao clicar no usuário', () => {
+  it('abre o menu ao clicar no usuário', async () => {
     render(<UserMenu />);
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Alexandre C\. Advogado\(a\)/i })
+      await screen.findByRole('button', {
+        name: /Alexandre C\. Advogado\(a\)/i,
+      })
     );
 
     expect(screen.getByText('Alexandre Carreiro')).toBeInTheDocument();
@@ -29,9 +39,9 @@ describe('UserMenu', () => {
     expect(screen.getByRole('button', { name: /Sair/i })).toBeInTheDocument();
   });
 
-  it('fecha o menu ao clicar novamente no usuário', () => {
+  it('fecha o menu ao clicar novamente no usuário', async () => {
     render(<UserMenu />);
-    const trigger = screen.getByRole('button', {
+    const trigger = await screen.findByRole('button', {
       name: /Alexandre C\. Advogado\(a\)/i,
     });
 
@@ -41,7 +51,7 @@ describe('UserMenu', () => {
     expect(screen.queryByText('Alexandre Carreiro')).not.toBeInTheDocument();
   });
 
-  it('fecha o menu ao clicar fora dele', () => {
+  it('fecha o menu ao clicar fora dele', async () => {
     render(
       <>
         <UserMenu />
@@ -49,17 +59,21 @@ describe('UserMenu', () => {
       </>
     );
     fireEvent.click(
-      screen.getByRole('button', { name: /Alexandre C\. Advogado\(a\)/i })
+      await screen.findByRole('button', {
+        name: /Alexandre C\. Advogado\(a\)/i,
+      })
     );
     fireEvent.mouseDown(screen.getByRole('button', { name: 'Área externa' }));
 
     expect(screen.queryByText('Alexandre Carreiro')).not.toBeInTheDocument();
   });
 
-  it('não fecha o menu ao clicar dentro dele', () => {
+  it('não fecha o menu ao clicar dentro dele', async () => {
     render(<UserMenu />);
     fireEvent.click(
-      screen.getByRole('button', { name: /Alexandre C\. Advogado\(a\)/i })
+      await screen.findByRole('button', {
+        name: /Alexandre C\. Advogado\(a\)/i,
+      })
     );
     fireEvent.mouseDown(screen.getByRole('button', { name: /Meu perfil/i }));
 

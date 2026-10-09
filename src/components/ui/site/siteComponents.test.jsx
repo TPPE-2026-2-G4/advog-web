@@ -324,7 +324,7 @@ describe('Componentes UI do Módulo Site', () => {
 
       const img = screen.getByAltText('Imagem da seção Sobre');
       expect(img).toBeInTheDocument();
-      expect(img).toHaveAttribute('src', 'http://minio/sobre.jpg');
+      expect(img).toHaveAttribute('src', 'http://localhost:9000/sobre.jpg');
 
       const replaceBtn = screen.getByRole('button', {
         name: /substituir imagem/i,
@@ -636,7 +636,10 @@ describe('Componentes UI do Módulo Site', () => {
       );
 
       const sobreImg = screen.getByAltText('Sobre o Escritório');
-      expect(sobreImg).toHaveAttribute('src', 'http://minio/sobre.jpg');
+      expect(sobreImg).toHaveAttribute(
+        'src',
+        'http://localhost:9000/sobre.jpg'
+      );
       expect(
         screen.getByText('Mais de 500 casos atendidos')
       ).toBeInTheDocument();

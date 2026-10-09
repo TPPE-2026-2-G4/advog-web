@@ -2,15 +2,13 @@ import { buscarDadosInstitucionais } from '@/services/institucional';
 import { Scale } from 'lucide-react';
 import styles from './page.module.css';
 
+import { getImageUrl, formatParagraphs } from '@/utils/institucionalUtils';
+
 export default async function Home() {
   const dados = await buscarDadosInstitucionais();
+  console.log('DADOS RECEBIDOS DO BACKEND:', dados.imagemSobre);
 
-  const sobreTextos = dados.sobreEscritorio
-    ? dados.sobreEscritorio.split('\n').filter((p) => p.trim() !== '')
-    : [
-        'Fundado em 2010 por Dr. Alexandre Carreiro, o escritório nasceu com a missão de oferecer atendimento jurídico de excelência, combinando tradição e inovação tecnológica. Localizado em Brasília-DF, atendemos clientes em todo o território nacional.',
-        'Com mais de 15 anos de experiência, nossa equipe é formada por advogados especializados que priorizam a defesa dos direitos dos nossos clientes com ética, dedicação e resultados concretos. Nosso maior diferencial é o controle rigoroso de prazos processuais, garantindo que nenhuma oportunidade seja perdida.',
-      ];
+  const sobreTextos = formatParagraphs(dados?.sobreEscritorio);
 
   return (
     <div style={{ backgroundColor: '#FAF9F6', minHeight: '100vh' }}>
@@ -30,7 +28,7 @@ export default async function Home() {
               {dados.imagemSobre ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={dados.imagemSobre}
+                  src={getImageUrl(dados.imagemSobre)}
                   alt="Imagem do escritório"
                   className={styles.image}
                 />
