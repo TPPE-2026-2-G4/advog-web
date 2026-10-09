@@ -30,20 +30,19 @@ export default function UserMenu() {
   if (!mounted || !user) return null;
 
   const getShortName = (name) => {
-    if (!name) return 'Usuário';
     const parts = name.trim().split(/\s+/);
     if (parts.length === 1) return parts[0];
     return `${parts[0]} ${parts[1][0]}.`;
   };
 
-  const userName = user?.nome || user?.nome_func || 'Usuário Logado';
+  const userName = user.nome || user.nome_func;
   const shortName = getShortName(userName);
-  const userInitials = user ? getInitials(userName) : 'US';
+  const userInitials = getInitials(userName);
   const userRole =
-    typeof user?.cargo === 'string'
+    typeof user.cargo === 'string'
       ? user.cargo
-      : user?.cargo?.nome_cargo || user?.cargo?.nome || 'Advogado(a)';
-  const userEmail = user?.email || user?.email_func || 'usuario@adv.br';
+      : user.cargo?.nome_cargo || user.cargo?.nome;
+  const userEmail = user.email || user.email_func;
 
   return (
     <div className={styles.userMenuContainer} ref={menuRef}>

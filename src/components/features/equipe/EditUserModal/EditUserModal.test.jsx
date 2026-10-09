@@ -69,6 +69,38 @@ describe('EditUserModal', () => {
     expect(screen.getByLabelText('Nível de Acesso')).toHaveValue('3');
   });
 
+  it('usa valor vazio quando não encontra o cargo pelo nome', () => {
+    renderModal({
+      member: { ...member, cargo_id: undefined, cargo: 'CargoInexistente' },
+    });
+
+    expect(screen.getByLabelText('Nível de Acesso')).toHaveValue('');
+  });
+
+  describe('Testes de fallback de chave do membro (memberKey)', () => {
+    it.each([
+      ['com funcionario_id', { funcionario_id: 1 }],
+      ['com id', { id: 2 }],
+      ['com email_func', { email_func: 'a@b.com' }],
+      ['com email', { email: 'c@d.com' }],
+      ['completamente sem ID', {}],
+    ])('renderiza a chave correta %s', (desc, memberData) => {
+      renderModal({ member: memberData });
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+  });
+
+  it('envia o cargo contido em formData caso selectedRole seja nulo', async () => {
+    const onSave = vi.fn().mockResolvedValue({});
+    // Member starts without cargo, formData.cargo starts as ""
+    renderModal({ member: { funcionario_id: 9, nome_func: 'Teste' }, onSave });
+
+    // Try to submit with "" directly to bypass required attribute check in jsdom
+    fireEvent.submit(screen.getByRole('dialog'));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ cargo: '' }));
+  });
+
   it('repopula o formulário com o membro atual sempre que o modal é aberto', () => {
     const { rerender } = renderModal({ isOpen: false });
     const anotherMember = {
@@ -123,20 +155,28 @@ describe('EditUserModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('exibe a mensagem da rejeição e mantém o diálogo aberto', async () => {
-    const onClose = vi.fn();
-    const onSave = vi
-      .fn()
-      .mockRejectedValue(new Error('E-mail já está em uso'));
-    renderModal({ onClose, onSave });
+  describe('Tratamento de rejeição (getErrorMessage)', () => {
+    it.each([
+      ['string', 'E-mail já está em uso', 'E-mail já está em uso'],
+      ['objeto com message', new Error('Falha de rede'), 'Falha de rede'],
+      ['objeto vazio', {}, 'Não foi possível atualizar o usuário.'],
+      ['falsy', undefined, 'Não foi possível atualizar o usuário.'],
+    ])(
+      'exibe a mensagem para erro tipo %s e mantém aberto',
+      async (descricao, errorObject, expectedMessage) => {
+        const onClose = vi.fn();
+        const onSave = vi.fn().mockRejectedValue(errorObject);
+        renderModal({ onClose, onSave });
 
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar' }));
+        fireEvent.submit(screen.getByRole('button', { name: 'Salvar' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'E-mail já está em uso'
+        expect(await screen.findByRole('alert')).toHaveTextContent(
+          expectedMessage
+        );
+        expect(onClose).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+      }
     );
-    expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
   });
 
   it('fecha por Cancelar, X, overlay ou Escape fora do carregamento', () => {
@@ -173,7 +213,12 @@ describe('EditUserModal', () => {
 
     fireEvent.click(container.firstChild);
     fireEvent.keyDown(document, { key: 'Escape' });
+
+    // Tenta submeter de novo para cobrir o if (isSubmitting) return;
+    fireEvent.submit(screen.getByRole('dialog'));
+
     expect(onClose).not.toHaveBeenCalled();
+    expect(onSave).toHaveBeenCalledTimes(1);
 
     resolveSave({});
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());

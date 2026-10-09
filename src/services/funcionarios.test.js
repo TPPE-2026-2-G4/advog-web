@@ -236,6 +236,24 @@ describe('serviço de funcionários', () => {
       );
       expect(fetch).not.toHaveBeenCalled();
     });
+
+    it.each([
+      ['mensagem da API', respostaComErro('Cargo inválido'), 'Cargo inválido'],
+      [
+        'mensagem padrão',
+        respostaComErroSemJson(),
+        'Não foi possível alterar o cargo.',
+      ],
+    ])(
+      'lança o erro com %s quando a alteração de cargo falha',
+      async (_descricao, resposta, mensagemEsperada) => {
+        sessionStorage.setItem('access_token', 'token-jwt');
+        fetch.mockResolvedValue(resposta);
+        await expect(mudarCargoFuncionario(8, 2)).rejects.toThrow(
+          mensagemEsperada
+        );
+      }
+    );
   });
 
   describe('mudarExibicaoInstitucional', () => {
