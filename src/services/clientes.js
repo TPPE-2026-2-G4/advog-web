@@ -9,14 +9,34 @@ const getAuthHeaders = () => {
   };
 };
 
+const traduzirMensagemErro = (msg) => {
+  if (!msg || typeof msg !== 'string') return msg;
+  const lower = msg.toLowerCase();
+  if (
+    lower.includes('value is not a valid email address') ||
+    lower.includes('not a valid email address') ||
+    lower.includes('email address is not valid') ||
+    (lower.includes('value_error') && lower.includes('email'))
+  ) {
+    return 'Informe um e-mail válido.';
+  }
+  if (lower.includes('field required') || lower.includes('missing')) {
+    return 'Preencha todos os campos obrigatórios.';
+  }
+  return msg;
+};
+
 const extrairMensagemErro = async (response, mensagemPadrao) => {
   const errorData = await response.json().catch(() => null);
-  if (typeof errorData?.detail === 'string') return errorData.detail;
+  if (typeof errorData?.detail === 'string') {
+    return traduzirMensagemErro(errorData.detail);
+  }
   if (Array.isArray(errorData?.detail)) {
-    return errorData.detail
+    const rawMsg = errorData.detail
       .map((e) => e.msg || e.message)
       .filter(Boolean)
       .join(' ');
+    return traduzirMensagemErro(rawMsg) || mensagemPadrao;
   }
   return mensagemPadrao;
 };

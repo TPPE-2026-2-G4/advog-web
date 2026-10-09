@@ -36,7 +36,8 @@ describe('ClientDetailsModal', () => {
 
     expect(screen.getByText('Detalhes do Cliente')).toBeInTheDocument();
     expect(screen.getByText('Tech Solutions LTDA')).toBeInTheDocument();
-    expect(screen.getByText('55.666.777/0001-88')).toBeInTheDocument();
+    expect(screen.getAllByText('55.666.777/0001-88')).toHaveLength(2);
+    expect(screen.getByText('CPF / CNPJ')).toBeInTheDocument();
     expect(screen.getByText('Atendimento iniciado')).toBeInTheDocument();
     expect(screen.getByText('(61) 3456-7890')).toBeInTheDocument();
     expect(screen.getByText('contato@techsolutions.com')).toBeInTheDocument();
@@ -153,5 +154,22 @@ describe('ClientDetailsModal', () => {
     );
     expect(screen.getByText('Dr. ID Funcionario')).toBeInTheDocument();
     expect(screen.getAllByText('-')).toHaveLength(2);
+  });
+
+  it('renderiza documento quando informado via campo cpf_cnpj', () => {
+    render(
+      <ClientDetailsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        cliente={{
+          ...mockCliente,
+          cnpj: null,
+          cpf: null,
+          documento: null,
+          cpf_cnpj: '01234567890',
+        }}
+      />
+    );
+    expect(screen.getAllByText('012.345.678-90')).toHaveLength(2);
   });
 });

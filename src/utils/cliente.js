@@ -100,3 +100,38 @@ export function obterIniciais(nome) {
   const ultima = partes[partes.length - 1][0];
   return (primeira + ultima).toUpperCase();
 }
+
+export function validarDadosCliente({ nome, cpfCnpj, telefone, email } = {}) {
+  if (!nome || !nome.trim()) {
+    return 'O nome ou razão social é obrigatório.';
+  }
+
+  const docDigits = cpfCnpj ? String(cpfCnpj).replace(/\D/g, '') : '';
+  if (
+    docDigits.length > 0 &&
+    docDigits.length !== 11 &&
+    docDigits.length !== 14
+  ) {
+    return 'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.';
+  }
+
+  if (!telefone || !telefone.trim()) {
+    return 'O telefone é obrigatório.';
+  }
+
+  const telDigits = String(telefone).replace(/\D/g, '');
+  if (telDigits.length < 10 || telDigits.length > 11) {
+    return 'Informe um telefone válido com DDD (10 ou 11 dígitos).';
+  }
+
+  if (!email || !email.trim()) {
+    return 'O e-mail é obrigatório.';
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.trim())) {
+    return 'Informe um e-mail válido.';
+  }
+
+  return null;
+}

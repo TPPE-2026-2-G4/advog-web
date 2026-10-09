@@ -3,7 +3,12 @@
 import { useState } from 'react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import AutocompleteResponsible from '../AutocompleteResponsible/AutocompleteResponsible';
-import { ETAPAS, formatarCpfCnpj, formatarTelefone } from '@/utils/cliente';
+import {
+  ETAPAS,
+  formatarCpfCnpj,
+  formatarTelefone,
+  validarDadosCliente,
+} from '@/utils/cliente';
 import styles from './AddClientModal.module.css';
 
 export default function AddClientModal({
@@ -45,13 +50,14 @@ export default function AddClientModal({
     e.preventDefault();
     setError('');
 
-    if (!nome.trim()) {
-      setError('O nome ou razão social é obrigatório.');
-      return;
-    }
-
-    if (!email.trim() || !email.includes('@')) {
-      setError('Informe um e-mail válido.');
+    const erroValidacao = validarDadosCliente({
+      nome,
+      cpfCnpj,
+      telefone,
+      email,
+    });
+    if (erroValidacao) {
+      setError(erroValidacao);
       return;
     }
 
@@ -70,7 +76,12 @@ export default function AddClientModal({
       });
       resetForm();
     } catch (err) {
-      setError(err.message || 'Erro ao salvar cliente.');
+      const msg =
+        err?.message?.includes('NetworkError') ||
+        err?.message?.includes('Failed to fetch')
+          ? 'Erro de conexão com o servidor. Tente novamente em instantes.'
+          : err?.message || 'Erro ao salvar cliente.';
+      setError(msg);
     }
   };
 
@@ -92,6 +103,9 @@ export default function AddClientModal({
           <div className={styles.formGroup}>
             <label htmlFor="add-client-nome" className={styles.label}>
               Nome Completo / Razão Social
+              <span className={styles.requiredAsterisk} aria-hidden="true">
+                *
+              </span>
             </label>
             <input
               id="add-client-nome"
@@ -124,6 +138,9 @@ export default function AddClientModal({
             <div className={styles.formGroup}>
               <label htmlFor="add-client-telefone" className={styles.label}>
                 Telefone
+                <span className={styles.requiredAsterisk} aria-hidden="true">
+                  *
+                </span>
               </label>
               <input
                 id="add-client-telefone"
@@ -140,9 +157,13 @@ export default function AddClientModal({
           <div className={styles.formGroup}>
             <label htmlFor="add-client-email" className={styles.label}>
               Email
+              <span className={styles.requiredAsterisk} aria-hidden="true">
+                *
+              </span>
             </label>
             <input
               id="add-client-email"
+              aria-label="Email"
               type="email"
               className={styles.input}
               placeholder="email@exemplo.com"

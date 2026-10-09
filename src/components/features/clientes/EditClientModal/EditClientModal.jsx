@@ -3,7 +3,12 @@
 import { useState } from 'react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import AutocompleteResponsible from '../AutocompleteResponsible/AutocompleteResponsible';
-import { ETAPAS, formatarCpfCnpj, formatarTelefone } from '@/utils/cliente';
+import {
+  ETAPAS,
+  formatarCpfCnpj,
+  formatarTelefone,
+  validarDadosCliente,
+} from '@/utils/cliente';
 import styles from '../AddClientModal/AddClientModal.module.css';
 
 function EditClientDialog({
@@ -44,13 +49,14 @@ function EditClientDialog({
     e.preventDefault();
     setError('');
 
-    if (!nome.trim()) {
-      setError('O nome ou razão social é obrigatório.');
-      return;
-    }
-
-    if (!email.trim() || !email.includes('@')) {
-      setError('Informe um e-mail válido.');
+    const erroValidacao = validarDadosCliente({
+      nome,
+      cpfCnpj,
+      telefone,
+      email,
+    });
+    if (erroValidacao) {
+      setError(erroValidacao);
       return;
     }
 
@@ -59,6 +65,7 @@ function EditClientDialog({
       await onSubmit?.(clienteId, {
         nome: nome.trim(),
         cpf: cpfCnpj ? formatarCpfCnpj(cpfCnpj) : null,
+        documento: cpfCnpj ? formatarCpfCnpj(cpfCnpj) : null,
         telefone: telefone ? formatarTelefone(telefone) : null,
         email: email.trim(),
         responsavel_id: responsavelId ? Number(responsavelId) : null,
@@ -68,7 +75,12 @@ function EditClientDialog({
         ultima_interacao: cliente.ultima_interacao || new Date().toISOString(),
       });
     } catch (err) {
-      setError(err.message || 'Erro ao atualizar cliente.');
+      const msg =
+        err?.message?.includes('NetworkError') ||
+        err?.message?.includes('Failed to fetch')
+          ? 'Erro de conexão com o servidor. Tente novamente em instantes.'
+          : err?.message || 'Erro ao atualizar cliente.';
+      setError(msg);
     }
   };
 
@@ -90,6 +102,9 @@ function EditClientDialog({
           <div className={styles.formGroup}>
             <label htmlFor="edit-client-nome" className={styles.label}>
               Nome Completo / Razão Social
+              <span className={styles.requiredAsterisk} aria-hidden="true">
+                *
+              </span>
             </label>
             <input
               id="edit-client-nome"
@@ -122,6 +137,9 @@ function EditClientDialog({
             <div className={styles.formGroup}>
               <label htmlFor="edit-client-telefone" className={styles.label}>
                 Telefone
+                <span className={styles.requiredAsterisk} aria-hidden="true">
+                  *
+                </span>
               </label>
               <input
                 id="edit-client-telefone"
@@ -138,9 +156,13 @@ function EditClientDialog({
           <div className={styles.formGroup}>
             <label htmlFor="edit-client-email" className={styles.label}>
               Email
+              <span className={styles.requiredAsterisk} aria-hidden="true">
+                *
+              </span>
             </label>
             <input
               id="edit-client-email"
+              aria-label="Email"
               type="email"
               className={styles.input}
               placeholder="email@exemplo.com"

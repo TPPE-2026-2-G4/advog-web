@@ -7,6 +7,7 @@ import {
   obterEtapaPorId,
   obterEtapaPorLabel,
   obterIniciais,
+  validarDadosCliente,
 } from './cliente';
 
 describe('cliente utils', () => {
@@ -106,6 +107,106 @@ describe('cliente utils', () => {
       expect(obterIniciais('Tech Solutions')).toBe('TS');
       expect(obterIniciais('Tech Solutions LTDA')).toBe('TL');
       expect(obterIniciais('Maria Oliveira')).toBe('MO');
+    });
+  });
+
+  describe('validarDadosCliente', () => {
+    const dadosValidos = {
+      nome: 'João Santos',
+      cpfCnpj: '12345678901',
+      telefone: '(61) 98888-7777',
+      email: 'joao@email.com',
+    };
+
+    it('retorna null para dados válidos com CPF de 11 dígitos', () => {
+      expect(validarDadosCliente(dadosValidos)).toBeNull();
+    });
+
+    it('retorna null para dados válidos com CNPJ de 14 dígitos', () => {
+      expect(
+        validarDadosCliente({
+          ...dadosValidos,
+          cpfCnpj: '12.345.678/0001-99',
+        })
+      ).toBeNull();
+    });
+
+    it('permite CPF/CNPJ vazio', () => {
+      expect(
+        validarDadosCliente({
+          ...dadosValidos,
+          cpfCnpj: '',
+        })
+      ).toBeNull();
+    });
+
+    it('retorna erro quando nome não for preenchido', () => {
+      expect(validarDadosCliente({ ...dadosValidos, nome: '' })).toBe(
+        'O nome ou razão social é obrigatório.'
+      );
+      expect(validarDadosCliente({ ...dadosValidos, nome: '   ' })).toBe(
+        'O nome ou razão social é obrigatório.'
+      );
+      expect(validarDadosCliente()).toBe(
+        'O nome ou razão social é obrigatório.'
+      );
+    });
+
+    it('retorna erro quando CPF/CNPJ tiver tamanho inválido', () => {
+      expect(validarDadosCliente({ ...dadosValidos, cpfCnpj: '1' })).toBe(
+        'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.'
+      );
+      expect(
+        validarDadosCliente({ ...dadosValidos, cpfCnpj: '123456789' })
+      ).toBe('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.');
+    });
+
+    it('retorna erro quando telefone não for preenchido', () => {
+      expect(validarDadosCliente({ ...dadosValidos, telefone: '' })).toBe(
+        'O telefone é obrigatório.'
+      );
+      expect(validarDadosCliente({ ...dadosValidos, telefone: '   ' })).toBe(
+        'O telefone é obrigatório.'
+      );
+    });
+
+    it('retorna erro quando telefone tiver dígitos insuficientes ou excessivos', () => {
+      expect(validarDadosCliente({ ...dadosValidos, telefone: '1' })).toBe(
+        'Informe um telefone válido com DDD (10 ou 11 dígitos).'
+      );
+      expect(
+        validarDadosCliente({ ...dadosValidos, telefone: '123456789' })
+      ).toBe('Informe um telefone válido com DDD (10 ou 11 dígitos).');
+      expect(
+        validarDadosCliente({ ...dadosValidos, telefone: '123456789012' })
+      ).toBe('Informe um telefone válido com DDD (10 ou 11 dígitos).');
+    });
+
+    it('aceita telefone fixo de 10 dígitos e celular de 11 dígitos', () => {
+      expect(
+        validarDadosCliente({ ...dadosValidos, telefone: '6133334444' })
+      ).toBeNull();
+      expect(
+        validarDadosCliente({ ...dadosValidos, telefone: '61999998888' })
+      ).toBeNull();
+    });
+
+    it('retorna erro quando email for vazio', () => {
+      expect(validarDadosCliente({ ...dadosValidos, email: '' })).toBe(
+        'O e-mail é obrigatório.'
+      );
+      expect(validarDadosCliente({ ...dadosValidos, email: '   ' })).toBe(
+        'O e-mail é obrigatório.'
+      );
+    });
+
+    it('retorna erro quando email tiver formato inválido', () => {
+      expect(validarDadosCliente({ ...dadosValidos, email: 'invalido' })).toBe(
+        'Informe um e-mail válido.'
+      );
+      expect(validarDadosCliente({ ...dadosValidos, email: 'sem@ponto' })).toBe(
+        'Informe um e-mail válido.'
+      );
     });
   });
 });

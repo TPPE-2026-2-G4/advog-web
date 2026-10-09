@@ -204,6 +204,9 @@ describe('ClientesClient', () => {
     fireEvent.change(screen.getByLabelText(/^email$/i), {
       target: { value: 'email@valido.com' },
     });
+    fireEvent.change(screen.getByLabelText(/telefone/i), {
+      target: { value: '21999998888' },
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /salvar cadastro/i }));
 

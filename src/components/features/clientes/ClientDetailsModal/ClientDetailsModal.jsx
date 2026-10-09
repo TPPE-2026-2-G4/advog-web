@@ -47,7 +47,8 @@ export default function ClientDetailsModal({
     return 'Não atribuído';
   };
 
-  const documento = cliente.cpf || cliente.cnpj || cliente.documento;
+  const documento =
+    cliente.cpf || cliente.cnpj || cliente.cpf_cnpj || cliente.documento;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -76,6 +77,16 @@ export default function ClientDetailsModal({
         <div className={styles.divider} />
 
         <div className={styles.infoGrid}>
+          <div className={styles.infoItem}>
+            <FileText size={18} className={styles.infoIcon} />
+            <div className={styles.infoContent}>
+              <span className={styles.infoLabel}>CPF / CNPJ</span>
+              <span className={styles.infoValue}>
+                {documento ? formatarCpfCnpj(documento) : '-'}
+              </span>
+            </div>
+          </div>
+
           <div className={styles.infoItem}>
             <Phone size={18} className={styles.infoIcon} />
             <div className={styles.infoContent}>

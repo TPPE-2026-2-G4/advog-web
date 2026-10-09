@@ -85,6 +85,35 @@ describe('serviço de clientes', () => {
       await expect(listarClientes()).rejects.toThrow('Campo obrigatório');
     });
 
+    it('traduz erro de email do Pydantic para mensagem amigável em português', async () => {
+      fetch.mockResolvedValue(
+        mockFetchResponse(
+          {
+            detail: [
+              {
+                msg: 'value is not a valid email address: The email address is not valid. It must have exactly one @-sign.',
+              },
+            ],
+          },
+          422
+        )
+      );
+
+      await expect(listarClientes()).rejects.toThrow(
+        'Informe um e-mail válido.'
+      );
+    });
+
+    it('traduz erro de campo obrigatório para mensagem amigável em português', async () => {
+      fetch.mockResolvedValue(
+        mockFetchResponse({ detail: 'Field required' }, 422)
+      );
+
+      await expect(listarClientes()).rejects.toThrow(
+        'Preencha todos os campos obrigatórios.'
+      );
+    });
+
     it('lança erro padrão caso o body da resposta não possa ser lido', async () => {
       fetch.mockResolvedValue({
         ok: false,

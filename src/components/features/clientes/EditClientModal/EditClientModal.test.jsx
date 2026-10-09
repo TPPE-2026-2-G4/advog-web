@@ -166,9 +166,30 @@ describe('EditClientModal', () => {
 
     fireEvent.click(screen.getByText('Salvar Alterações'));
     expect(screen.getByText('Informe um e-mail válido.')).toBeInTheDocument();
+
+    const cpfInput = screen.getByDisplayValue('55.666.777/0001-88');
+    fireEvent.change(cpfInput, { target: { value: '1' } });
+    fireEvent.click(screen.getByText('Salvar Alterações'));
+    expect(
+      screen.getByText(
+        'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.'
+      )
+    ).toBeInTheDocument();
+
+    fireEvent.change(cpfInput, { target: { value: '' } });
+    const telInput = screen.getByDisplayValue('(61) 3456-7890');
+    fireEvent.change(telInput, { target: { value: '' } });
+    fireEvent.click(screen.getByText('Salvar Alterações'));
+    expect(screen.getByText('O telefone é obrigatório.')).toBeInTheDocument();
+
+    fireEvent.change(telInput, { target: { value: '1' } });
+    fireEvent.click(screen.getByText('Salvar Alterações'));
+    expect(
+      screen.getByText('Informe um telefone válido com DDD (10 ou 11 dígitos).')
+    ).toBeInTheDocument();
   });
 
-  it('trata erro lançado por onSubmit com mensagem customizada ou padrão', async () => {
+  it('trata erro lançado por onSubmit com mensagem customizada, de rede ou padrão', async () => {
     const handleSubmit = vi.fn().mockRejectedValue(new Error('Falha no banco'));
     const { rerender } = render(
       <EditClientModal
@@ -196,6 +217,27 @@ describe('EditClientModal', () => {
     fireEvent.click(screen.getByText('Salvar Alterações'));
     expect(
       await screen.findByText('Erro ao atualizar cliente.')
+    ).toBeInTheDocument();
+
+    const handleSubmitRede = vi
+      .fn()
+      .mockRejectedValue(
+        new Error('NetworkError when attempting to fetch resource.')
+      );
+    rerender(
+      <EditClientModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSubmit={handleSubmitRede}
+        cliente={mockCliente}
+        funcionarios={mockFuncionarios}
+      />
+    );
+    fireEvent.click(screen.getByText('Salvar Alterações'));
+    expect(
+      await screen.findByText(
+        'Erro de conexão com o servidor. Tente novamente em instantes.'
+      )
     ).toBeInTheDocument();
   });
 
@@ -230,12 +272,13 @@ describe('EditClientModal', () => {
     expect(handleClose).toHaveBeenCalledOnce();
   });
 
-  it('suporta cliente com id, cnpj, status_id e campos vazios de documento/telefone', async () => {
+  it('suporta cliente com id, cnpj, status_id e documento vazio ao salvar', async () => {
     const handleSubmit = vi.fn().mockResolvedValue({});
     const clienteAlternativo = {
       id: 99,
       nome: 'Empresa XPTO',
       cnpj: '12345678000199',
+      telefone: '6133334444',
       status_id: 3,
     };
     render(
@@ -262,7 +305,7 @@ describe('EditClientModal', () => {
       expect.objectContaining({
         nome: 'Empresa XPTO',
         cpf: null,
-        telefone: null,
+        telefone: '(61) 3333-4444',
         email: 'xpto@teste.com',
         etapa_id: 3,
       })

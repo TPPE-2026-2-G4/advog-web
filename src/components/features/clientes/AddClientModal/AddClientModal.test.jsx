@@ -57,6 +57,39 @@ describe('AddClientModal', () => {
       target: { value: 'Cliente Teste' },
     });
     fireEvent.click(screen.getByText('Salvar Cadastro'));
+    expect(screen.getByText('O telefone é obrigatório.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByText('Salvar Cadastro'));
+    expect(
+      screen.getByText('Informe um telefone válido com DDD (10 ou 11 dígitos).')
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
+      target: { value: '61988887777' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByText('Salvar Cadastro'));
+    expect(
+      screen.getByText(
+        'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.'
+      )
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), {
+      target: { value: '' },
+    });
+    fireEvent.click(screen.getByText('Salvar Cadastro'));
+    expect(screen.getByText('O e-mail é obrigatório.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('email@exemplo.com'), {
+      target: { value: 'email_sem_arroba' },
+    });
+    fireEvent.click(screen.getByText('Salvar Cadastro'));
     expect(screen.getByText('Informe um e-mail válido.')).toBeInTheDocument();
   });
 
@@ -137,6 +170,9 @@ describe('AddClientModal', () => {
     fireEvent.change(screen.getByPlaceholderText('Nome do cliente'), {
       target: { value: 'Cliente Teste' },
     });
+    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
+      target: { value: '61988887777' },
+    });
     fireEvent.change(screen.getByPlaceholderText('email@exemplo.com'), {
       target: { value: 'teste@email.com' },
     });
@@ -159,6 +195,9 @@ describe('AddClientModal', () => {
     fireEvent.change(screen.getByPlaceholderText('Nome do cliente'), {
       target: { value: 'Cliente Teste' },
     });
+    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
+      target: { value: '61988887777' },
+    });
     fireEvent.change(screen.getByPlaceholderText('email@exemplo.com'), {
       target: { value: 'teste@email.com' },
     });
@@ -166,6 +205,39 @@ describe('AddClientModal', () => {
     fireEvent.click(screen.getByText('Salvar Cadastro'));
     expect(
       await screen.findByText('Erro ao salvar cliente.')
+    ).toBeInTheDocument();
+  });
+
+  it('trata erro de rede exibindo mensagem em português', async () => {
+    const handleSubmitNetwork = vi
+      .fn()
+      .mockRejectedValue(
+        new Error('NetworkError when attempting to fetch resource.')
+      );
+    render(
+      <AddClientModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSubmit={handleSubmitNetwork}
+        funcionarios={mockFuncionarios}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Nome do cliente'), {
+      target: { value: 'Cliente Rede' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
+      target: { value: '61988887777' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('email@exemplo.com'), {
+      target: { value: 'rede@email.com' },
+    });
+
+    fireEvent.click(screen.getByText('Salvar Cadastro'));
+    expect(
+      await screen.findByText(
+        'Erro de conexão com o servidor. Tente novamente em instantes.'
+      )
     ).toBeInTheDocument();
   });
 
@@ -210,6 +282,9 @@ describe('AddClientModal', () => {
 
     fireEvent.change(screen.getByPlaceholderText('Nome do cliente'), {
       target: { value: 'Cliente Sem Responsável' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
+      target: { value: '61988887777' },
     });
     fireEvent.change(screen.getByPlaceholderText('email@exemplo.com'), {
       target: { value: 'semresp@email.com' },

@@ -162,7 +162,54 @@ describe('useClientes', () => {
     expect(result.current.errorMessage).toBe('Erro ao cadastrar');
   });
 
-  it('atualiza cliente com sucesso', async () => {
+  it('preserva cpf e documento no estado local ao criar cliente mesmo se API não retornar', async () => {
+    const payload = {
+      nome: 'Cliente Novo',
+      cpf: '12345678901',
+      documento: '123.456.789-01',
+    };
+    criarCliente.mockResolvedValueOnce({
+      cliente_id: 88,
+      nome: 'Cliente Novo',
+    });
+
+    const { result } = renderHook(() =>
+      useClientes({
+        initialClientes: mockClientes,
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleCreateClient(payload);
+    });
+
+    expect(result.current.clientes[0].cpf).toBe('12345678901');
+    expect(result.current.clientes[0].documento).toBe('123.456.789-01');
+  });
+
+  it('trata erro de rede no cadastro com mensagem amigável', async () => {
+    criarCliente.mockRejectedValueOnce(
+      new Error('NetworkError when attempting to fetch resource.')
+    );
+
+    const { result } = renderHook(() =>
+      useClientes({
+        initialClientes: mockClientes,
+      })
+    );
+
+    await act(async () => {
+      try {
+        await result.current.handleCreateClient({});
+      } catch {}
+    });
+
+    expect(result.current.errorMessage).toBe(
+      'Erro de conexão com o servidor. Tente novamente em instantes.'
+    );
+  });
+
+  it('atualiza cliente com sucesso e preserva documento', async () => {
     const atualizado = {
       cliente_id: 1,
       nome: 'João Santos Atualizado',
@@ -176,10 +223,14 @@ describe('useClientes', () => {
     );
 
     await act(async () => {
-      await result.current.handleUpdateClient(1, atualizado);
+      await result.current.handleUpdateClient(1, {
+        ...atualizado,
+        cpf: '99988877766',
+      });
     });
 
     expect(result.current.clientes[0].nome).toBe('João Santos Atualizado');
+    expect(result.current.clientes[0].cpf).toBe('99988877766');
     expect(result.current.feedbackMessage).toBe(
       'Cliente atualizado com sucesso!'
     );
@@ -205,6 +256,28 @@ describe('useClientes', () => {
 
     expect(caughtError?.message).toBe('Erro na atualização');
     expect(result.current.errorMessage).toBe('Erro na atualização');
+  });
+
+  it('trata erro de rede na atualização com mensagem amigável', async () => {
+    atualizarCliente.mockRejectedValueOnce(
+      new Error('NetworkError when attempting to fetch resource.')
+    );
+
+    const { result } = renderHook(() =>
+      useClientes({
+        initialClientes: mockClientes,
+      })
+    );
+
+    await act(async () => {
+      try {
+        await result.current.handleUpdateClient(1, {});
+      } catch {}
+    });
+
+    expect(result.current.errorMessage).toBe(
+      'Erro de conexão com o servidor. Tente novamente em instantes.'
+    );
   });
 
   it('exclui cliente com sucesso', async () => {

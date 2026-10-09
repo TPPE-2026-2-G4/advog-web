@@ -131,12 +131,23 @@ export function useClientes({
     setErrorMessage('');
     try {
       const criado = await criarCliente(dados);
-      setClientes((prev) => [criado, ...prev]);
+      const clienteComDados = {
+        ...dados,
+        ...criado,
+        cpf: criado?.cpf || dados.cpf || null,
+        documento: criado?.documento || dados.documento || dados.cpf || null,
+      };
+      setClientes((prev) => [clienteComDados, ...prev]);
       setIsAddOpen(false);
       showFeedback('Cliente cadastrado com sucesso!');
-      return criado;
+      return clienteComDados;
     } catch (err) {
-      setErrorMessage(err.message || 'Erro ao cadastrar cliente.');
+      const msg =
+        err?.message?.includes('NetworkError') ||
+        err?.message?.includes('Failed to fetch')
+          ? 'Erro de conexão com o servidor. Tente novamente em instantes.'
+          : err?.message || 'Erro ao cadastrar cliente.';
+      setErrorMessage(msg);
       throw err;
     } finally {
       setIsSaving(false);
@@ -150,7 +161,20 @@ export function useClientes({
       const atualizado = await atualizarCliente(id, dados);
       setClientes((prev) =>
         prev.map((c) =>
-          (c.cliente_id || c.id) === id ? { ...c, ...atualizado } : c
+          (c.cliente_id || c.id) === id
+            ? {
+                ...c,
+                ...dados,
+                ...atualizado,
+                cpf: atualizado?.cpf || dados.cpf || c.cpf || null,
+                documento:
+                  atualizado?.documento ||
+                  dados.documento ||
+                  dados.cpf ||
+                  c.documento ||
+                  null,
+              }
+            : c
         )
       );
       setIsEditOpen(false);
@@ -158,7 +182,12 @@ export function useClientes({
       showFeedback('Cliente atualizado com sucesso!');
       return atualizado;
     } catch (err) {
-      setErrorMessage(err.message || 'Erro ao atualizar cliente.');
+      const msg =
+        err?.message?.includes('NetworkError') ||
+        err?.message?.includes('Failed to fetch')
+          ? 'Erro de conexão com o servidor. Tente novamente em instantes.'
+          : err?.message || 'Erro ao atualizar cliente.';
+      setErrorMessage(msg);
       throw err;
     } finally {
       setIsSaving(false);
