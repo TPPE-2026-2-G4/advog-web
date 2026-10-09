@@ -18,6 +18,8 @@ function FirstLoginContent() {
     setUf,
     numeroOab,
     setNumeroOab,
+    semOab,
+    setSemOab,
     erro,
     isSubmitting,
     handleSubmit,
@@ -68,70 +70,89 @@ function FirstLoginContent() {
           required
         />
 
-        <div className={styles.rowOab}>
-          <div className={styles.ufGroup}>
-            <label className={styles.label} htmlFor="uf">
-              UF da OAB
-            </label>
-            <select
-              id="uf"
-              className={`${styles.input} ${styles.select}`}
-              value={uf}
-              onChange={(event) => setUf(event.target.value)}
-              required
-            >
-              <option value="">UF</option>
-              {[
-                'AC',
-                'AL',
-                'AM',
-                'AP',
-                'BA',
-                'CE',
-                'DF',
-                'ES',
-                'GO',
-                'MA',
-                'MG',
-                'MS',
-                'MT',
-                'PA',
-                'PB',
-                'PE',
-                'PI',
-                'PR',
-                'RJ',
-                'RN',
-                'RO',
-                'RR',
-                'RS',
-                'SC',
-                'SE',
-                'SP',
-                'TO',
-              ].map((state) => (
-                <option key={state} value={state}>
-                  {state}
-                </option>
-              ))}
-            </select>
-          </div>
+        <label className={styles.oabOption}>
+          <input
+            type="checkbox"
+            className={styles.checkbox}
+            checked={semOab}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              setSemOab(checked);
+              if (checked) {
+                setUf('');
+                setNumeroOab('');
+              }
+            }}
+          />
+          <span>Sou estagiário(a) / ainda não possuo OAB</span>
+        </label>
 
-          <div className={styles.numeroGroup}>
-            <label className={styles.label} htmlFor="numeroOab">
-              Número da OAB
-            </label>
-            <input
-              id="numeroOab"
-              className={styles.input}
-              type="text"
-              placeholder="Ex.: 123456"
-              value={numeroOab}
-              onChange={(event) => setNumeroOab(event.target.value)}
-              required
-            />
+        {!semOab && (
+          <div className={styles.rowOab}>
+            <div className={styles.ufGroup}>
+              <label className={styles.label} htmlFor="uf">
+                UF da OAB
+              </label>
+              <select
+                id="uf"
+                className={`${styles.input} ${styles.select}`}
+                value={uf}
+                onChange={(event) => setUf(event.target.value)}
+                required
+              >
+                <option value="">UF</option>
+                {[
+                  'AC',
+                  'AL',
+                  'AM',
+                  'AP',
+                  'BA',
+                  'CE',
+                  'DF',
+                  'ES',
+                  'GO',
+                  'MA',
+                  'MG',
+                  'MS',
+                  'MT',
+                  'PA',
+                  'PB',
+                  'PE',
+                  'PI',
+                  'PR',
+                  'RJ',
+                  'RN',
+                  'RO',
+                  'RR',
+                  'RS',
+                  'SC',
+                  'SE',
+                  'SP',
+                  'TO',
+                ].map((state) => (
+                  <option key={state} value={state}>
+                    {state}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.numeroGroup}>
+              <label className={styles.label} htmlFor="numeroOab">
+                Número da OAB
+              </label>
+              <input
+                id="numeroOab"
+                className={styles.input}
+                type="text"
+                placeholder="Ex.: 123456"
+                value={numeroOab}
+                onChange={(event) => setNumeroOab(event.target.value)}
+                required
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <button className={styles.button} type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
