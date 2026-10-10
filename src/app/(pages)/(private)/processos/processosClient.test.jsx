@@ -6,13 +6,17 @@ import {
   within,
 } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  atualizarProcesso,
+  criarProcesso,
+  excluirProcesso,
+  listarProcessos,
+} from '@/services/processos';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
-import { listarProcessos } from '@/services/processos';
+import { toProcessPage } from '@/utils/processo';
 import ProcessosClient from './processosClient';
 
-vi.mock('@/services/clientes', () => ({ listarClientes: vi.fn() }));
-vi.mock('@/services/funcionarios', () => ({ listarFuncionarios: vi.fn() }));
 vi.mock('@/services/processos', () => ({
   atualizarProcesso: vi.fn(),
   criarProcesso: vi.fn(),
@@ -20,177 +24,340 @@ vi.mock('@/services/processos', () => ({
   listarProcessos: vi.fn(),
 }));
 
-const processData = {
-  processo_id: 1,
-  cnj: '0061234-56.2026.8.26.0100',
-  titulo: 'Caso existente',
-  descricao: null,
-  status: 'Ativo',
-  tribunal: 'TJDFT',
-  area: 'Civil',
-  data_inicio: null,
-  data_realizado: null,
-  data_prazo: '2026-10-05T00:00:00',
-  cliente_id: 10,
-  funcionario_id: 5,
-};
-const clientes = [{ cliente_id: 10, nome: 'Maria Silva' }];
-const funcionarios = [{ funcionario_id: 5, nome: 'Ana Paula' }];
+vi.mock('@/services/clientes', () => ({
+  listarClientes: vi.fn(),
+}));
 
-const pageResponse = (
-  itens,
-  { total = itens.length, page = 1, totalPages = 1 } = {}
-) => ({
-  itens,
-  total,
-  page,
-  page_size: 5,
-  total_pages: totalPages,
-});
+vi.mock('@/services/funcionarios', () => ({
+  listarFuncionarios: vi.fn(),
+}));
 
-const setPermissions = (permissions) => {
-  sessionStorage.setItem(
-    'current_user',
-    JSON.stringify({ cargo: { permissao: permissions } })
-  );
-};
-
-describe('ProcessosClient', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    localStorage.clear();
-    sessionStorage.clear();
-    listarProcessos.mockResolvedValue(pageResponse([processData]));
-    listarClientes.mockResolvedValue(clientes);
-    listarFuncionarios.mockResolvedValue(funcionarios);
-  });
-
-  it('bloqueia a tela sem permissão de visualização', () => {
-    setPermissions({ visualizar_processos: false });
-    render(<ProcessosClient />);
-
-    expect(screen.getByRole('alert')).toHaveTextContent('Acesso negado');
-    expect(listarProcessos).not.toHaveBeenCalled();
-  });
-
-  it('carrega processos e resolve os nomes pelos IDs', async () => {
-    setPermissions({
+const clientes = [{ cliente_id: 4, nome: 'Maria Silva' }];
+const funcionarios = [{ funcionario_id: 3, nome: 'Ana Paula Ribeiro' }];
+const currentUser = {
+  cargo: {
+    permissao: {
       visualizar_processos: true,
       criar_processos: true,
       editar_processos: true,
       excluir_processos: true,
-    });
-    render(<ProcessosClient />);
+    },
+  },
+};
 
-    const processTitle = await screen.findByRole('button', {
-      name: processData.titulo,
-    });
-    const processRow = processTitle.closest('tr');
+const responsaveis = [{ value: '3', label: 'Ana Paula Ribeiro' }];
 
-    expect(processRow).toBeInTheDocument();
-    expect(within(processRow).getByText('Maria Silva')).toBeInTheDocument();
-    expect(within(processRow).getByText('Ana Paula')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Novo Processo' })).toBeEnabled();
-    expect(
-      screen.getByRole('button', { name: `Editar processo ${processData.cnj}` })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', {
-        name: `Excluir processo ${processData.cnj}`,
-      })
-    ).toBeInTheDocument();
-    expect(listarClientes).toHaveBeenCalledOnce();
-    expect(listarFuncionarios).toHaveBeenCalledOnce();
-    expect(listarProcessos).toHaveBeenCalledWith({ page: 1, pageSize: 5 });
+const apiProcess = {
+  processo_id: 1,
+  cnj: '0061234-56.2026.8.26.0100',
+  titulo_proc: 'Caso existente',
+  descricao_proc: null,
+  status: 'Ativo',
+  tribunal: 'TJDFT',
+  area: 'Civil',
+  data_prazo: '2026-10-05T00:00:00',
+  cliente_id: 4,
+  responsavel_id: 3,
+};
+
+const createdApiProcess = {
+  ...apiProcess,
+  processo_id: 2,
+  cnj: '0061235-56.2026.8.26.0100',
+  titulo_proc: 'Novo caso',
+  status: 'Em Análise',
+};
+
+const apiPage = (itens, extra = {}) => ({
+  itens,
+  total: itens.length,
+  page: 1,
+  page_size: 5,
+  total_pages: 1,
+  ...extra,
+});
+
+const fillCreationForm = (process) => {
+  fireEvent.change(screen.getByLabelText('Número do Processo'), {
+    target: { value: process.cnj },
+  });
+  fireEvent.change(screen.getByLabelText('Tribunal'), {
+    target: { value: process.tribunal },
+  });
+  fireEvent.change(screen.getByLabelText('Título do Caso'), {
+    target: { value: process.titulo_proc },
+  });
+  fireEvent.change(screen.getByLabelText('Cliente'), {
+    target: { value: '4' },
+  });
+  fireEvent.change(screen.getByLabelText('Área de Atuação'), {
+    target: { value: process.area },
+  });
+  fireEvent.change(screen.getByLabelText('Responsável'), {
+    target: { value: '3' },
+  });
+  fireEvent.change(screen.getByLabelText('Próximo Prazo'), {
+    target: { value: '2026-10-05' },
+  });
+};
+
+const renderClient = (overrides = {}) =>
+  render(
+    <ProcessosClient
+      initialPage={toProcessPage(apiPage([apiProcess]))}
+      initialError=""
+      responsaveis={responsaveis}
+      {...overrides}
+    />
+  );
+
+describe('ProcessosClient', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionStorage.clear();
+    sessionStorage.setItem('current_user', JSON.stringify(currentUser));
+    listarClientes.mockResolvedValue(clientes);
+    listarFuncionarios.mockResolvedValue(funcionarios);
   });
 
-  it('busca no backend ao navegar entre páginas', async () => {
-    const firstPage = Array.from({ length: 5 }, (_, index) => ({
-      ...processData,
-      processo_id: index + 1,
-      cnj: `006123${index + 1}-56.2026.8.26.0100`,
-      titulo: `Caso ${index + 1}`,
-    }));
-    const lastProcess = {
-      ...processData,
-      processo_id: 6,
-      cnj: '0061236-56.2026.8.26.0100',
-      titulo: 'Caso 6',
-    };
+  it('exibe a página inicial com responsável resolvido e total do servidor', async () => {
+    renderClient();
+
+    expect(screen.getByText('1 processo encontrado')).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole('table')).findByText('Ana Paula Ribeiro')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('combobox', { name: /filtrar por status/i })
+    ).toBeInTheDocument();
+    expect(listarProcessos).not.toHaveBeenCalled();
+  });
+
+  it('consulta o servidor ao filtrar por status e volta à primeira página', async () => {
+    listarProcessos.mockResolvedValue(apiPage([]));
+    renderClient();
+
+    fireEvent.change(
+      screen.getByRole('combobox', { name: /filtrar por status/i }),
+      {
+        target: { value: 'Concluído' },
+      }
+    );
+
+    expect(
+      await screen.findByText('Nenhum processo encontrado')
+    ).toBeInTheDocument();
+    expect(listarProcessos).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        status: 'Concluído',
+        page: 1,
+        pageSize: 5,
+      })
+    );
+  });
+
+  it('aplica a busca por texto após uma pausa na digitação', async () => {
+    listarProcessos.mockResolvedValue(apiPage([apiProcess]));
+    renderClient();
+
+    fireEvent.change(
+      screen.getByPlaceholderText(/buscar por número, cliente ou título/i),
+      { target: { value: '0061234' } }
+    );
+
+    await waitFor(() => {
+      expect(listarProcessos).toHaveBeenCalledWith(
+        expect.objectContaining({ busca: '0061234' })
+      );
+    });
+  });
+
+  it('não consulta o servidor com intervalo de prazo inválido', async () => {
+    listarProcessos.mockResolvedValue(apiPage([]));
+    renderClient();
+
+    fireEvent.change(screen.getByLabelText('De:'), {
+      target: { value: '2026-10-10' },
+    });
+    await waitFor(() => {
+      expect(listarProcessos).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.change(screen.getByLabelText('Até:'), {
+      target: { value: '2026-10-01' },
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'A data inicial não pode ser posterior à data final.'
+    );
+    expect(listarProcessos).toHaveBeenCalledTimes(1);
+  });
+
+  it('mantém os filtros visíveis quando a listagem falha', () => {
+    renderClient({ initialError: 'API indisponível', initialPage: undefined });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('API indisponível');
+    expect(
+      screen.getByRole('combobox', { name: /filtrar por status/i })
+    ).toBeInTheDocument();
+  });
+
+  it('fecha o detalhe do processo visualizado', async () => {
+    renderClient();
+    await waitFor(() => expect(listarClientes).toHaveBeenCalled());
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `Visualizar processo ${apiProcess.cnj}`,
+      })
+    );
+    expect(
+      screen.getByRole('heading', { name: apiProcess.titulo_proc })
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(
+      screen.queryByRole('heading', { name: apiProcess.titulo_proc })
+    ).not.toBeInTheDocument();
+  });
+
+  it('cadastra, edita e exclui recarregando a página do servidor', async () => {
+    criarProcesso.mockResolvedValue(createdApiProcess);
+    atualizarProcesso.mockResolvedValue({
+      ...apiProcess,
+      titulo_proc: 'Caso atualizado',
+    });
+    excluirProcesso.mockResolvedValue(undefined);
     listarProcessos
       .mockResolvedValueOnce(
-        pageResponse(firstPage, { total: 6, totalPages: 2 })
+        apiPage([createdApiProcess, apiProcess], { total: 2 })
       )
       .mockResolvedValueOnce(
-        pageResponse([lastProcess], { total: 6, page: 2, totalPages: 2 })
-      );
-    setPermissions({ visualizar_processos: true });
-    render(<ProcessosClient />);
+        apiPage([{ ...apiProcess, titulo_proc: 'Caso atualizado' }], {
+          total: 1,
+        })
+      )
+      .mockResolvedValueOnce(apiPage([], { total: 0 }));
+    renderClient();
+    await within(screen.getByRole('table')).findByText('Ana Paula Ribeiro');
 
-    const navigation = await screen.findByRole('navigation', {
-      name: 'Paginação',
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Novo Processo' }));
+    fillCreationForm(createdApiProcess);
+    fireEvent.submit(screen.getByRole('dialog'));
+
+    expect(
+      await screen.findByText('2 processos encontrados')
+    ).toBeInTheDocument();
+    expect(criarProcesso).toHaveBeenCalledOnce();
+    expect(
+      screen.getByRole('button', { name: createdApiProcess.titulo_proc })
+    ).toBeInTheDocument();
+
     fireEvent.click(
-      within(navigation).getByRole('button', { name: 'Próxima página' })
+      screen.getByRole('button', { name: `Editar processo ${apiProcess.cnj}` })
     );
+    fireEvent.change(screen.getByLabelText('Título do Caso'), {
+      target: { value: 'Caso atualizado' },
+    });
+    fireEvent.submit(screen.getByRole('dialog'));
+
+    expect(await screen.findByText('Caso atualizado')).toBeInTheDocument();
+    expect(atualizarProcesso).toHaveBeenCalledOnce();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: `Excluir processo ${apiProcess.cnj}` })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir processo' }));
 
     expect(
-      await screen.findByRole('button', { name: lastProcess.titulo })
+      await screen.findByText('Nenhum processo cadastrado')
     ).toBeInTheDocument();
-    expect(screen.getByText('6 processos encontrados')).toBeInTheDocument();
-    expect(listarProcessos).toHaveBeenLastCalledWith({
-      page: 2,
-      pageSize: 5,
-    });
+    expect(excluirProcesso).toHaveBeenCalledWith(apiProcess.processo_id);
   });
 
-  it('abre o formulário pelo botão Novo Processo', async () => {
-    setPermissions({
-      visualizar_processos: true,
-      criar_processos: true,
-    });
-    render(<ProcessosClient />);
+  it('mostra falha inicial e recarrega a lista', async () => {
+    listarProcessos.mockResolvedValue(apiPage([apiProcess]));
+    renderClient({ initialPage: undefined, initialError: 'API indisponível' });
 
-    const button = screen.getByRole('button', { name: 'Novo Processo' });
-    expect(button).toHaveAttribute('aria-haspopup', 'dialog');
-    expect(button).toHaveAttribute('aria-controls', 'process-form-dialog');
-
-    fireEvent.click(button);
+    expect(screen.getByRole('alert')).toHaveTextContent('API indisponível');
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(
-      await screen.findByRole('heading', { name: 'Novo Processo' })
+      await screen.findByRole('button', { name: apiProcess.titulo_proc })
     ).toBeInTheDocument();
-    expect(screen.getByRole('dialog')).toHaveAttribute(
-      'id',
-      'process-form-dialog'
+    expect(listarProcessos).toHaveBeenCalledOnce();
+  });
+
+  it('mantém o erro e indica a recarga enquanto a requisição está pendente', async () => {
+    listarProcessos.mockReturnValue(new Promise(() => {}));
+    renderClient({ initialPage: undefined, initialError: 'API indisponível' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(
+      await screen.findByRole('button', { name: 'Tentando novamente' })
+    ).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('API indisponível');
+  });
+
+  it('mantém o estado de erro quando a recarga falha novamente', async () => {
+    listarProcessos.mockRejectedValue(new Error('Backend fora do ar'));
+    renderClient({ initialPage: undefined, initialError: 'API indisponível' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Backend fora do ar'
     );
   });
 
-  it('oculta criação, edição e exclusão sem permissão', async () => {
-    setPermissions({ visualizar_processos: true });
-    render(<ProcessosClient />);
+  it('nega o acesso sem permissão para visualizar processos', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({ cargo: { permissao: {} } })
+    );
+    renderClient();
 
-    await screen.findByRole('button', { name: processData.titulo });
+    expect(screen.getByRole('alert')).toHaveTextContent('Acesso negado');
+    expect(listarClientes).not.toHaveBeenCalled();
+  });
+
+  it('oculta as ações sem permissão de criar, editar e excluir', async () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        cargo: { permissao: { visualizar_processos: true } },
+      })
+    );
+    renderClient();
+    await waitFor(() => expect(listarClientes).toHaveBeenCalled());
+
     expect(
       screen.queryByRole('button', { name: 'Novo Processo' })
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /Editar processo/ })
+      screen.queryByRole('button', {
+        name: `Editar processo ${apiProcess.cnj}`,
+      })
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /Excluir processo/ })
+      screen.queryByRole('button', {
+        name: `Excluir processo ${apiProcess.cnj}`,
+      })
     ).not.toBeInTheDocument();
   });
 
-  it('apresenta falhas ao carregar processos e referências', async () => {
-    setPermissions({ visualizar_processos: true });
-    listarProcessos.mockRejectedValue(new Error('Backend fora do ar'));
-    listarClientes.mockRejectedValue(new Error('Falha nos clientes'));
-    render(<ProcessosClient />);
+  it.each([
+    ['uma mensagem de erro', new Error('Clientes indisponíveis')],
+    ['um valor que não é erro', 'falha'],
+  ])(
+    'mantém a listagem quando o carregamento de referências rejeita com %s',
+    async (_description, reason) => {
+      listarClientes.mockRejectedValue(reason);
+      renderClient();
 
-    await waitFor(() => {
-      expect(screen.getByText('Backend fora do ar')).toBeInTheDocument();
-      expect(screen.getByText('Falha nos clientes')).toBeInTheDocument();
-    });
-  });
+      await waitFor(() => expect(listarClientes).toHaveBeenCalled());
+      expect(screen.getByText('1 processo encontrado')).toBeInTheDocument();
+    }
+  );
 });

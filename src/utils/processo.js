@@ -5,6 +5,16 @@ export const PROCESS_STATUS = Object.freeze([
   'Arquivado',
 ]);
 
+export const PROCESS_PAGE_SIZE = 5;
+
+export const DEFAULT_PROCESS_PAGE = {
+  itens: [],
+  total: 0,
+  page: 1,
+  pageSize: PROCESS_PAGE_SIZE,
+  totalPages: 1,
+};
+
 export const CNJ_PATTERN = '^\\d{7}-\\d{2}\\.\\d{4}\\.\\d\\.\\d{2}\\.\\d{4}$';
 export const CNJ_REGEX = new RegExp(CNJ_PATTERN);
 const CNJ_DIGIT_LIMIT = 20;
@@ -142,5 +152,69 @@ export function toProcessFormData(processo) {
     cliente_id: data.cliente_id == null ? '' : String(data.cliente_id),
     funcionario_id:
       data.funcionario_id == null ? '' : String(data.funcionario_id),
+  };
+}
+
+export function buildProcessQuery(filters = {}) {
+  const params = new URLSearchParams();
+  const values = {
+    busca: filters.busca?.trim(),
+    status: filters.status,
+    responsavel_id: filters.responsavelId,
+    prazo_inicio: normalizeProcessDate(filters.prazoInicio),
+    prazo_fim: normalizeProcessDate(filters.prazoFim),
+    page: filters.page,
+    page_size: filters.pageSize,
+  };
+
+  Object.entries(values).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    params.set(key, String(value));
+  });
+
+  return params.toString();
+}
+
+export function hasInvalidDateRange(startDate, endDate) {
+  const start = normalizeProcessDate(startDate);
+  const end = normalizeProcessDate(endDate);
+
+  return Boolean(start && end && start > end);
+}
+
+export function toResponsavelOptions(funcionarios = []) {
+  return funcionarios.map((funcionario) => ({
+    value: String(funcionario.funcionario_id || funcionario.id),
+    label: funcionario.nome,
+  }));
+}
+
+export function toResponsavelNames(responsaveis = []) {
+  return new Map(responsaveis.map(({ value, label }) => [value, label]));
+}
+
+export function toProcessView(processo, responsavelNames = new Map()) {
+  return {
+    id: processo.cnj ?? '',
+    titulo: processo.titulo_proc,
+    cliente: processo.cliente_id
+      ? `Cliente nº ${processo.cliente_id}`
+      : 'Não informado',
+    status: processo.status,
+    tribunal: processo.tribunal,
+    area: processo.area,
+    responsavel:
+      responsavelNames.get(String(processo.responsavel_id)) ?? 'Não informado',
+    prazo: normalizeProcessDate(processo.data_prazo),
+  };
+}
+
+export function toProcessPage(page) {
+  return {
+    itens: (page.itens ?? []).map((processo) => processo),
+    total: page.total ?? 0,
+    page: page.page ?? 1,
+    pageSize: page.page_size ?? 0,
+    totalPages: page.total_pages ?? 1,
   };
 }

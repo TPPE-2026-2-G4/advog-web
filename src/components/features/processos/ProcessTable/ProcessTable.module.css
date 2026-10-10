@@ -204,6 +204,7 @@
   width: 34px;
   height: 34px;
   border: 1px solid #d1d5db;
+  border-radius: 50%;
 }
 
 .pageButton:hover:not(:disabled) {
