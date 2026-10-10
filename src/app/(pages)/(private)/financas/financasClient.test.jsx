@@ -1,14 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
-beforeEach(() => cleanup());
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import FinancasClient from './financasClient';
 import {
   atualizarFinancas,
   criarFinancas,
   excluirFinancas,
+  listarCategorias,
+  obterResumoFinancas,
+  listarFinancas,
   mudarStatusLancamento,
 } from '@/services/financas';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import FinancasClient from './financasClient';
 
 const mockLancamentos = [
   {
@@ -26,7 +27,7 @@ const mockLancamentos = [
     categoria: 'Honorários',
     tipo: 'entrada',
     valor: 5000,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 2,
@@ -43,7 +44,7 @@ const mockLancamentos = [
     categoria: 'Custas',
     tipo: 'saida',
     valor: 250,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 3,
@@ -60,7 +61,7 @@ const mockLancamentos = [
     categoria: 'Honorários',
     tipo: 'entrada',
     valor: 8500,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 4,
@@ -77,7 +78,7 @@ const mockLancamentos = [
     categoria: 'Despesas Operacionais',
     tipo: 'saida',
     valor: 3200,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 5,
@@ -111,7 +112,7 @@ const mockLancamentos = [
     categoria: 'Despesas Operacionais',
     tipo: 'saida',
     valor: 450,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 7,
@@ -128,7 +129,7 @@ const mockLancamentos = [
     categoria: 'Honorários',
     tipo: 'entrada',
     valor: 3000,
-    status: 'pago',
+    status: 'realizado',
   },
   {
     id: 8,
@@ -150,28 +151,61 @@ const mockLancamentos = [
 ];
 
 vi.mock('@/services/financas', () => ({
+  listarFinancas: vi.fn(),
   criarFinancas: vi.fn(),
   atualizarFinancas: vi.fn(),
   excluirFinancas: vi.fn(),
+  atualizarFinancas: vi.fn(),
   mudarStatusLancamento: vi.fn(),
+  listarCategorias: vi
+    .fn()
+    .mockResolvedValue([{ categoria_id: 1, nome: 'Honorários' }]),
+  criarCategoria: vi
+    .fn()
+    .mockResolvedValue({ categoria_id: 2, nome: 'Nova Categoria' }),
+  excluirCategoria: vi.fn().mockResolvedValue(true),
+  obterResumoFinancas: vi.fn(),
 }));
 
 describe('FinancasClient', () => {
+  let currentLancamentos = [];
+
   beforeEach(() => {
     vi.clearAllMocks();
-    criarFinancas.mockImplementation(async (item) => ({
-      ...item,
-      id: item.id || 99,
+    currentLancamentos = [...mockLancamentos];
+
+    listarFinancas.mockImplementation(async () => ({
+      itens: currentLancamentos,
+      total: currentLancamentos.length,
+      page: 1,
+      page_size: currentLancamentos.length,
     }));
-    atualizarFinancas.mockImplementation(async (id, item) => ({
-      ...item,
-      id,
-    }));
-    excluirFinancas.mockImplementation(async () => {});
-    mudarStatusLancamento.mockImplementation(async (id, status) => ({
-      id,
-      status,
-    }));
+    obterResumoFinancas.mockResolvedValue({
+      realizado: { total_entradas: 5000, total_saidas: 1000 },
+      pendente: { total_entradas: 0, total_saidas: 0 },
+      atrasado: { total_entradas: 0, total_saidas: 0 },
+    });
+    criarFinancas.mockImplementation(async (item) => {
+      const newItem = { ...item, id: item.id || 99 };
+      currentLancamentos = [newItem, ...currentLancamentos];
+      return newItem;
+    });
+    atualizarFinancas.mockImplementation(async (id, item) => {
+      const updated = { ...item, id };
+      currentLancamentos = currentLancamentos.map((l) =>
+        l.id === id ? updated : l
+      );
+      return updated;
+    });
+    excluirFinancas.mockImplementation(async (id) => {
+      currentLancamentos = currentLancamentos.filter((l) => l.id !== id);
+    });
+    mudarStatusLancamento.mockImplementation(async (id) => {
+      const item = currentLancamentos.find((l) => l.id === id);
+      const novoStatus =
+        item?.status === 'realizado' ? 'pendente' : 'realizado';
+      return { id, status: novoStatus };
+    });
   });
 
   it('renderiza o título e subtítulo corretamente', () => {
@@ -238,13 +272,17 @@ describe('FinancasClient', () => {
       />
     );
 
+    await waitFor(() => {
+      expect(listarFinancas).toHaveBeenCalled();
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
     const editButtons = screen.getAllByRole('button', {
       name: 'Editar lançamento',
     });
     fireEvent.click(editButtons[0]);
     expect(handleEditLancamento).toHaveBeenCalledOnce();
 
-    // Fechar o modal de edição antes de abrir o de exclusão
     const closeButtons = screen.getAllByRole('button', { name: 'Fechar' });
     fireEvent.click(closeButtons[0]);
 
@@ -253,7 +291,6 @@ describe('FinancasClient', () => {
     });
     fireEvent.click(deleteButtons[0]);
 
-    // O modal deve abrir. Clicar no botão de confirmação do modal
     const dialogs = screen.getAllByRole('dialog');
     const deleteDialog = dialogs[dialogs.length - 1];
     const modalConfirmButton =
@@ -264,12 +301,10 @@ describe('FinancasClient', () => {
     await waitFor(() => {
       expect(excluirFinancas).toHaveBeenCalledWith(1);
       expect(handleDeleteLancamento).toHaveBeenCalledOnce();
+      expect(
+        screen.queryByText('Honorários Iniciais - João Santos')
+      ).not.toBeInTheDocument();
     });
-
-    // O item foi removido da lista
-    expect(
-      screen.queryByText('Honorários Iniciais - João Santos')
-    ).not.toBeInTheDocument();
   });
 
   it('exibe mensagem de erro na tela caso a exclusão falhe', async () => {
@@ -284,7 +319,6 @@ describe('FinancasClient', () => {
     });
     fireEvent.click(deleteButtons[0]);
 
-    // O modal deve abrir. Clicar no botão de confirmação do modal
     const modalConfirmButton =
       screen.getByRole('dialog').querySelector('.deleteButton') ||
       screen.getAllByRole('button', { name: 'Excluir lançamento' }).pop();
@@ -321,6 +355,9 @@ describe('FinancasClient', () => {
     });
     fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
       target: { value: '2026-10-15' },
+    });
+    fireEvent.change(screen.getByLabelText('Categoria'), {
+      target: { value: 'Honorários' },
     });
 
     fireEvent.submit(screen.getByRole('button', { name: 'Salvar Lançamento' }));
@@ -377,7 +414,6 @@ describe('FinancasClient', () => {
       />
     );
 
-    // Primeiro item é Pago, então possui botão com X ("Marcar como pendente")
     const toggleButtons = screen.getAllByRole('button', {
       name: 'Marcar como pendente',
     });

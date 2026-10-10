@@ -2,6 +2,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import LancamentoModal from './LancamentoModal';
 
+vi.mock('@/services/financas', () => ({
+  listarCategorias: vi.fn().mockResolvedValue([
+    { categoria_id: 1, nome: 'Honorários' },
+    { categoria_id: 2, nome: 'Custas' },
+    { categoria_id: 3, nome: 'Despesas Operacionais' },
+    { categoria_id: 4, nome: 'Consultoria' },
+    { categoria_id: 5, nome: 'Outros' },
+  ]),
+  criarCategoria: vi
+    .fn()
+    .mockResolvedValue({ categoria_id: 99, nome: 'Nova Categoria' }),
+  excluirCategoria: vi.fn().mockResolvedValue(true),
+  obterResumoFinancas: vi.fn(),
+}));
+
 const renderModal = (props = {}) =>
   render(
     <LancamentoModal
@@ -182,7 +197,7 @@ describe('LancamentoModal', () => {
       valor: 1000,
       data: '01/09/2026',
       dataIso: '2026-09-01',
-      status: 'recebido',
+      status: 'realizado',
     };
 
     renderModal({ initialItem: mockItem, onSave, onClose });
@@ -202,7 +217,7 @@ describe('LancamentoModal', () => {
           id: 99,
           titulo: 'Título Atualizado',
           valor: 2500,
-          status: 'recebido',
+          status: 'realizado',
         })
       );
       expect(onClose).toHaveBeenCalledOnce();
@@ -223,7 +238,7 @@ describe('LancamentoModal', () => {
       dataVencimento: '05/09/2026',
       dataVencimentoIso: '2026-09-05',
       data_vencimento: '2026-09-05',
-      status: 'recebido',
+      status: 'realizado',
     };
 
     renderModal({ initialItem: mockItem, onSave, onClose });
@@ -292,7 +307,6 @@ describe('LancamentoModal', () => {
       target: { value: '100' },
     });
 
-    // Forçar data inválida para que dataIso retorne vazio e use formData.data
     fireEvent.change(screen.getByLabelText('Data'), { target: { value: 'T' } });
     fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
       target: { value: 'T' },
@@ -306,21 +320,14 @@ describe('LancamentoModal', () => {
   });
 
   it('cobre fallbacks de valores iniciais faltantes em edição', () => {
-    // Para atingir linhas 37-38, 41-45 (tipo e titulo fallback, valor fallback)
     const mockItem = {
       id: 99,
-      // tipo ausente
-      // titulo ausente
-      // valor ausente
-      status: 'pendente', // só para não dar problema no isStatusConcluido vazio
+      status: 'pendente',
     };
     renderModal({ initialItem: mockItem, onSave: vi.fn(), onClose: vi.fn() });
 
-    // Título fallback ''
     expect(screen.getByLabelText('Título')).toHaveValue('');
-    // Valor fallback ''
     expect(screen.getByLabelText('Valor')).toHaveValue('');
-    // Tipo fallback 'entrada'
     expect(screen.getByRole('button', { name: 'Entrada' })).toHaveAttribute(
       'aria-pressed',
       'true'
@@ -328,7 +335,6 @@ describe('LancamentoModal', () => {
   });
 
   it('cobre branch else if de status não-concluido e sem data', async () => {
-    // Para atingir fallback date em submit e não-concluido status
     const onSave = vi.fn().mockResolvedValue({});
     const mockItem = {
       id: 99,
@@ -336,7 +342,6 @@ describe('LancamentoModal', () => {
     };
     renderModal({ initialItem: mockItem, onSave, onClose: vi.fn() });
 
-    // Preenche pra não dar erro
     fireEvent.change(screen.getByLabelText('Título'), {
       target: { value: 'X' },
     });
@@ -354,12 +359,10 @@ describe('LancamentoModal', () => {
   });
 
   it('cobre fallback message em catch block vazio', async () => {
-    // Para atingir linha 168: err?.message || 'Erro ao salvar o lançamento financeiro.'
-    const onSave = vi.fn().mockRejectedValue({}); // Sem mensagem
+    const onSave = vi.fn().mockRejectedValue({});
     const mockItem = { id: 99, status: 'pendente' };
     renderModal({ initialItem: mockItem, onSave, onClose: vi.fn() });
 
-    // Preenche pra não dar erro de validacao
     fireEvent.change(screen.getByLabelText('Título'), {
       target: { value: 'X' },
     });

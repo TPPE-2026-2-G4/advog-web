@@ -19,6 +19,8 @@ export default function FinancasClient({
 }) {
   const {
     lancamentos,
+    categorias,
+    pagination,
     isNewModalOpen,
     setIsNewModalOpen,
     selectedLancamento,
@@ -28,6 +30,7 @@ export default function FinancasClient({
     handleCreateLancamento,
     handleUpdateLancamento,
     handleToggleStatus,
+    handleFilterLancamentos,
     isDeleting,
     deleteError,
     statusError,
@@ -68,9 +71,7 @@ export default function FinancasClient({
       const updated = await handleToggleStatus(item);
       onToggleStatus?.(updated);
       return updated;
-    } catch {
-      // O erro é exposto através de statusError
-    }
+    } catch {}
   };
 
   const handleTableDelete = (item) => {
@@ -81,9 +82,7 @@ export default function FinancasClient({
     try {
       await handleDeleteLancamento(lancamentoToDelete);
       setLancamentoToDelete(null);
-    } catch {
-      // O erro é exposto através de deleteError
-    }
+    } catch {}
   };
 
   const handleCloseDeleteModal = () => {
@@ -127,9 +126,12 @@ export default function FinancasClient({
 
       <LancamentosTable
         lancamentos={lancamentos}
+        categorias={categorias}
+        pagination={pagination}
         onEdit={handleEditLancamento}
         onDelete={handleTableDelete}
         onToggleStatus={handleTableToggleStatus}
+        onFilter={handleFilterLancamentos}
       />
 
       <LancamentoModal

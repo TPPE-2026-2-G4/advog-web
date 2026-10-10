@@ -14,56 +14,60 @@ import {
 } from './financas';
 
 describe('financas utils', () => {
-  describe('formatCurrency', () => {
-    it('formata valores numéricos para BRL', () => {
-      expect(formatCurrency(5000)).toBe('R$ 5.000,00');
-      expect(formatCurrency(250.5)).toBe('R$ 250,50');
-      expect(formatCurrency(0)).toBe('R$ 0,00');
-    });
-
-    it('retorna R$ 0,00 para valores inválidos ou indefinidos', () => {
-      expect(formatCurrency(null)).toBe('R$ 0,00');
-      expect(formatCurrency(undefined)).toBe('R$ 0,00');
-      expect(formatCurrency('abc')).toBe('R$ 0,00');
-    });
+  test.each([
+    [5000, 'R$ 5.000,00'],
+    [250.5, 'R$ 250,50'],
+    [0, 'R$ 0,00'],
+    [null, 'R$ 0,00'],
+    [undefined, 'R$ 0,00'],
+    ['abc', 'R$ 0,00'],
+    [10.5, 'R$ 10,50'],
+  ])('formatCurrency(%s) deve retornar %s', (value, expected) => {
+    expect(formatCurrency(value)).toBe(expected);
   });
 
   describe('calcularResumoFinanceiro', () => {
-    it('calcula corretamente total de entradas, saídas e saldo', () => {
-      const lancamentos = [
-        { tipo: 'entrada', valor: 1000 },
-        { tipo: 'entrada', valor: 500 },
-        { tipo: 'saida', valor: 300 },
-      ];
-
-      const resultado = calcularResumoFinanceiro(lancamentos);
-      expect(resultado).toEqual({
-        totalEntradas: 1500,
-        totalSaidas: 300,
-        saldo: 1200,
-      });
-    });
-
-    it('lida com lista vazia de lançamentos', () => {
-      expect(calcularResumoFinanceiro([])).toEqual({
-        totalEntradas: 0,
-        totalSaidas: 0,
-        saldo: 0,
-      });
-    });
+    test.each([
+      [
+        [
+          { tipo: 'entrada', valor: 1000 },
+          { tipo: 'entrada', valor: 500 },
+          { tipo: 'saida', valor: 300 },
+        ],
+        { totalEntradas: 1500, totalSaidas: 300, saldo: 1200 },
+      ],
+      [
+        [
+          { tipo: 'entrada', valor: 'abc' },
+          { tipo: 'outro', valor: 100 },
+        ],
+        { totalEntradas: 0, totalSaidas: 0, saldo: 0 },
+      ],
+      [[], { totalEntradas: 0, totalSaidas: 0, saldo: 0 }],
+    ])(
+      'calcularResumoFinanceiro(%j) deve retornar %j',
+      (lancamentos, expected) => {
+        expect(calcularResumoFinanceiro(lancamentos)).toEqual(expected);
+      }
+    );
   });
 
   describe('formatDate helpers', () => {
-    it('formata data ISO para formato brasileiro DD/MM/AAAA', () => {
-      expect(formatDateToBr('2026-09-15')).toBe('15/09/2026');
-      expect(formatDateToBr('15/09/2026')).toBe('15/09/2026');
-      expect(formatDateToBr('')).toBe('');
+    test.each([
+      ['2026-09-15', '15/09/2026'],
+      ['15/09/2026', '15/09/2026'],
+      ['', ''],
+      ['2026-08', '2026-08'],
+    ])('formatDateToBr(%s) deve retornar %s', (input, expected) => {
+      expect(formatDateToBr(input)).toBe(expected);
     });
 
-    it('formata data brasileira para formato ISO AAAA-MM-DD', () => {
-      expect(formatDateToIso('15/09/2026')).toBe('2026-09-15');
-      expect(formatDateToIso('2026-09-15')).toBe('2026-09-15');
-      expect(formatDateToIso('')).toBe('');
+    test.each([
+      ['15/09/2026', '2026-09-15'],
+      ['2026-09-15', '2026-09-15'],
+      ['', ''],
+    ])('formatDateToIso(%s) deve retornar %s', (input, expected) => {
+      expect(formatDateToIso(input)).toBe(expected);
     });
   });
 
@@ -98,28 +102,28 @@ describe('financas utils', () => {
   });
 
   describe('status helpers (isStatusConcluido, getStatusConcluido, formatStatusLabel)', () => {
-    it('isStatusConcluido reconhece pago e recebido como concluídos', () => {
-      expect(isStatusConcluido('pago')).toBe(true);
-      expect(isStatusConcluido('recebido')).toBe(true);
-      expect(isStatusConcluido('PAGO')).toBe(true);
-      expect(isStatusConcluido('RECEBIDO')).toBe(true);
-      expect(isStatusConcluido('pendente')).toBe(false);
-      expect(isStatusConcluido('atrasado')).toBe(false);
-      expect(isStatusConcluido(null)).toBe(false);
+    test.each([
+      ['realizado', true],
+      ['REALIZADO', true],
+      ['pendente', false],
+      ['atrasado', false],
+      [null, false],
+    ])('isStatusConcluido(%s) deve retornar %s', (status, expected) => {
+      expect(isStatusConcluido(status)).toBe(expected);
     });
 
-    it('getStatusConcluido retorna recebido para entrada e pago para saida', () => {
-      expect(getStatusConcluido('entrada')).toBe('recebido');
-      expect(getStatusConcluido('ENTRADA')).toBe('recebido');
-      expect(getStatusConcluido('saida')).toBe('pago');
-      expect(getStatusConcluido('SAIDA')).toBe('pago');
+    it('getStatusConcluido retorna recebido para entrada e realizado para saida', () => {
+      expect(getStatusConcluido('entrada')).toBe('realizado');
+      expect(getStatusConcluido('ENTRADA')).toBe('realizado');
+      expect(getStatusConcluido('saida')).toBe('realizado');
+      expect(getStatusConcluido('SAIDA')).toBe('realizado');
     });
 
     it('formatStatusLabel formata corretamente o label baseado no tipo e status', () => {
-      expect(formatStatusLabel('pago', 'entrada')).toBe('Recebido');
-      expect(formatStatusLabel('recebido', 'entrada')).toBe('Recebido');
-      expect(formatStatusLabel('pago', 'saida')).toBe('Pago');
-      expect(formatStatusLabel('recebido', 'saida')).toBe('Pago');
+      expect(formatStatusLabel('realizado', 'entrada')).toBe('Realizado');
+      expect(formatStatusLabel('realizado', 'entrada')).toBe('Realizado');
+      expect(formatStatusLabel('realizado', 'saida')).toBe('Realizado');
+      expect(formatStatusLabel('realizado', 'saida')).toBe('Realizado');
       expect(formatStatusLabel('atrasado', 'entrada')).toBe('Atrasado');
       expect(formatStatusLabel('atrasado', 'saida')).toBe('Atrasado');
       expect(formatStatusLabel('pendente', 'entrada')).toBe('Pendente');
@@ -163,14 +167,14 @@ describe('financas utils', () => {
     it('converte resposta da API para modelo do frontend', () => {
       const apiItem = {
         lancamento_id: 15,
-        tipo: 'Saída',
+        tipo: 's',
         titulo: 'Aluguel',
         descricao: 'Sala comercial',
         valor: 2000,
         data_vencimento: '2026-10-01',
         data_pagamento: null,
         categoria: 'Despesas',
-        status: 'Pago',
+        status: 'Realizado',
         recorrente: true,
       };
 
@@ -178,7 +182,7 @@ describe('financas utils', () => {
       expect(front.id).toBe(15);
       expect(front.lancamento_id).toBe(15);
       expect(front.tipo).toBe('saida');
-      expect(front.status).toBe('pago');
+      expect(front.status).toBe('realizado');
       expect(front.data).toBe('01/10/2026');
       expect(front.dataIso).toBe('2026-10-01');
       expect(front.dataVencimento).toBe('01/10/2026');
@@ -201,7 +205,7 @@ describe('financas utils', () => {
       };
 
       const apiPayload = toApiLancamento(frontItem);
-      expect(apiPayload.tipo).toBe('Saída');
+      expect(apiPayload.tipo).toBe('s');
       expect(apiPayload.titulo).toBe('Internet');
       expect(apiPayload.descricao).toBe('Mensalidade');
       expect(apiPayload.valor).toBe(150.5);
@@ -213,13 +217,13 @@ describe('financas utils', () => {
     it('converte resposta da API com data_pagamento para modelo do frontend', () => {
       const apiItem = {
         lancamento_id: 16,
-        tipo: 'Entrada',
+        tipo: 'e',
         titulo: 'Consultoria',
         valor: 3500,
         data_vencimento: '2026-10-15',
         data_pagamento: '2026-10-10',
         categoria: 'Honorários',
-        status: 'Recebido',
+        status: 'Realizado',
         recorrente: false,
       };
 
@@ -244,7 +248,7 @@ describe('financas utils', () => {
         dataPagamentoIso: '2026-10-12',
         dataVencimentoIso: '2026-10-18',
         categoria: 'Honorários',
-        status: 'Recebido',
+        status: 'Realizado',
       };
 
       const apiPayload = toApiLancamento(frontItem);
@@ -260,7 +264,7 @@ describe('financas utils', () => {
         dataPagamento: '05/11/2026',
         dataVencimento: '10/11/2026',
         categoria: 'Despesas',
-        status: 'Pago',
+        status: 'Realizado',
       };
 
       const apiPayload = toApiLancamento(frontItem);
@@ -358,18 +362,32 @@ describe('financas utils', () => {
     expect(parseApiError({ detail: ['Erro direto'] })).toBe('Erro direto');
   });
 
-  it('cobre data_vencimento presente e ausente', () => {
-    // line 132: apiItem.data_vencimento truthy
-    const front = toLancamento({ data_vencimento: '2026-12-12' });
-    expect(front.dataVencimentoIso).toBe('2026-12-12');
-  });
+  describe('toLancamento datas fallbacks', () => {
+    test.each([
+      [{ data_vencimento: '2026-10-10' }, '2026-10-10'],
+      [{ dataVencimentoIso: '2026-10-11' }, '2026-10-11'],
+      [{ dataVencimento: '12/10/2026' }, '2026-10-12'],
+      [{ data: '2026-10-13' }, '2026-10-13'],
+      [{}, ''],
+    ])('toLancamento fallback vencimento %j -> %s', (apiItem, expectedIso) => {
+      const front = toLancamento({ ...apiItem, tipo: 'entrada' });
+      expect(front.dataVencimentoIso).toBe(expectedIso);
+    });
 
-  it('cobre data fallback em vencimento (vencimentoBr || dataBr)', () => {
-    // lines 172-174
-    // Se passarmos apenas "data", vencimentoBr será vazio, e usará dataBr
-    const front = toLancamento({ data: '2026-11-11' });
-    expect(front.dataVencimentoIso).toBe('2026-11-11');
-    expect(front.data).toBe('11/11/2026');
-    expect(front.dataVencimento).toBe('11/11/2026');
+    test.each([
+      // Para forçar (vencimentoBr || dataBr) na linha 175
+      // Para isso, rawVencimento deve ser falsy (vencimentoBr = ''), e dataBr deve ser truthy.
+      // Se rawData for truthy e formatar br, mas rawPagamento for falsy.
+      [{ data: '2026-11-11' }, '11/11/2026', '2026-11-11'],
+      // Se data_pagamento presente
+      [{ data_pagamento: '2026-12-12' }, '12/12/2026', '2026-12-12'],
+    ])(
+      'toLancamento fallbacks gerais %j -> %s, %s',
+      (apiItem, expectedData, expectedDataIso) => {
+        const front = toLancamento({ ...apiItem, tipo: 'entrada' });
+        expect(front.data).toBe(expectedData);
+        expect(front.dataIso).toBe(expectedDataIso);
+      }
+    );
   });
 });

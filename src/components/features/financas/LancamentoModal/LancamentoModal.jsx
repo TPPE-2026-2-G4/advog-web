@@ -10,15 +10,10 @@ import {
   isStatusConcluido,
   verificarStatusPorVencimento,
 } from '@/utils/financas';
+import { listarCategorias, criarCategoria } from '@/services/financas';
 import styles from './LancamentoModal.module.css';
 
-const CATEGORIAS = [
-  'Honorários',
-  'Custas',
-  'Despesas Operacionais',
-  'Consultoria',
-  'Outros',
-];
+import CategoriaAutocomplete from './CategoriaAutocomplete';
 
 const INITIAL_FORM = {
   tipo: 'entrada',
@@ -27,7 +22,7 @@ const INITIAL_FORM = {
   valor: '',
   data: '',
   dataVencimento: '',
-  categoria: 'Honorários',
+  categoria: '',
   recorrente: false,
 };
 
@@ -53,7 +48,7 @@ function getInitialFormData(initialItem) {
         formatDateToIso(initialItem.dataVencimento) ||
         formatDateToIso(initialItem.data_vencimento) ||
         '',
-      categoria: initialItem.categoria || 'Honorários',
+      categoria: initialItem.categoria || '',
       recorrente: Boolean(initialItem.recorrente),
     };
   }
@@ -124,6 +119,30 @@ export default function LancamentoModal({
     setIsSubmitting(true);
 
     try {
+      let categoriaIdFinal = initialItem?.categoria_id || null;
+      let categoriaNomeFinal = formData.categoria;
+
+      if (categoriaNomeFinal) {
+        const categorias = await listarCategorias();
+        const categoriaExistente = categorias.find(
+          (c) =>
+            (c.nome_categoria || c.nome || '').toLowerCase() ===
+            categoriaNomeFinal.trim().toLowerCase()
+        );
+
+        if (categoriaExistente) {
+          categoriaIdFinal =
+            categoriaExistente.categoria_id || categoriaExistente.id;
+          categoriaNomeFinal =
+            categoriaExistente.nome_categoria || categoriaExistente.nome;
+        } else {
+          const novaCat = await criarCategoria(categoriaNomeFinal.trim());
+          categoriaIdFinal = novaCat.categoria_id || novaCat.id;
+          categoriaNomeFinal =
+            novaCat.nome_categoria || novaCat.nome || categoriaNomeFinal.trim();
+        }
+      }
+
       const dataIso = formData.data ? formatDateToIso(formData.data) : '';
       const dataBr = formData.data ? formatDateToBr(formData.data) : '';
       const dataVencimentoIso = formData.dataVencimento
@@ -151,7 +170,8 @@ export default function LancamentoModal({
           formData.dataVencimento ||
           dataIso ||
           formData.data,
-        categoria: formData.categoria,
+        categoria: categoriaNomeFinal,
+        categoria_id: categoriaIdFinal,
         recorrente: formData.recorrente,
       };
 
@@ -310,19 +330,14 @@ export default function LancamentoModal({
             <label className={styles.label} htmlFor="lancamento-categoria">
               Categoria
             </label>
-            <select
+            <CategoriaAutocomplete
               id="lancamento-categoria"
-              name="categoria"
-              className={styles.select}
               value={formData.categoria}
-              onChange={handleChange}
-            >
-              {CATEGORIAS.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+              onChange={(newVal) =>
+                setFormData((current) => ({ ...current, categoria: newVal }))
+              }
+              disabled={isSubmitting}
+            />
           </div>
         </div>
 
