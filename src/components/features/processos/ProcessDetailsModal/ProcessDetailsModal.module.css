@@ -50,6 +50,12 @@
   border-color: #fef08a;
 }
 
+.statusArchived {
+  color: #4b5563;
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
 .body {
   padding: 20px 24px 28px;
 }

@@ -8,21 +8,29 @@ import {
 } from '@/utils/processo';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { API_URL } from './api';
+import { getAccessToken } from '@/utils/authSession';
 
 const validationFieldLabels = {
-  id: 'Número do processo',
+  cnj: 'Número do processo',
   titulo: 'Título do caso',
-  cliente: 'Cliente',
+  descricao: 'Descrição',
   status: 'Status',
   tribunal: 'Tribunal',
   area: 'Área de atuação',
-  responsavel: 'Responsável',
-  prazo: 'Próximo prazo',
-  diasRestantes: 'Dias restantes',
+  data_inicio: 'Data de início',
+  data_realizado: 'Data de realização',
+  data_prazo: 'Próximo prazo',
+  cliente_id: 'Cliente',
+  funcionario_id: 'Responsável',
 };
 
 const getErrorMessage = async (response, fallbackMessage) => {
   const error = await response.json().catch(() => null);
+
+  if (response.status === 401) return 'Sessão expirada. Faça login novamente.';
+  if (response.status === 403) {
+    return 'Você não possui permissão para realizar esta ação.';
+  }
 
   if (typeof error?.detail === 'string') return error.detail;
 
@@ -48,10 +56,19 @@ const getErrorMessage = async (response, fallbackMessage) => {
 };
 
 const request = async (path, options, fallbackMessage) => {
+  const token = getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
   let response;
 
   try {
-    response = await fetch(`${API_URL}${path}`, options);
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        ...options?.headers,
+        Authorization: `Bearer ${token}`,
+      },
+    });
   } catch {
     throw new Error(fallbackMessage);
   }
@@ -119,7 +136,7 @@ export async function getProcessosData() {
     ]);
 
     const responsaveis = toResponsavelOptions(funcionarios);
-    const initialPage = toProcessPage(page, toResponsavelNames(responsaveis));
+    const initialPage = toProcessPage(page);
 
     return { initialPage, responsaveis, initialError: '' };
   } catch (error) {

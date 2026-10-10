@@ -1,24 +1,17 @@
 .container {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 24px;
-  padding: 16px;
-  background-color: #ffffff;
-  border: 1px solid #f3f4f6;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.searchRow {
-  display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+  margin-bottom: 24px;
 }
 
-.searchField {
+.searchContainer {
   position: relative;
-  flex: 1 1 320px;
+  flex: 1 1 300px;
+  max-width: 400px;
 }
 
 .searchIcon {
@@ -30,86 +23,114 @@
   pointer-events: none;
 }
 
-.searchField .input {
-  padding-left: 42px;
-}
-
-.selectField {
-  flex: 0 1 220px;
-}
-
-.input,
-.select {
+.searchInput {
   width: 100%;
-  min-height: 42px;
-  padding: 10px 14px;
+  height: 38px;
+  padding: 8px 16px 8px 40px;
   color: #172133;
   font-family: inherit;
   font-size: 14px;
   background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
   box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  outline: none;
 }
 
-.input:focus-visible,
-.select:focus-visible {
-  outline: 2px solid #c1a077;
-  outline-offset: 1px;
+.searchInput:focus-visible {
+  border-color: #c1a077;
+  box-shadow: 0 0 0 2px rgba(193, 160, 119, 0.15);
 }
 
-.input[aria-invalid='true'] {
+.filtersContainer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.dateGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inlineLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.labelText {
+  font-weight: 500;
+}
+
+.pillInput,
+.pillSelect {
+  height: 38px;
+  padding: 8px 16px;
+  color: #172133;
+  font-family: inherit;
+  font-size: 14px;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  outline: none;
+  cursor: pointer;
+}
+
+.pillInput:focus-visible,
+.pillSelect:focus-visible {
+  border-color: #c1a077;
+  box-shadow: 0 0 0 2px rgba(193, 160, 119, 0.15);
+}
+
+.pillInput[aria-invalid='true'] {
   border-color: #b91c1c;
 }
 
-.dateRow {
+.clearButton {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  border: none;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 8px 16px;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 500;
+  background-color: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
-.legend {
-  padding: 0;
-  margin-bottom: 6px;
-  color: #6b7280;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.dateField {
-  display: flex;
-  flex: 0 1 200px;
-  flex-direction: column;
-  gap: 4px;
-  color: #6b7280;
-  font-size: 12px;
+.clearButton:hover {
+  background-color: #f3f4f6;
+  color: #1f2937;
 }
 
 .dateError {
-  flex-basis: 100%;
+  width: 100%;
   margin: 0;
   color: #b91c1c;
   font-size: 13px;
+  margin-top: -8px;
 }
 
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-@media (max-width: 640px) {
-  .selectField,
-  .dateField {
-    flex: 1 1 100%;
+@media (max-width: 768px) {
+  .searchContainer {
+    max-width: 100%;
   }
 }

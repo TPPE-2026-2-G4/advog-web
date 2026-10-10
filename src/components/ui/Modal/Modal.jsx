@@ -27,6 +27,7 @@ export function ModalCloseButton({
 
 export default function Modal({
   isOpen,
+  id,
   onClose,
   preventClose = false,
   as: Component = 'div',
@@ -66,6 +67,7 @@ export default function Modal({
       onClick={handleOverlayClick}
     >
       <Component
+        id={id}
         className={`${styles.modal} ${className}`.trim()}
         role={role}
         aria-modal={ariaModal ? 'true' : undefined}

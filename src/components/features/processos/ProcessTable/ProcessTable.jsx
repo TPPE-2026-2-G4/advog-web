@@ -6,16 +6,13 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react';
-import {
-  PROCESS_PAGE_SIZE,
-  formatProcessDate,
-  isOverdueDeadline,
-} from '@/utils/processo';
+import { formatProcessDate, isOverdueDeadline } from '@/utils/processo';
 import styles from './ProcessTable.module.css';
 
 const getStatusStyle = (status) => {
   if (status === 'Ativo') return styles.statusActive;
   if (status === 'Concluído') return styles.statusCompleted;
+  if (status === 'Arquivado') return styles.statusArchived;
   return styles.statusPending;
 };
 
@@ -24,12 +21,14 @@ export default function ProcessTable({
   totalItems = 0,
   currentPage = 1,
   totalPages = 1,
-  pageSize = PROCESS_PAGE_SIZE,
+  pageSize = 5,
   hasActiveFilters = false,
   onPageChange,
   onView,
   onEdit,
   onDelete,
+  canEdit = false,
+  canDelete = false,
 }) {
   const firstItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const lastItem = Math.min(currentPage * pageSize, totalItems);
@@ -71,9 +70,9 @@ export default function ProcessTable({
             </thead>
             <tbody>
               {processes.map((processo) => (
-                <tr key={processo.id} className={styles.tr}>
+                <tr key={processo.processo_id} className={styles.tr}>
                   <td className={styles.td} data-label="Nº do Processo">
-                    <span className={styles.processNumber}>{processo.id}</span>
+                    <span className={styles.processNumber}>{processo.cnj}</span>
                   </td>
                   <td className={styles.td} data-label="Caso / Cliente">
                     <button
@@ -112,12 +111,12 @@ export default function ProcessTable({
                   <td className={styles.td} data-label="Próximo Prazo">
                     <span
                       className={
-                        isOverdueDeadline(processo.prazo)
+                        isOverdueDeadline(processo.data_prazo)
                           ? styles.criticalDeadline
                           : styles.primaryText
                       }
                     >
-                      {formatProcessDate(processo.prazo)}
+                      {formatProcessDate(processo.data_prazo)}
                     </span>
                   </td>
                   <td className={styles.td} data-label="Ações">
@@ -126,29 +125,33 @@ export default function ProcessTable({
                         type="button"
                         className={styles.actionButton}
                         onClick={() => onView(processo)}
-                        aria-label={`Visualizar processo ${processo.id}`}
+                        aria-label={`Visualizar processo ${processo.cnj}`}
                         title="Visualizar processo"
                       >
                         <Eye size={18} aria-hidden="true" />
                       </button>
-                      <button
-                        type="button"
-                        className={styles.actionButton}
-                        onClick={() => onEdit(processo)}
-                        aria-label={`Editar processo ${processo.id}`}
-                        title="Editar processo"
-                      >
-                        <Pencil size={18} aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.actionButton} ${styles.deleteButton}`}
-                        onClick={() => onDelete(processo)}
-                        aria-label={`Excluir processo ${processo.id}`}
-                        title="Excluir processo"
-                      >
-                        <Trash2 size={18} aria-hidden="true" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className={styles.actionButton}
+                          onClick={() => onEdit(processo)}
+                          aria-label={`Editar processo ${processo.cnj}`}
+                          title="Editar processo"
+                        >
+                          <Pencil size={18} aria-hidden="true" />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          type="button"
+                          className={`${styles.actionButton} ${styles.deleteButton}`}
+                          onClick={() => onDelete(processo)}
+                          aria-label={`Excluir processo ${processo.cnj}`}
+                          title="Excluir processo"
+                        >
+                          <Trash2 size={18} aria-hidden="true" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

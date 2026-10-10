@@ -7,6 +7,7 @@ import styles from './ProcessDetailsModal.module.css';
 const getStatusStyle = (status) => {
   if (status === 'Ativo') return styles.statusActive;
   if (status === 'Concluído') return styles.statusCompleted;
+  if (status === 'Arquivado') return styles.statusArchived;
   return styles.statusPending;
 };
 
@@ -38,7 +39,9 @@ export default function ProcessDetailsModal({ process, onClose }) {
         <h2 id={titleId} className={styles.title}>
           {process.titulo}
         </h2>
-        <p className={styles.processNumber}>{process.id}</p>
+        <p className={styles.processNumber}>{process.cnj}</p>
+
+        {process.descricao && <p>{process.descricao}</p>}
 
         <dl className={styles.detailsGrid}>
           <div className={styles.detailItem}>
@@ -51,11 +54,19 @@ export default function ProcessDetailsModal({ process, onClose }) {
           </div>
           <div className={styles.detailItem}>
             <dt>Responsável</dt>
-            <dd>{process.responsavel}</dd>
+            <dd>{process.responsavel || 'Sem responsável'}</dd>
+          </div>
+          <div className={styles.detailItem}>
+            <dt>Data de Início</dt>
+            <dd>{formatProcessDate(process.data_inicio)}</dd>
+          </div>
+          <div className={styles.detailItem}>
+            <dt>Data de Realização</dt>
+            <dd>{formatProcessDate(process.data_realizado)}</dd>
           </div>
           <div className={styles.detailItem}>
             <dt>Próximo Prazo</dt>
-            <dd>{formatProcessDate(process.prazo)}</dd>
+            <dd>{formatProcessDate(process.data_prazo)}</dd>
           </div>
         </dl>
       </div>

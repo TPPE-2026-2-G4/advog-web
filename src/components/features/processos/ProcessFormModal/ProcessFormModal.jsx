@@ -11,36 +11,47 @@ import {
   normalizeProcessDate,
   toProcessFormData,
   toProcessPayload,
+  toProcessUpdatePayload,
 } from '@/utils/processo';
 import styles from './ProcessFormModal.module.css';
 
-const requiredTextFields = [
-  'titulo',
-  'cliente',
-  'tribunal',
-  'area',
-  'responsavel',
-];
+const requiredTextFields = ['titulo', 'tribunal', 'area'];
+const dateFields = ['data_inicio', 'data_realizado', 'data_prazo'];
 
 const getErrorMessage = (error) =>
   error instanceof Error
     ? error.message
     : 'Não foi possível salvar o processo.';
 
-export default function ProcessFormModal({ process, isOpen, onClose, onSave }) {
+export default function ProcessFormModal({
+  process,
+  isOpen,
+  clientes = [],
+  funcionarios = [],
+  onClose,
+  onSave,
+}) {
   if (!isOpen) return null;
 
   return (
     <ProcessFormDialog
-      key={process?.id ?? 'new-process'}
+      key={process?.processo_id ?? 'new-process'}
       process={process}
+      clientes={clientes}
+      funcionarios={funcionarios}
       onClose={onClose}
       onSave={onSave}
     />
   );
 }
 
-function ProcessFormDialog({ process, onClose, onSave }) {
+function ProcessFormDialog({
+  process,
+  clientes,
+  funcionarios,
+  onClose,
+  onSave,
+}) {
   const isEditing = Boolean(process);
   const [formData, setFormData] = useState(() => toProcessFormData(process));
   const [error, setError] = useState('');
@@ -52,7 +63,7 @@ function ProcessFormDialog({ process, onClose, onSave }) {
     const { name, value } = event.target;
     setFormData((current) => ({
       ...current,
-      [name]: name === 'id' ? formatCnjInput(value) : value,
+      [name]: name === 'cnj' ? formatCnjInput(value) : value,
     }));
   };
 
@@ -60,18 +71,25 @@ function ProcessFormDialog({ process, onClose, onSave }) {
     event.preventDefault();
     if (isSubmitting) return;
 
-    if (!CNJ_REGEX.test(formData.id)) {
+    if (!CNJ_REGEX.test(formData.cnj)) {
       setError('Informe o número do processo no formato CNJ.');
       return;
     }
 
-    if (requiredTextFields.some((field) => !formData[field].trim())) {
+    if (
+      !formData.cliente_id ||
+      requiredTextFields.some((field) => !formData[field].trim())
+    ) {
       setError('Preencha todos os campos obrigatórios.');
       return;
     }
 
-    if (!normalizeProcessDate(formData.prazo)) {
-      setError('Informe um próximo prazo válido.');
+    if (
+      dateFields.some(
+        (field) => formData[field] && !normalizeProcessDate(formData[field])
+      )
+    ) {
+      setError('Informe datas válidas.');
       return;
     }
 
@@ -79,7 +97,10 @@ function ProcessFormDialog({ process, onClose, onSave }) {
     setIsSubmitting(true);
 
     try {
-      await onSave(toProcessPayload(formData, { includeId: !isEditing }));
+      const payload = isEditing
+        ? toProcessUpdatePayload(formData, process)
+        : toProcessPayload(formData);
+      await onSave(payload);
       onClose();
     } catch (saveError) {
       setError(getErrorMessage(saveError));
@@ -93,11 +114,13 @@ function ProcessFormDialog({ process, onClose, onSave }) {
   return (
     <Modal
       isOpen
+      id="process-form-dialog"
       onClose={onClose}
       preventClose={isSubmitting}
       as="form"
       onSubmit={handleSubmit}
       className={styles.modal}
+      overlayClassName={styles.overlay}
       ariaLabelledBy={titleId}
     >
       <div className={styles.header}>
@@ -120,16 +143,16 @@ function ProcessFormDialog({ process, onClose, onSave }) {
       <div className={styles.body} aria-busy={isSubmitting}>
         <div className={styles.grid}>
           <div className={styles.inputGroup}>
-            <label className={styles.label} htmlFor={fieldId('id')}>
+            <label className={styles.label} htmlFor={fieldId('cnj')}>
               Número do Processo
             </label>
             <input
-              id={fieldId('id')}
-              name="id"
+              id={fieldId('cnj')}
+              name="cnj"
               type="text"
               className={styles.input}
               placeholder="0000000-00.0000.0.00.0000"
-              value={formData.id}
+              value={formData.cnj}
               onChange={handleChange}
               inputMode="numeric"
               pattern={CNJ_PATTERN}
@@ -152,7 +175,7 @@ function ProcessFormDialog({ process, onClose, onSave }) {
               className={styles.input}
               value={formData.tribunal}
               onChange={handleChange}
-              maxLength={20}
+              maxLength={100}
               disabled={isSubmitting}
               required
             />
@@ -177,22 +200,46 @@ function ProcessFormDialog({ process, onClose, onSave }) {
           />
         </div>
 
+        <div className={styles.inputGroup}>
+          <label
+            className={styles.optionalLabel}
+            htmlFor={fieldId('descricao')}
+          >
+            Descrição
+          </label>
+          <textarea
+            id={fieldId('descricao')}
+            name="descricao"
+            className={styles.textarea}
+            value={formData.descricao}
+            onChange={handleChange}
+            maxLength={255}
+            rows={3}
+            disabled={isSubmitting}
+          />
+        </div>
+
         <div className={styles.grid}>
           <div className={styles.inputGroup}>
-            <label className={styles.label} htmlFor={fieldId('cliente')}>
+            <label className={styles.label} htmlFor={fieldId('cliente_id')}>
               Cliente
             </label>
-            <input
-              id={fieldId('cliente')}
-              name="cliente"
-              type="text"
-              className={styles.input}
-              value={formData.cliente}
+            <select
+              id={fieldId('cliente_id')}
+              name="cliente_id"
+              className={styles.select}
+              value={formData.cliente_id}
               onChange={handleChange}
-              maxLength={100}
               disabled={isSubmitting}
               required
-            />
+            >
+              <option value="">Selecione um cliente</option>
+              {clientes.map((cliente) => (
+                <option key={cliente.cliente_id} value={cliente.cliente_id}>
+                  {cliente.nome}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className={styles.inputGroup}>
@@ -215,25 +262,35 @@ function ProcessFormDialog({ process, onClose, onSave }) {
 
         <div className={styles.grid}>
           <div className={styles.inputGroup}>
-            <label className={styles.label} htmlFor={fieldId('responsavel')}>
+            <label
+              className={styles.optionalLabel}
+              htmlFor={fieldId('funcionario_id')}
+            >
               Responsável
             </label>
-            <input
-              id={fieldId('responsavel')}
-              name="responsavel"
-              type="text"
-              className={styles.input}
-              value={formData.responsavel}
+            <select
+              id={fieldId('funcionario_id')}
+              name="funcionario_id"
+              className={styles.select}
+              value={formData.funcionario_id}
               onChange={handleChange}
-              maxLength={100}
               disabled={isSubmitting}
-              required
-            />
+            >
+              <option value="">Sem responsável</option>
+              {funcionarios.map((funcionario) => (
+                <option
+                  key={funcionario.funcionario_id || funcionario.id}
+                  value={funcionario.funcionario_id || funcionario.id}
+                >
+                  {funcionario.nome}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className={styles.inputGroup}>
             <label className={styles.label} htmlFor={fieldId('status')}>
-              Status
+              {isEditing ? 'Status' : 'Status Inicial'}
             </label>
             <select
               id={fieldId('status')}
@@ -253,19 +310,58 @@ function ProcessFormDialog({ process, onClose, onSave }) {
           </div>
         </div>
 
+        <div className={styles.grid}>
+          <div className={styles.inputGroup}>
+            <label
+              className={styles.optionalLabel}
+              htmlFor={fieldId('data_inicio')}
+            >
+              Data de Início
+            </label>
+            <input
+              id={fieldId('data_inicio')}
+              name="data_inicio"
+              type="date"
+              className={styles.input}
+              value={formData.data_inicio}
+              onChange={handleChange}
+              disabled={isSubmitting}
+            />
+          </div>
+          <div className={styles.inputGroup}>
+            <label
+              className={styles.optionalLabel}
+              htmlFor={fieldId('data_realizado')}
+            >
+              Data de Realização
+            </label>
+            <input
+              id={fieldId('data_realizado')}
+              name="data_realizado"
+              type="date"
+              className={styles.input}
+              value={formData.data_realizado}
+              onChange={handleChange}
+              disabled={isSubmitting}
+            />
+          </div>
+        </div>
+
         <div className={styles.inputGroup}>
-          <label className={styles.label} htmlFor={fieldId('prazo')}>
+          <label
+            className={styles.optionalLabel}
+            htmlFor={fieldId('data_prazo')}
+          >
             Próximo Prazo
           </label>
           <input
-            id={fieldId('prazo')}
-            name="prazo"
+            id={fieldId('data_prazo')}
+            name="data_prazo"
             type="date"
             className={styles.input}
-            value={formData.prazo}
+            value={formData.data_prazo}
             onChange={handleChange}
             disabled={isSubmitting}
-            required
           />
         </div>
 
@@ -295,7 +391,7 @@ function ProcessFormDialog({ process, onClose, onSave }) {
           ) : isEditing ? (
             'Salvar alterações'
           ) : (
-            'Salvar processo'
+            'Salvar Processo'
           )}
         </button>
       </div>

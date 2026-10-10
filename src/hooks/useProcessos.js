@@ -9,7 +9,6 @@ import {
   PROCESS_PAGE_SIZE,
   hasInvalidDateRange,
   toProcessPage,
-  toProcessView,
   toResponsavelNames,
 } from '@/utils/processo';
 
@@ -147,11 +146,14 @@ export function useProcessos({
 
   const saveProcess = async (dados) => {
     if (editingProcess) {
-      const updatedProcess = await atualizarProcesso(editingProcess.id, dados);
+      const updatedProcess = await atualizarProcesso(
+        editingProcess.processo_id,
+        dados
+      );
 
       setDetailProcess((current) =>
-        current?.id === editingProcess.id
-          ? toProcessView(updatedProcess, responsavelNames)
+        current?.processo_id === editingProcess.processo_id
+          ? updatedProcess
           : current
       );
       reloadProcesses();
@@ -180,7 +182,7 @@ export function useProcessos({
     setIsDeleting(true);
 
     try {
-      await excluirProcesso(deletingProcess.id);
+      await excluirProcesso(deletingProcess.processo_id);
       const remainingPages = Math.max(
         1,
         Math.ceil((pageData.total - 1) / PROCESS_PAGE_SIZE)
@@ -188,7 +190,7 @@ export function useProcessos({
 
       setCurrentPage((page) => Math.min(page, remainingPages));
       setDetailProcess((current) =>
-        current?.id === deletingProcess.id ? null : current
+        current?.processo_id === deletingProcess.processo_id ? null : current
       );
       setDeletingProcess(null);
       reloadProcesses();
