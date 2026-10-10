@@ -12,7 +12,9 @@ import {
   excluirProcesso,
   listarProcessos,
 } from '@/services/processos';
-import { toProcessPage, toResponsavelNames } from '@/utils/processo';
+import { listarClientes } from '@/services/clientes';
+import { listarFuncionarios } from '@/services/funcionarios';
+import { toProcessPage } from '@/utils/processo';
 import ProcessosClient from './processosClient';
 
 vi.mock('@/services/processos', () => ({
@@ -21,6 +23,27 @@ vi.mock('@/services/processos', () => ({
   excluirProcesso: vi.fn(),
   listarProcessos: vi.fn(),
 }));
+
+vi.mock('@/services/clientes', () => ({
+  listarClientes: vi.fn(),
+}));
+
+vi.mock('@/services/funcionarios', () => ({
+  listarFuncionarios: vi.fn(),
+}));
+
+const clientes = [{ cliente_id: 4, nome: 'Maria Silva' }];
+const funcionarios = [{ funcionario_id: 3, nome: 'Ana Paula Ribeiro' }];
+const currentUser = {
+  cargo: {
+    permissao: {
+      visualizar_processos: true,
+      criar_processos: true,
+      editar_processos: true,
+      excluir_processos: true,
+    },
+  },
+};
 
 const responsaveis = [{ value: '3', label: 'Ana Paula Ribeiro' }];
 
@@ -65,13 +88,13 @@ const fillCreationForm = (process) => {
     target: { value: process.titulo_proc },
   });
   fireEvent.change(screen.getByLabelText('Cliente'), {
-    target: { value: 'Maria Silva' },
+    target: { value: '4' },
   });
   fireEvent.change(screen.getByLabelText('Área de Atuação'), {
     target: { value: process.area },
   });
   fireEvent.change(screen.getByLabelText('Responsável'), {
-    target: { value: 'Ana Paula Ribeiro' },
+    target: { value: '3' },
   });
   fireEvent.change(screen.getByLabelText('Próximo Prazo'), {
     target: { value: '2026-10-05' },
@@ -81,10 +104,7 @@ const fillCreationForm = (process) => {
 const renderClient = (overrides = {}) =>
   render(
     <ProcessosClient
-      initialPage={toProcessPage(
-        apiPage([apiProcess]),
-        toResponsavelNames(responsaveis)
-      )}
+      initialPage={toProcessPage(apiPage([apiProcess]))}
       initialError=""
       responsaveis={responsaveis}
       {...overrides}
@@ -94,14 +114,18 @@ const renderClient = (overrides = {}) =>
 describe('ProcessosClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
+    sessionStorage.setItem('current_user', JSON.stringify(currentUser));
+    listarClientes.mockResolvedValue(clientes);
+    listarFuncionarios.mockResolvedValue(funcionarios);
   });
 
-  it('exibe a página inicial com responsável resolvido e total do servidor', () => {
+  it('exibe a página inicial com responsável resolvido e total do servidor', async () => {
     renderClient();
 
     expect(screen.getByText('1 processo encontrado')).toBeInTheDocument();
     expect(
-      within(screen.getByRole('table')).getByText('Ana Paula Ribeiro')
+      await within(screen.getByRole('table')).findByText('Ana Paula Ribeiro')
     ).toBeInTheDocument();
     expect(
       screen.getByRole('combobox', { name: /filtrar por status/i })
@@ -152,14 +176,14 @@ describe('ProcessosClient', () => {
     listarProcessos.mockResolvedValue(apiPage([]));
     renderClient();
 
-    fireEvent.change(screen.getByLabelText('De'), {
+    fireEvent.change(screen.getByLabelText('De:'), {
       target: { value: '2026-10-10' },
     });
     await waitFor(() => {
       expect(listarProcessos).toHaveBeenCalledTimes(1);
     });
 
-    fireEvent.change(screen.getByLabelText('Até'), {
+    fireEvent.change(screen.getByLabelText('Até:'), {
       target: { value: '2026-10-01' },
     });
 
@@ -178,8 +202,9 @@ describe('ProcessosClient', () => {
     ).toBeInTheDocument();
   });
 
-  it('fecha o detalhe do processo visualizado', () => {
+  it('fecha o detalhe do processo visualizado', async () => {
     renderClient();
+    await waitFor(() => expect(listarClientes).toHaveBeenCalled());
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -214,6 +239,7 @@ describe('ProcessosClient', () => {
       )
       .mockResolvedValueOnce(apiPage([], { total: 0 }));
     renderClient();
+    await within(screen.getByRole('table')).findByText('Ana Paula Ribeiro');
 
     fireEvent.click(screen.getByRole('button', { name: 'Novo Processo' }));
     fillCreationForm(createdApiProcess);
@@ -246,7 +272,7 @@ describe('ProcessosClient', () => {
     expect(
       await screen.findByText('Nenhum processo cadastrado')
     ).toBeInTheDocument();
-    expect(excluirProcesso).toHaveBeenCalledWith(apiProcess.cnj);
+    expect(excluirProcesso).toHaveBeenCalledWith(apiProcess.processo_id);
   });
 
   it('mostra falha inicial e recarrega a lista', async () => {
@@ -284,4 +310,54 @@ describe('ProcessosClient', () => {
       'Backend fora do ar'
     );
   });
+
+  it('nega o acesso sem permissão para visualizar processos', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({ cargo: { permissao: {} } })
+    );
+    renderClient();
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Acesso negado');
+    expect(listarClientes).not.toHaveBeenCalled();
+  });
+
+  it('oculta as ações sem permissão de criar, editar e excluir', async () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        cargo: { permissao: { visualizar_processos: true } },
+      })
+    );
+    renderClient();
+    await waitFor(() => expect(listarClientes).toHaveBeenCalled());
+
+    expect(
+      screen.queryByRole('button', { name: 'Novo Processo' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: `Editar processo ${apiProcess.cnj}`,
+      })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: `Excluir processo ${apiProcess.cnj}`,
+      })
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['uma mensagem de erro', new Error('Clientes indisponíveis')],
+    ['um valor que não é erro', 'falha'],
+  ])(
+    'mantém a listagem quando o carregamento de referências rejeita com %s',
+    async (_description, reason) => {
+      listarClientes.mockRejectedValue(reason);
+      renderClient();
+
+      await waitFor(() => expect(listarClientes).toHaveBeenCalled());
+      expect(screen.getByText('1 processo encontrado')).toBeInTheDocument();
+    }
+  );
 });

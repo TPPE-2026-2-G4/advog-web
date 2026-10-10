@@ -65,6 +65,7 @@ export default function ProcessFilters({
 
         <select
           name="responsavelId"
+          aria-label="Filtrar por responsável"
           className={styles.pillSelect}
           value={filters.responsavelId}
           onChange={handleChange}
@@ -79,6 +80,7 @@ export default function ProcessFilters({
 
         <select
           name="status"
+          aria-label="Filtrar por status"
           className={styles.pillSelect}
           value={filters.status}
           onChange={handleChange}

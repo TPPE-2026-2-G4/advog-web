@@ -49,7 +49,7 @@ describe('ProcessFilters', () => {
     });
 
     expect(
-      screen.getByRole('option', { name: 'Todos os Status' })
+      screen.getByRole('option', { name: 'Todos os status' })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('option', { name: 'Em Análise' })
@@ -66,7 +66,7 @@ describe('ProcessFilters', () => {
     });
 
     expect(
-      screen.getByRole('option', { name: 'Todos os Responsáveis' })
+      screen.getByRole('option', { name: 'Todos os responsáveis' })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('option', { name: 'Pedro Lima' })
@@ -79,10 +79,10 @@ describe('ProcessFilters', () => {
   it('informa o intervalo de prazo com início e fim', () => {
     const { onFilterChange } = renderFilters();
 
-    fireEvent.change(screen.getByLabelText('De'), {
+    fireEvent.change(screen.getByLabelText('De:'), {
       target: { value: '2026-09-01' },
     });
-    fireEvent.change(screen.getByLabelText('Até'), {
+    fireEvent.change(screen.getByLabelText('Até:'), {
       target: { value: '2026-09-30' },
     });
 
@@ -103,8 +103,11 @@ describe('ProcessFilters', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'A data inicial não pode ser posterior à final.'
     );
-    expect(screen.getByLabelText('De')).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByLabelText('Até')).toHaveAttribute(
+    expect(screen.getByLabelText('De:')).toHaveAttribute(
+      'aria-invalid',
+      'true'
+    );
+    expect(screen.getByLabelText('Até:')).toHaveAttribute(
       'aria-invalid',
       'true'
     );
@@ -128,7 +131,18 @@ describe('ProcessFilters', () => {
     expect(
       screen.getByRole('combobox', { name: /filtrar por responsável/i })
     ).toHaveValue('3');
-    expect(screen.getByLabelText('De')).toHaveValue('2026-01-01');
-    expect(screen.getByLabelText('Até')).toHaveValue('2026-02-01');
+    expect(screen.getByLabelText('De:')).toHaveValue('2026-01-01');
+    expect(screen.getByLabelText('Até:')).toHaveValue('2026-02-01');
+  });
+
+  it('limpa todos os filtros ao acionar o botão limpar', () => {
+    const { onFilterChange } = renderFilters();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+
+    ['busca', 'status', 'responsavelId', 'prazoInicio', 'prazoFim'].forEach(
+      (field) => expect(onFilterChange).toHaveBeenCalledWith(field, '')
+    );
+    expect(onFilterChange).toHaveBeenCalledTimes(5);
   });
 });

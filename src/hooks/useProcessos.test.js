@@ -17,18 +17,6 @@ vi.mock('@/services/processos', () => ({
 
 const responsaveis = [{ value: '3', label: 'Ana Paula' }];
 
-const createView = (index = 1, overrides = {}) => ({
-  id: `006123${index}-56.2026.8.26.0100`,
-  titulo: `Caso ${index}`,
-  cliente: `Cliente nº ${index}`,
-  status: 'Ativo',
-  tribunal: 'TJDFT',
-  area: 'Civil',
-  responsavel: 'Ana Paula',
-  prazo: '2026-10-05',
-  ...overrides,
-});
-
 const createApiProcess = (index = 1, overrides = {}) => ({
   processo_id: index,
   cnj: `006123${index}-56.2026.8.26.0100`,
@@ -68,11 +56,11 @@ describe('useProcessos', () => {
 
   it('inicia com a página entregue pelo servidor sem buscar novamente', () => {
     const { result } = renderProcessos(
-      initialPageOf([createView(1)], 7),
+      initialPageOf([createApiProcess(1)], 7),
       'Falha inicial'
     );
 
-    expect(result.current.processos).toEqual([createView(1)]);
+    expect(result.current.processos).toEqual([createApiProcess(1)]);
     expect(result.current.totalItems).toBe(7);
     expect(result.current.totalPages).toBe(2);
     expect(result.current.loadError).toBe('Falha inicial');
@@ -84,14 +72,12 @@ describe('useProcessos', () => {
     listarProcessos.mockResolvedValue(
       apiPage([createApiProcess(6)], { total: 6, page: 2 })
     );
-    const { result } = renderProcessos(initialPageOf([createView(1)], 6));
+    const { result } = renderProcessos(initialPageOf([createApiProcess(1)], 6));
 
     act(() => result.current.setCurrentPage(2));
 
     await waitFor(() => {
-      expect(result.current.processos).toEqual([
-        createView(6, { cliente: 'Não informado' }),
-      ]);
+      expect(result.current.processos).toEqual([createApiProcess(6)]);
     });
     expect(listarProcessos).toHaveBeenCalledWith(
       expect.objectContaining({ page: 2, pageSize: 5 })
@@ -101,7 +87,7 @@ describe('useProcessos', () => {
 
   it('volta à primeira página e envia o status ao trocar um filtro', async () => {
     listarProcessos.mockResolvedValue(apiPage([]));
-    const { result } = renderProcessos(initialPageOf([createView(1)], 6));
+    const { result } = renderProcessos(initialPageOf([createApiProcess(1)], 6));
 
     act(() => result.current.setCurrentPage(2));
     act(() => result.current.setFilter('status', 'Concluído'));
@@ -168,7 +154,7 @@ describe('useProcessos', () => {
 
   it('mantém os dados e exibe erro quando a recarga falha', async () => {
     listarProcessos.mockRejectedValue(new Error('Backend fora do ar'));
-    const { result } = renderProcessos(initialPageOf([createView(1)]));
+    const { result } = renderProcessos(initialPageOf([createApiProcess(1)]));
 
     act(() => result.current.reloadProcesses());
 
@@ -183,7 +169,9 @@ describe('useProcessos', () => {
     listarProcessos.mockResolvedValue(
       apiPage([createApiProcess(9)], { total: 1 })
     );
-    const { result } = renderProcessos(initialPageOf([createView(1)], 6, 2));
+    const { result } = renderProcessos(
+      initialPageOf([createApiProcess(1)], 6, 2)
+    );
 
     act(() => result.current.setCurrentPage(2));
     act(() => result.current.openCreateForm());
@@ -202,7 +190,7 @@ describe('useProcessos', () => {
   });
 
   it('edita o processo selecionado e atualiza o detalhe aberto', async () => {
-    const selected = createView(1);
+    const selected = createApiProcess(1);
     atualizarProcesso.mockResolvedValue(
       createApiProcess(1, { titulo_proc: 'Caso editado' })
     );
@@ -220,12 +208,12 @@ describe('useProcessos', () => {
       await result.current.saveProcess({ titulo: 'Caso editado' });
     });
 
-    expect(atualizarProcesso).toHaveBeenCalledWith(selected.id, {
+    expect(atualizarProcesso).toHaveBeenCalledWith(selected.processo_id, {
       titulo: 'Caso editado',
     });
     expect(result.current.detailProcess).toMatchObject({
-      id: selected.id,
-      titulo: 'Caso editado',
+      processo_id: selected.processo_id,
+      titulo_proc: 'Caso editado',
     });
     await waitFor(() => {
       expect(listarProcessos).toHaveBeenCalled();
@@ -237,16 +225,20 @@ describe('useProcessos', () => {
     listarProcessos.mockResolvedValue(
       apiPage([createApiProcess(1)], { total: 5 })
     );
-    const { result } = renderProcessos(initialPageOf([createView(6)], 6, 2));
+    const { result } = renderProcessos(
+      initialPageOf([createApiProcess(6)], 6, 2)
+    );
 
     act(() => result.current.setCurrentPage(2));
-    act(() => result.current.openDeleteModal(createView(6)));
+    act(() => result.current.openDeleteModal(createApiProcess(6)));
 
     await act(async () => {
       await result.current.deleteSelectedProcess();
     });
 
-    expect(excluirProcesso).toHaveBeenCalledWith(createView(6).id);
+    expect(excluirProcesso).toHaveBeenCalledWith(
+      createApiProcess(6).processo_id
+    );
     expect(result.current.deletingProcess).toBeNull();
     await waitFor(() => {
       expect(result.current.currentPage).toBe(1);
@@ -254,7 +246,7 @@ describe('useProcessos', () => {
   });
 
   it('preserva o processo e o modal quando a exclusão falha', async () => {
-    const process = createView(1);
+    const process = createApiProcess(1);
     excluirProcesso.mockRejectedValue(new Error('Não pode excluir'));
     const { result } = renderProcessos(initialPageOf([process]));
 
@@ -277,7 +269,7 @@ describe('useProcessos', () => {
         resolvePage = resolve;
       })
     );
-    const { result } = renderProcessos(initialPageOf([createView(1)], 6));
+    const { result } = renderProcessos(initialPageOf([createApiProcess(1)], 6));
 
     act(() => result.current.setCurrentPage(2));
     expect(result.current.isReloading).toBe(true);
@@ -294,7 +286,9 @@ describe('useProcessos', () => {
     listarProcessos.mockImplementation(
       () => new Promise((resolve, reject) => pending.push({ resolve, reject }))
     );
-    const { result } = renderProcessos(initialPageOf([createView(1)], 12));
+    const { result } = renderProcessos(
+      initialPageOf([createApiProcess(1)], 12)
+    );
 
     act(() => result.current.setCurrentPage(2));
     act(() => result.current.setCurrentPage(3));
@@ -309,7 +303,7 @@ describe('useProcessos', () => {
     });
 
     expect(result.current.loadError).toBe('');
-    expect(result.current.processos[0].id).toBe(createApiProcess(12).cnj);
+    expect(result.current.processos[0].cnj).toBe(createApiProcess(12).cnj);
   });
 
   it('não fecha o modal de exclusão enquanto a exclusão está em andamento', async () => {
@@ -320,7 +314,7 @@ describe('useProcessos', () => {
       })
     );
     listarProcessos.mockResolvedValue(apiPage([]));
-    const process = createView(1);
+    const process = createApiProcess(1);
     const { result } = renderProcessos(initialPageOf([process]));
 
     act(() => result.current.openDeleteModal(process));
@@ -338,7 +332,7 @@ describe('useProcessos', () => {
   });
 
   it('fecha o modal de exclusão quando nenhuma exclusão está em andamento', () => {
-    const process = createView(1);
+    const process = createApiProcess(1);
     const { result } = renderProcessos(initialPageOf([process]));
 
     act(() => result.current.openDeleteModal(process));
@@ -350,7 +344,7 @@ describe('useProcessos', () => {
   it('fecha o detalhe do processo quando ele é excluído', async () => {
     excluirProcesso.mockResolvedValue(undefined);
     listarProcessos.mockResolvedValue(apiPage([]));
-    const process = createView(1);
+    const process = createApiProcess(1);
     const { result } = renderProcessos(initialPageOf([process]));
 
     act(() => {
@@ -366,7 +360,7 @@ describe('useProcessos', () => {
 
   it('usa a mensagem padrão quando a listagem rejeita com um valor que não é erro', async () => {
     listarProcessos.mockRejectedValue('falha');
-    const { result } = renderProcessos(initialPageOf([createView(1)]));
+    const { result } = renderProcessos(initialPageOf([createApiProcess(1)]));
 
     act(() => result.current.reloadProcesses());
 

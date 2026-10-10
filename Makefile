@@ -23,3 +23,8 @@ local:
 	@echo "\n\n⚙️ Rodando aplicação localmente... \n"
 	docker compose down advog-web
 	npm run dev
+
+test:
+	@echo "\n\n⚙️ Rodando testes... \n"
+	npm run test --coverage
+	@echo "\n✅ Testes executados com sucesso! \n"

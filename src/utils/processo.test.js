@@ -14,17 +14,21 @@ import {
   normalizeProcessDate,
   toProcessFormData,
   toProcessPayload,
+  toProcessUpdatePayload,
 } from './processo';
 
 const formData = {
-  id: '0061234-56.2026.8.26.0100',
+  cnj: ' 0061234-56.2026.8.26.0100 ',
   titulo: '  Ação indenizatória  ',
-  cliente: '  Maria Silva ',
+  descricao: '  ',
   status: 'Ativo',
   tribunal: ' TJDFT ',
   area: ' Civil ',
-  responsavel: ' Ana Paula ',
-  prazo: '2026-10-05',
+  data_inicio: '01/09/2026',
+  data_realizado: '',
+  data_prazo: '2026-10-05',
+  cliente_id: '4',
+  funcionario_id: '3',
 };
 
 describe('utilitários de processo', () => {
@@ -86,49 +90,99 @@ describe('utilitários de processo', () => {
   });
 
   it('monta o payload de criação normalizado', () => {
-    const payload = toProcessPayload(formData);
-
-    expect(payload).toMatchObject({
-      id: formData.id,
+    expect(toProcessPayload(formData)).toEqual({
+      cnj: '0061234-56.2026.8.26.0100',
       titulo: 'Ação indenizatória',
-      cliente: 'Maria Silva',
+      descricao: null,
       status: 'Ativo',
       tribunal: 'TJDFT',
       area: 'Civil',
-      responsavel: 'Ana Paula',
-      prazo: '2026-10-05',
+      data_inicio: '2026-09-01T00:00:00',
+      data_realizado: null,
+      data_prazo: '2026-10-05T00:00:00',
+      cliente_id: 4,
+      funcionario_id: 3,
     });
-    expect(payload.diasRestantes).toEqual(expect.any(Number));
   });
 
-  it('omite o identificador no payload de edição', () => {
-    expect(toProcessPayload(formData, { includeId: false })).not.toHaveProperty(
-      'id'
-    );
+  it('envia funcionario_id nulo quando não há responsável', () => {
+    expect(
+      toProcessPayload({ ...formData, funcionario_id: '' }).funcionario_id
+    ).toBeNull();
+  });
+
+  it('omite o CNJ no payload de edição', () => {
+    expect(
+      toProcessPayload(formData, { includeCnj: false })
+    ).not.toHaveProperty('cnj');
+  });
+
+  it('inclui no payload de atualização apenas os campos alterados', () => {
+    const original = {
+      cnj: '0061234-56.2026.8.26.0100',
+      titulo: 'Ação indenizatória',
+      descricao: null,
+      status: 'Ativo',
+      tribunal: 'TJDFT',
+      area: 'Civil',
+      data_inicio: '2026-09-01T00:00:00',
+      data_realizado: null,
+      data_prazo: '2026-10-05T00:00:00',
+      cliente_id: 4,
+      funcionario_id: 3,
+    };
+
+    expect(
+      toProcessUpdatePayload(
+        { ...toProcessFormData(original), status: 'Concluído' },
+        original
+      )
+    ).toEqual({ status: 'Concluído' });
   });
 
   it('converte uma resposta da API em dados de formulário', () => {
     expect(
       toProcessFormData({
-        ...formData,
-        prazo: '05/10/2026',
+        cnj: '0061234-56.2026.8.26.0100',
+        titulo: 'Caso',
+        descricao: null,
+        status: 'Ativo',
+        tribunal: 'TJDFT',
+        area: 'Civil',
+        data_inicio: '2026-09-01T00:00:00',
+        data_realizado: null,
+        data_prazo: '05/10/2026',
+        cliente_id: 4,
+        funcionario_id: null,
       })
     ).toEqual({
-      ...formData,
-      prazo: '2026-10-05',
+      cnj: '0061234-56.2026.8.26.0100',
+      titulo: 'Caso',
+      descricao: '',
+      status: 'Ativo',
+      tribunal: 'TJDFT',
+      area: 'Civil',
+      data_inicio: '2026-09-01',
+      data_realizado: '',
+      data_prazo: '2026-10-05',
+      cliente_id: '4',
+      funcionario_id: '',
     });
   });
 
   it('fornece valores padrão para um novo processo', () => {
     expect(toProcessFormData()).toEqual({
-      id: '',
+      cnj: '',
       titulo: '',
-      cliente: '',
+      descricao: '',
       status: 'Em Análise',
       tribunal: '',
       area: '',
-      responsavel: '',
-      prazo: '',
+      data_inicio: '',
+      data_realizado: '',
+      data_prazo: '',
+      cliente_id: '',
+      funcionario_id: '',
     });
   });
 });
@@ -221,16 +275,13 @@ describe('filtros e listagem de processos', () => {
   });
 
   it('converte a página da API mantendo os metadados de paginação', () => {
-    const page = toProcessPage(
-      {
-        itens: [{ cnj: '1', titulo_proc: 'A', status: 'Ativo' }],
-        total: 6,
-        page: 2,
-        page_size: 5,
-        total_pages: 2,
-      },
-      new Map()
-    );
+    const page = toProcessPage({
+      itens: [{ cnj: '1', titulo_proc: 'A', status: 'Ativo' }],
+      total: 6,
+      page: 2,
+      page_size: 5,
+      total_pages: 2,
+    });
 
     expect(page).toMatchObject({
       total: 6,
@@ -239,7 +290,7 @@ describe('filtros e listagem de processos', () => {
       totalPages: 2,
     });
     expect(page.itens).toHaveLength(1);
-    expect(page.itens[0].titulo).toBe('A');
+    expect(page.itens[0].titulo_proc).toBe('A');
   });
 });
 
@@ -254,7 +305,7 @@ describe('nomes de responsáveis', () => {
 
 describe('página de processos com dados incompletos', () => {
   it('usa valores padrão quando a página da API vem incompleta', () => {
-    expect(toProcessPage({}, new Map())).toEqual({
+    expect(toProcessPage({})).toEqual({
       itens: [],
       total: 0,
       page: 1,
