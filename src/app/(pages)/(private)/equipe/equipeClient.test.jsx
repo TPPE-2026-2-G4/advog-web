@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { createEmptyPermission } from '@/constants/permissions';
 import EquipeClient from './equipeClient';
 import { useEquipe } from '@/hooks/useEquipe';
@@ -456,5 +457,20 @@ describe('EquipeClient', () => {
 
     expect(hookState.handleCloseDeleteRoleModal).toHaveBeenCalledOnce();
     expect(hookState.handleDeleteRole).toHaveBeenCalledOnce();
+  });
+
+  describe('Testes de SSR e useSyncExternalStore (getServerSnapshot)', () => {
+    it.each([['SSR', true]])(
+      'renderiza no %s com snapshot fallback',
+      (env, isSsr) => {
+        useEquipe.mockReturnValue(createHookState());
+        if (isSsr) {
+          const html = renderToString(
+            <EquipeClient initialData={[]} initialRoles={[]} />
+          );
+          expect(html).toContain('Gestão de Usuários e Permissões');
+        }
+      }
+    );
   });
 });

@@ -4,6 +4,7 @@
 import { useRef } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 import styles from './site.module.css';
+import { getImageUrl } from '@/utils/institucional';
 
 export default function ContentTab({
   formData,
@@ -20,7 +21,7 @@ export default function ContentTab({
     }
   };
 
-  const preview = sobreImagePreview || formData.imagemSobre;
+  const preview = sobreImagePreview || getImageUrl(formData.imagemSobre);
 
   return (
     <div className={styles.card}>

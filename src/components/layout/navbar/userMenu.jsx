@@ -3,12 +3,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, User, Settings, LogOut } from 'lucide-react';
 import styles from './navbar.module.css';
+import { getCurrentUser } from '@/utils/authSession';
+import { getInitials } from '@/utils/funcionario';
 
 export default function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
+  const [user, setUser] = useState(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setUser(getCurrentUser());
+
+    setMounted(true);
+
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -18,13 +27,30 @@ export default function UserMenu() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  if (!mounted || !user) return null;
+
+  const getShortName = (name) => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[1][0]}.`;
+  };
+
+  const userName = user.nome || user.nome_func;
+  const shortName = getShortName(userName);
+  const userInitials = getInitials(userName);
+  const userRole =
+    typeof user.cargo === 'string'
+      ? user.cargo
+      : user.cargo?.nome_cargo || user.cargo?.nome;
+  const userEmail = user.email || user.email_func;
+
   return (
     <div className={styles.userMenuContainer} ref={menuRef}>
       <button onClick={() => setIsOpen(!isOpen)} className={styles.triggerBtn}>
-        <div className={styles.avatar}>AC</div>
+        <div className={styles.avatar}>{userInitials}</div>
         <div className={styles.userInfo}>
-          <p className={styles.userName}>Alexandre C.</p>
-          <p className={styles.userRole}>Advogado(a)</p>
+          <p className={styles.userName}>{shortName}</p>
+          <p className={styles.userRole}>{userRole}</p>
         </div>
         <ChevronDown size={16} className={styles.chevron} />
       </button>
@@ -32,8 +58,8 @@ export default function UserMenu() {
       {isOpen && (
         <div className={styles.dropdown}>
           <div className={styles.dropdownHeader}>
-            <p className={styles.dropdownName}>Alexandre Carreiro</p>
-            <p className={styles.dropdownEmail}>alexandre@carreiro.adv.br</p>
+            <p className={styles.dropdownName}>{userName}</p>
+            <p className={styles.dropdownEmail}>{userEmail}</p>
           </div>
 
           <div className={styles.menuGroup}>

@@ -33,10 +33,8 @@ describe('serviço institucional', () => {
     }
   });
 
-  it('exporta DEFAULT_EQUIPE_SITE com 4 advogados visíveis', () => {
-    expect(DEFAULT_EQUIPE_SITE).toHaveLength(4);
-    expect(DEFAULT_EQUIPE_SITE[0].nome).toBe('Dr. Alexandre Carreiro');
-    expect(DEFAULT_EQUIPE_SITE[0].exibicaoInstitucional).toBe(true);
+  it('exporta DEFAULT_EQUIPE_SITE como array vazio (seed via backend)', () => {
+    expect(DEFAULT_EQUIPE_SITE).toHaveLength(0);
   });
 
   describe('buscarDadosInstitucionais', () => {

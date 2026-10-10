@@ -7,48 +7,21 @@ const apiUrl =
 
 export const DEFAULT_INSTITUCIONAL = {
   id: 1,
-  nomeEscritorio: 'Carreiro Advogados',
-  descricao: 'Tradição e excelência na defesa dos seus direitos',
-  sobreEscritorio:
-    'Fundado em 2010 por Dr. Alexandre Carreiro, o escritório nasceu com a missão de oferecer atendimento jurídico de excelência, combinando tradição e inovação tecnológica.',
+  nomeEscritorio: '',
+  descricao: '',
+  sobreEscritorio: '',
   imagemSobre: null,
-  textoAdicionalSobre:
-    'Mais de 500 casos atendidos · 15 anos de atuação · Atendimento personalizado',
-  email: 'contato@carreiro.adv.br',
-  telefone: '(61) 98765-4321',
-  endereco: 'SCLN 203, Bloco B — Brasília, DF',
+  textoAdicionalSobre: '',
+  email: '',
+  telefone: '',
+  endereco: '',
   corPrimaria: '#1B2A4A',
   corSecundaria: '#B79A63',
   logotipo: '',
   bannerHero: '',
 };
 
-export const DEFAULT_EQUIPE_SITE = [
-  {
-    funcionario_id: 1,
-    nome: 'Dr. Alexandre Carreiro',
-    cargo: 'Sócio Fundador · Direito Trabalhista e Civil',
-    exibicaoInstitucional: true,
-  },
-  {
-    funcionario_id: 2,
-    nome: 'Dra. Ana Paula Ribeiro',
-    cargo: 'Advogada Sênior · Direito Civil e Previdenciário',
-    exibicaoInstitucional: true,
-  },
-  {
-    funcionario_id: 3,
-    nome: 'Dr. Pedro Lima',
-    cargo: 'Advogado Júnior · Direito Tributário',
-    exibicaoInstitucional: true,
-  },
-  {
-    funcionario_id: 4,
-    nome: 'Dra. Mariana Costa',
-    cargo: 'Estagiária · Direito Trabalhista',
-    exibicaoInstitucional: true,
-  },
-];
+export const DEFAULT_EQUIPE_SITE = [];
 
 export async function buscarDadosInstitucionais() {
   try {
@@ -73,10 +46,14 @@ export async function salvarDadosInstitucionais(dados) {
       ...(token && { Authorization: `Bearer ${token}` }),
     };
 
+    // Remove campos de imagem do payload, pois o backend já os salva na rota de upload.
+    // Enviar a presigned URL de volta corromperia a chave no banco de dados.
+    const { imagemSobre, logotipo, bannerHero, ...dadosLimpos } = dados;
+
     const response = await fetch(`${apiUrl}/institucional`, {
       method: 'PUT',
       headers,
-      body: JSON.stringify(dados),
+      body: JSON.stringify(dadosLimpos),
     });
 
     if (!response.ok) {
