@@ -266,11 +266,9 @@ describe('FinancasClient', () => {
       />
     );
 
-    // Wait for the initial useEffect fetch (which overwrites initialData) to settle
     await waitFor(() => {
       expect(listarFinancas).toHaveBeenCalled();
     });
-    // Add small delay to let state update after the mock resolves
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     const editButtons = screen.getAllByRole('button', {
@@ -279,7 +277,6 @@ describe('FinancasClient', () => {
     fireEvent.click(editButtons[0]);
     expect(handleEditLancamento).toHaveBeenCalledOnce();
 
-    // Fechar o modal de edição antes de abrir o de exclusão
     const closeButtons = screen.getAllByRole('button', { name: 'Fechar' });
     fireEvent.click(closeButtons[0]);
 
@@ -288,7 +285,6 @@ describe('FinancasClient', () => {
     });
     fireEvent.click(deleteButtons[0]);
 
-    // O modal deve abrir. Clicar no botão de confirmação do modal
     const dialogs = screen.getAllByRole('dialog');
     const deleteDialog = dialogs[dialogs.length - 1];
     const modalConfirmButton =
@@ -317,7 +313,6 @@ describe('FinancasClient', () => {
     });
     fireEvent.click(deleteButtons[0]);
 
-    // O modal deve abrir. Clicar no botão de confirmação do modal
     const modalConfirmButton =
       screen.getByRole('dialog').querySelector('.deleteButton') ||
       screen.getAllByRole('button', { name: 'Excluir lançamento' }).pop();
@@ -413,7 +408,6 @@ describe('FinancasClient', () => {
       />
     );
 
-    // Primeiro item é Realizado, então possui botão com X ("Marcar como pendente")
     const toggleButtons = screen.getAllByRole('button', {
       name: 'Marcar como pendente',
     });

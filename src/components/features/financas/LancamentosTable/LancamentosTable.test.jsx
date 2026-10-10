@@ -133,14 +133,11 @@ describe('LancamentosTable', () => {
       />
     );
 
-    // Valor formatado em BRL
     expect(screen.getByText('R$ 5.000,00')).toBeInTheDocument();
     expect(screen.getByText('R$ 4.200,00')).toBeInTheDocument();
 
-    // Tipo
     expect(screen.getAllByText('Entrada').length).toBeGreaterThanOrEqual(2);
 
-    // Status: entrada exibe Realizado, saída exibe Realizado
     expect(screen.getAllByText('Realizado').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Realizado').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText('Pendente').length).toBeGreaterThanOrEqual(2);
@@ -190,7 +187,7 @@ describe('LancamentosTable', () => {
       expect.objectContaining({ categoria: 'Honorários' })
     );
 
-    fireEvent.change(selectCategoria, { target: { value: '' } }); // reset
+    fireEvent.change(selectCategoria, { target: { value: '' } });
 
     fireEvent.change(selectStatus, { target: { value: 'pendente' } });
     expect(handleFilter).toHaveBeenCalledWith(
@@ -239,7 +236,6 @@ describe('LancamentosTable', () => {
     fireEvent.change(selectStatus, { target: { value: 'pendente' } });
     fireEvent.change(inputDe, { target: { value: '2026-08-15' } });
 
-    // Clear mocks before pressing clear to check exactly the last call
     handleFilter.mockClear();
 
     fireEvent.click(clearBtn);
