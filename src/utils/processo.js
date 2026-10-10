@@ -7,6 +7,14 @@ export const PROCESS_STATUS = Object.freeze([
 
 export const PROCESS_PAGE_SIZE = 5;
 
+export const DEFAULT_PROCESS_PAGE = {
+  itens: [],
+  total: 0,
+  page: 1,
+  pageSize: PROCESS_PAGE_SIZE,
+  totalPages: 1,
+};
+
 export const CNJ_PATTERN = '^\\d{7}-\\d{2}\\.\\d{4}\\.\\d\\.\\d{2}\\.\\d{4}$';
 export const CNJ_REGEX = new RegExp(CNJ_PATTERN);
 const CNJ_DIGIT_LIMIT = 20;
