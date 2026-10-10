@@ -1,4 +1,12 @@
-import { buildProcessQuery } from '@/utils/processo';
+import {
+  buildProcessQuery,
+  PROCESS_PAGE_SIZE,
+  DEFAULT_PROCESS_PAGE,
+  toProcessPage,
+  toResponsavelNames,
+  toResponsavelOptions,
+} from '@/utils/processo';
+import { listarFuncionarios } from '@/services/funcionarios';
 import { API_URL } from './api';
 
 const validationFieldLabels = {
@@ -101,4 +109,27 @@ export function excluirProcesso(processoId) {
     { method: 'DELETE' },
     'Não foi possível excluir o processo.'
   );
+}
+
+export async function getProcessosData() {
+  try {
+    const [page, funcionarios] = await Promise.all([
+      listarProcessos({ page: 1, pageSize: PROCESS_PAGE_SIZE }),
+      listarFuncionarios(),
+    ]);
+
+    const responsaveis = toResponsavelOptions(funcionarios);
+    const initialPage = toProcessPage(page, toResponsavelNames(responsaveis));
+
+    return { initialPage, responsaveis, initialError: '' };
+  } catch (error) {
+    return {
+      initialPage: DEFAULT_PROCESS_PAGE,
+      responsaveis: [],
+      initialError:
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar os processos.',
+    };
+  }
 }
