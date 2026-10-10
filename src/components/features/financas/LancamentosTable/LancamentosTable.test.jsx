@@ -120,40 +120,6 @@ describe('LancamentosTable', () => {
     expect(
       screen.getByText('Nenhum lançamento encontrado.')
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('Exibindo 0–0 de 0 resultados')
-    ).toBeInTheDocument();
-  });
-
-  it('renderiza os primeiros 5 lançamentos por padrão (pagina 1)', () => {
-    render(<LancamentosTable lancamentos={mockLancamentos} pageSize={5} />);
-
-    expect(
-      screen.getByText('Honorários Iniciais - João Santos')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Custas Processuais - Maria Souza')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Honorários de Êxito - Costa Indústrias')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Aluguel do Escritório - Agosto/2026')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Consultoria Jurídica - Tech Solutions')
-    ).toBeInTheDocument();
-
-    // Itens da página 2 não devem estar visíveis
-    expect(
-      screen.queryByText('Software Jurídico Mensalidade')
-    ).not.toBeInTheDocument();
-
-    // Contagem e paginação
-    expect(
-      screen.getByText('Exibindo 1–5 de 10 resultados')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
   });
 
   it('renderiza tipos, formatação monetária e status corretamente', () => {

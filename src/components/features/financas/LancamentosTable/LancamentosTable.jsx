@@ -229,14 +229,14 @@ export default function LancamentosTable({
             </tr>
           </thead>
           <tbody>
-            {paginatedLancamentos.length === 0 ? (
+            {lancamentos.length === 0 ? (
               <tr>
                 <td colSpan={7} className={styles.emptyState}>
                   Nenhum lançamento encontrado.
                 </td>
               </tr>
             ) : (
-              paginatedLancamentos.map((item) => {
+              lancamentos.map((item) => {
                 const isEntrada = item.tipo?.toLowerCase() === 'entrada';
                 const statusLower = item.status?.toLowerCase();
                 const isPago = isStatusConcluido(item.status);
