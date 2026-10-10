@@ -5,7 +5,10 @@ import {
   listarCategorias,
   obterResumoFinancas,
   listarFinancas,
+  mudarStatusLancamento,
 } from '@/services/financas';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import FinancasClient from './financasClient';
 
 const mockLancamentos = [
@@ -153,6 +156,7 @@ vi.mock('@/services/financas', () => ({
   atualizarFinancas: vi.fn(),
   excluirFinancas: vi.fn(),
   atualizarFinancas: vi.fn(),
+  mudarStatusLancamento: vi.fn(),
   listarCategorias: vi
     .fn()
     .mockResolvedValue([{ categoria_id: 1, nome: 'Honorários' }]),
@@ -196,10 +200,12 @@ describe('FinancasClient', () => {
     excluirFinancas.mockImplementation(async (id) => {
       currentLancamentos = currentLancamentos.filter((l) => l.id !== id);
     });
-    atualizarFinancas.mockImplementation(async (id, status) => ({
-      id,
-      status,
-    }));
+    mudarStatusLancamento.mockImplementation(async (id) => {
+      const item = currentLancamentos.find((l) => l.id === id);
+      const novoStatus =
+        item?.status === 'realizado' ? 'pendente' : 'realizado';
+      return { id, status: novoStatus };
+    });
   });
 
   it('renderiza o título e subtítulo corretamente', () => {
@@ -414,7 +420,7 @@ describe('FinancasClient', () => {
     fireEvent.click(toggleButtons[0]);
 
     await waitFor(() => {
-      expect(atualizarFinancas).toHaveBeenCalled();
+      expect(mudarStatusLancamento).toHaveBeenCalled();
       expect(handleToggleStatus).toHaveBeenCalledOnce();
     });
   });
@@ -435,7 +441,7 @@ describe('FinancasClient', () => {
   });
 
   it('exibe mensagem de erro na tela caso a alteração de status falhe', async () => {
-    atualizarFinancas.mockRejectedValueOnce(
+    mudarStatusLancamento.mockRejectedValueOnce(
       new Error('Erro ao alterar status.')
     );
     render(<FinancasClient initialData={mockLancamentos} />);

@@ -1,3 +1,6 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useFinancas } from './useFinancas';
 import {
   atualizarFinancas,
   criarFinancas,
@@ -7,11 +10,14 @@ import {
   excluirCategoria,
   obterResumoFinancas,
   listarFinancas,
+  mudarStatusLancamento,
 } from '@/services/financas';
 
 vi.mock('@/services/financas', () => ({
   criarFinancas: vi.fn(),
   excluirFinancas: vi.fn(),
+  atualizarFinancas: vi.fn(),
+  mudarStatusLancamento: vi.fn(),
   listarCategorias: vi
     .fn()
     .mockResolvedValue([{ categoria_id: 1, nome: 'Honorários' }]),
@@ -56,9 +62,9 @@ describe('useFinancas', () => {
       id,
     }));
     excluirFinancas.mockImplementation(async () => {});
-    atualizarFinancas.mockImplementation(async (id, status) => ({
+    mudarStatusLancamento.mockImplementation(async (id) => ({
       id,
-      status,
+      status: 'realizado', // default mock behavior for status
     }));
   });
 
@@ -238,7 +244,7 @@ describe('useFinancas', () => {
     await act(async () => {
       await result.current.handleToggleStatus(pendenteEntrada);
     });
-    expect(atualizarFinancas).toHaveBeenCalledWith(3, 'realizado');
+    expect(mudarStatusLancamento).toHaveBeenCalledWith(3);
     expect(result.current.lancamentos[0].status).toBe('realizado');
     expect(onToggleStatus).toHaveBeenCalledWith(
       expect.objectContaining({ id: 3, status: 'realizado' })
@@ -247,7 +253,7 @@ describe('useFinancas', () => {
     await act(async () => {
       await result.current.handleToggleStatus(pendenteSaida);
     });
-    expect(atualizarFinancas).toHaveBeenCalledWith(4, 'realizado');
+    expect(mudarStatusLancamento).toHaveBeenCalledWith(4);
     expect(result.current.lancamentos[1].status).toBe('realizado');
     expect(onToggleStatus).toHaveBeenCalledWith(
       expect.objectContaining({ id: 4, status: 'realizado' })
@@ -255,7 +261,7 @@ describe('useFinancas', () => {
   });
 
   it('armazena statusError quando a alternância de status na API falha', async () => {
-    atualizarFinancas.mockRejectedValueOnce(new Error('Falha no status'));
+    mudarStatusLancamento.mockRejectedValueOnce(new Error('Falha no status'));
     const { result } = renderHook(() => useFinancas(mockData));
 
     await act(async () => {
@@ -275,13 +281,17 @@ describe('useFinancas', () => {
       status: 'realizado',
       valor: 200,
     };
+    mudarStatusLancamento.mockResolvedValueOnce({
+      ...recebidoVencido,
+      status: 'atrasado',
+    });
     const { result } = renderHook(() => useFinancas([recebidoVencido]));
 
     await act(async () => {
       await result.current.handleToggleStatus(recebidoVencido);
     });
 
-    expect(atualizarFinancas).toHaveBeenCalledWith(4, 'atrasado');
+    expect(mudarStatusLancamento).toHaveBeenCalledWith(4);
     expect(result.current.lancamentos[0].status).toBe('atrasado');
   });
 
@@ -293,13 +303,17 @@ describe('useFinancas', () => {
       status: 'realizado',
       valor: 300,
     };
+    mudarStatusLancamento.mockResolvedValueOnce({
+      ...realizadoFuturo,
+      status: 'pendente',
+    });
     const { result } = renderHook(() => useFinancas([realizadoFuturo]));
 
     await act(async () => {
       await result.current.handleToggleStatus(realizadoFuturo);
     });
 
-    expect(atualizarFinancas).toHaveBeenCalledWith(5, 'pendente');
+    expect(mudarStatusLancamento).toHaveBeenCalledWith(5);
     expect(result.current.lancamentos[0].status).toBe('pendente');
   });
   it('cobre ramificações de fallback em manipulações (branches)', async () => {
@@ -345,17 +359,212 @@ describe('useFinancas', () => {
     expect(result.current.saveError).toBe('Erro ao atualizar lançamento.');
 
     // 6. response null no toggle e error fallback
-    atualizarFinancas.mockResolvedValueOnce(null);
+    mudarStatusLancamento.mockResolvedValueOnce(null);
     await act(async () => {
       await result.current.handleToggleStatus(mockData[0]);
     });
 
-    atualizarFinancas.mockRejectedValueOnce('String de erro toggle');
+    mudarStatusLancamento.mockRejectedValueOnce('String de erro toggle');
     await act(async () => {
       try {
         await result.current.handleToggleStatus(mockData[0]);
       } catch (e) {}
     });
     expect(result.current.statusError).toBe('Erro ao atualizar status.');
+  });
+
+  describe.each([
+    [
+      'com dados de itens, paginação, resumo e categorias novas',
+      {
+        filters: { page: 2, page_size: 10 },
+        mockListarFinancas: {
+          itens: [{ id: 10, titulo: 'Teste Filter' }],
+          page: 2,
+          page_size: 10,
+          total: 1,
+          total_pages: 1,
+        },
+        mockResumo: {
+          realizado: { total_entradas: 100, total_saidas: 50 },
+          pendente: { total_entradas: 0, total_saidas: 0 },
+          atrasado: { total_entradas: 0, total_saidas: 0 },
+        },
+        mockCategorias: [{ categoria_id: 3, nome: 'Cat 3' }],
+        expectedPagination: { page: 2, pageSize: 10, total: 1, totalPages: 1 },
+      },
+    ],
+    [
+      'com dados em array simples e sem novas cats/resumo',
+      {
+        filters: {},
+        mockListarFinancas: [{ id: 11, titulo: 'Array Filter' }],
+        mockResumo: null,
+        mockCategorias: null,
+        expectedPagination: { page: 1, pageSize: 10, total: 1, totalPages: 1 },
+      },
+    ],
+    [
+      'quando ocorre um erro na requisição',
+      {
+        filters: { fail: true },
+        mockListarFinancas: null,
+        mockResumo: null,
+        mockCategorias: null,
+        expectedPagination: null,
+      },
+    ],
+  ])('handleFilterLancamentos: %s', (desc, scenario) => {
+    afterEach(() => {
+      listarCategorias.mockResolvedValue([
+        { categoria_id: 1, nome: 'Honorários' },
+      ]);
+    });
+
+    it('deve atualizar o estado de acordo', async () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      if (scenario.filters.fail) {
+        listarFinancas.mockRejectedValueOnce(new Error('Erro simulado'));
+      } else {
+        listarFinancas.mockResolvedValueOnce(scenario.mockListarFinancas);
+        obterResumoFinancas.mockResolvedValue(scenario.mockResumo);
+        if (scenario.mockCategorias) {
+          listarCategorias.mockResolvedValue(scenario.mockCategorias);
+        } else {
+          listarCategorias.mockResolvedValueOnce([
+            { categoria_id: 1, nome: 'Honorários' },
+          ]); // Initial fetch
+          listarCategorias.mockResolvedValueOnce(null); // Second fetch (handleFilter)
+        }
+      }
+
+      const { result } = renderHook(() => useFinancas());
+
+      await act(async () => {
+        await result.current.handleFilterLancamentos(scenario.filters);
+      });
+
+      if (scenario.filters.fail) {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'Erro ao filtrar lançamentos:',
+          expect.any(Error)
+        );
+      } else {
+        if (scenario.mockListarFinancas.itens) {
+          expect(result.current.lancamentos).toEqual(
+            scenario.mockListarFinancas.itens
+          );
+        } else {
+          expect(result.current.lancamentos).toEqual(
+            scenario.mockListarFinancas
+          );
+        }
+        if (scenario.mockCategorias) {
+          expect(result.current.categorias).toEqual(scenario.mockCategorias);
+        }
+      }
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('handleUpdateLancamento category removal', () => {
+    it('deve excluir a categoria antiga se não houver outros lançamentos utilizando-a', async () => {
+      const initData = [
+        {
+          id: 1,
+          categoria_id: 99,
+          categoria: 'Cat Antiga',
+          titulo: 'Lancamento 1',
+        },
+        {
+          id: 2,
+          categoria_id: 100,
+          categoria: 'Outra Cat',
+          titulo: 'Lancamento 2',
+        },
+      ];
+      const { result } = renderHook(() => useFinancas(initData));
+
+      const updatedLancamento = {
+        id: 1,
+        categoria_id: 101,
+        categoria: 'Cat Nova',
+        titulo: 'Lancamento 1',
+      };
+      atualizarFinancas.mockResolvedValueOnce(updatedLancamento);
+
+      act(() => {
+        result.current.handleEditLancamento(initData[0]);
+      });
+
+      await act(async () => {
+        await result.current.handleUpdateLancamento(updatedLancamento);
+      });
+
+      expect(excluirCategoria).toHaveBeenCalledWith(99);
+    });
+  });
+
+  describe.each([
+    [
+      'mapeia a categoria_id para o nome correto da categoria',
+      {
+        initData: [
+          { id: 1, categoria_id: 10, categoria: 'Outros', titulo: 'Teste' },
+        ],
+        mockCategorias: [{ categoria_id: 10, nome_categoria: 'Nova Cat' }],
+        expectedCategoria: 'Nova Cat',
+      },
+    ],
+    [
+      'mantém a categoria original se não houver match',
+      {
+        initData: [
+          { id: 2, categoria_id: 99, categoria: 'Outros', titulo: 'Teste 2' },
+        ],
+        mockCategorias: [{ categoria_id: 10, nome_categoria: 'Nova Cat' }],
+        expectedCategoria: 'Outros',
+      },
+    ],
+  ])('lancamentosMapeados: %s', (desc, scenario) => {
+    afterEach(() => {
+      listarCategorias.mockResolvedValue([
+        { categoria_id: 1, nome: 'Honorários' },
+      ]);
+    });
+
+    it('deve formatar corretamente', async () => {
+      listarCategorias.mockResolvedValueOnce(scenario.mockCategorias);
+      const { result } = renderHook(() => useFinancas(scenario.initData));
+
+      // We don't have waitFor from testing-library imported in this file.
+      // But act will flush promises if there are state updates (useEffect setCategorias).
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      expect(result.current.lancamentos[0].categoria).toBe(
+        scenario.expectedCategoria
+      );
+    });
+  });
+
+  describe('handleDeleteLancamento category removal', () => {
+    it('deve excluir a categoria se for o último lançamento daquela categoria', async () => {
+      const initData = [
+        { id: 1, categoria_id: 50 },
+        { id: 2, categoria_id: 51 },
+      ];
+      const { result } = renderHook(() => useFinancas(initData));
+      excluirFinancas.mockResolvedValueOnce(true);
+
+      await act(async () => {
+        await result.current.handleDeleteLancamento(initData[0]);
+      });
+
+      expect(excluirCategoria).toHaveBeenCalledWith(50);
+    });
   });
 });

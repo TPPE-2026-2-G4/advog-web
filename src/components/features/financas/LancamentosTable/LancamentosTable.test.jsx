@@ -191,7 +191,7 @@ describe('LancamentosTable', () => {
 
     fireEvent.change(selectStatus, { target: { value: 'pendente' } });
     expect(handleFilter).toHaveBeenCalledWith(
-      expect.objectContaining({ situacao: 'Previsto' })
+      expect.objectContaining({ situacao: 'Pendente' })
     );
   });
 
@@ -320,12 +320,11 @@ describe('LancamentosTable', () => {
       />
     );
 
-    const checkEntrada = screen.getByRole('button', {
-      name: 'Marcar como recebido',
-    });
-    const checkSaida = screen.getByRole('button', {
+    const checkButtons = screen.getAllByRole('button', {
       name: 'Marcar como realizado',
     });
+    const checkEntrada = checkButtons[0];
+    const checkSaida = checkButtons[1];
     expect(checkEntrada).toBeInTheDocument();
     expect(checkSaida).toBeInTheDocument();
 

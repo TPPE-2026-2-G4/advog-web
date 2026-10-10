@@ -345,13 +345,12 @@ describe('serviço de finanças', () => {
       expect(atualizado.id).toBe(1);
       expect(atualizado.status).toBe('realizado');
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/lancamentos/1/status',
+        'http://localhost:8000/lancamentos/1/alternar-status',
         {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ status: 'Realizado' }),
         }
       );
     });
