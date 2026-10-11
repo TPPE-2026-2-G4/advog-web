@@ -29,6 +29,7 @@ describe('serviço de funcionários', () => {
     vi.restoreAllMocks();
     vi.stubGlobal('fetch', vi.fn());
     sessionStorage.clear();
+    localStorage.clear();
   });
 
   describe('listarFuncionarios', () => {
@@ -67,6 +68,19 @@ describe('serviço de funcionários', () => {
   });
 
   describe('criarFuncionario', () => {
+    beforeEach(() => {
+      sessionStorage.setItem('access_token', 'token-admin');
+    });
+
+    it('não envia a requisição quando não há token de autenticação', async () => {
+      sessionStorage.clear();
+
+      await expect(criarFuncionario({})).rejects.toThrow(
+        'Sessão expirada. Faça login novamente.'
+      );
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
     it('envia nome, e-mail e cargo por POST e retorna o funcionário criado', async () => {
       const dados = {
         nome: 'Ana Paula Ribeiro',
@@ -79,7 +93,10 @@ describe('serviço de funcionários', () => {
       await expect(criarFuncionario(dados)).resolves.toEqual(funcionario);
       expect(fetch).toHaveBeenCalledWith('http://localhost:8000/funcionarios', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer token-admin',
+        },
         body: JSON.stringify(dados),
       });
     });
