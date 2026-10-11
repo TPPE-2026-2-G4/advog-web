@@ -3,6 +3,7 @@
 import { CheckCircle, Send } from 'lucide-react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import { useSolicitarAtendimento } from '@/hooks/useSolicitarAtendimento';
+import { LIMITES_SOLICITACAO } from '@/services/solicitacoes';
 import styles from './SolicitarAtendimento.module.css';
 
 const fields = [
@@ -56,21 +57,21 @@ export default function SolicitarAtendimento() {
       <div className={styles.container}>
         <header className={styles.header}>
           <h1 id="atendimento-title">Solicitar Atendimento</h1>
-          <p>Preencha o formulário abaixo para descrever sua demanda.</p>
+          <p>Preencha o formulário abaixo e nossa equipe entrará em contato.</p>
         </header>
 
         {status === 'confirmacao' ? (
           <div className={`${styles.card} ${styles.confirmation}`}>
-            <div role="status" aria-label="Simulação concluída">
+            <div role="status" aria-label="Solicitação enviada">
               <CheckCircle
                 className={styles.successIcon}
                 size={48}
                 aria-hidden="true"
               />
-              <h2>Simulação concluída</h2>
+              <h2>Solicitação enviada!</h2>
               <p>
-                Simulação concluída. Nenhuma solicitação foi enviada ao
-                escritório.
+                Recebemos sua solicitação com sucesso. Nossa equipe entrará em
+                contato.
               </p>
             </div>
             <button type="button" className={styles.button} onClick={resetForm}>
@@ -85,10 +86,6 @@ export default function SolicitarAtendimento() {
             noValidate
             aria-busy={isSubmitting}
           >
-            <p id="atendimento-demo" className={styles.notice}>
-              Modo de demonstração: os dados preenchidos não serão enviados ao
-              escritório.
-            </p>
             <div className={styles.fields}>
               {fields.map(
                 ({ name, label, type, autoComplete, placeholder }) => {
@@ -102,6 +99,7 @@ export default function SolicitarAtendimento() {
                     value: formData[name],
                     onChange: handleChange,
                     required: true,
+                    ...LIMITES_SOLICITACAO[name],
                     disabled: isSubmitting,
                     'aria-invalid': Boolean(errors[name]),
                     'aria-describedby': errors[name]
@@ -137,7 +135,6 @@ export default function SolicitarAtendimento() {
                 type="submit"
                 className={styles.button}
                 disabled={isSubmitting}
-                aria-describedby="atendimento-demo"
               >
                 {isSubmitting ? (
                   <LoadingDots />

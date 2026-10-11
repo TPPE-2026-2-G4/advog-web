@@ -9,7 +9,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SolicitarAtendimento from './SolicitarAtendimento';
 import { enviarSolicitacaoServico } from '@/services/solicitacoes';
 
-vi.mock('@/services/solicitacoes', () => ({
+vi.mock('@/services/solicitacoes', async (importOriginal) => ({
+  ...(await importOriginal()),
   enviarSolicitacaoServico: vi.fn(),
 }));
 
@@ -35,10 +36,10 @@ function enviar() {
 describe('SolicitarAtendimento', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    enviarSolicitacaoServico.mockResolvedValue({ simulado: true });
+    enviarSolicitacaoServico.mockResolvedValue({ cliente_id: 21, etapa_id: 1 });
   });
 
-  it('renderiza seção, campos obrigatórios e aviso de demonstração', () => {
+  it('renderiza seção, campos obrigatórios e limites do backend', () => {
     render(<SolicitarAtendimento />);
 
     expect(
@@ -61,10 +62,21 @@ describe('SolicitarAtendimento', () => {
       'autocomplete',
       'tel'
     );
-    expect(
-      screen.getByRole('button', { name: 'Enviar Solicitação' })
-    ).toHaveAccessibleDescription(
-      'Modo de demonstração: os dados preenchidos não serão enviados ao escritório.'
+    expect(screen.getByLabelText('Nome completo')).toHaveAttribute(
+      'minlength',
+      '3'
+    );
+    expect(screen.getByLabelText('Nome completo')).toHaveAttribute(
+      'maxlength',
+      '100'
+    );
+    expect(screen.getByLabelText('Descreva sua demanda')).toHaveAttribute(
+      'minlength',
+      '10'
+    );
+    expect(screen.getByLabelText('Descreva sua demanda')).toHaveAttribute(
+      'maxlength',
+      '2000'
     );
   });
 
@@ -98,25 +110,25 @@ describe('SolicitarAtendimento', () => {
     expect(email).toHaveAttribute('aria-invalid', 'false');
     enviar();
     expect(
-      await screen.findByRole('status', { name: 'Simulação concluída' })
-    ).toHaveTextContent('Simulação concluída.');
+      await screen.findByRole('status', { name: 'Solicitação enviada' })
+    ).toHaveTextContent('Recebemos sua solicitação com sucesso.');
   });
 
-  it('envia pelo formulário, anuncia a simulação e reinicia com foco no nome', async () => {
+  it('envia pelo formulário, confirma o recebimento e reinicia com foco no nome', async () => {
     render(<SolicitarAtendimento />);
     preencher();
     const email = screen.getByLabelText('Email');
     fireEvent.submit(email.form);
 
     expect(
-      await screen.findByRole('status', { name: 'Simulação concluída' })
+      await screen.findByRole('status', { name: 'Solicitação enviada' })
     ).toHaveTextContent(
-      'Simulação concluída. Nenhuma solicitação foi enviada ao escritório.'
+      'Recebemos sua solicitação com sucesso. Nossa equipe entrará em contato.'
     );
     expect(enviarSolicitacaoServico).toHaveBeenCalledWith({
       nome: values['Nome completo'],
       email: values.Email,
-      telefone: values.Telefone,
+      telefone: '61999999999',
       descricao: values['Descreva sua demanda'],
     });
     expect(screen.queryByLabelText('Nome completo')).not.toBeInTheDocument();
@@ -157,22 +169,22 @@ describe('SolicitarAtendimento', () => {
     ).toBeDisabled();
     fireEvent.submit(form);
     expect(enviarSolicitacaoServico).toHaveBeenCalledOnce();
-    await act(async () => resolve({ simulado: true }));
+    await act(async () => resolve({ cliente_id: 21, etapa_id: 1 }));
     expect(
-      screen.getByRole('status', { name: 'Simulação concluída' })
-    ).toHaveTextContent('Simulação concluída.');
+      screen.getByRole('status', { name: 'Solicitação enviada' })
+    ).toHaveTextContent('Recebemos sua solicitação com sucesso.');
   });
 
   it('anuncia falha, preserva os dados e permite tentar novamente', async () => {
     enviarSolicitacaoServico.mockRejectedValueOnce(
-      new Error('Falha na simulação.')
+      new Error('Falha no envio.')
     );
     render(<SolicitarAtendimento />);
     preencher();
     enviar();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Falha na simulação.'
+      'Falha no envio.'
     );
     for (const [label, value] of Object.entries(values)) {
       expect(screen.getByLabelText(label)).toHaveValue(value);
@@ -182,7 +194,7 @@ describe('SolicitarAtendimento', () => {
     ).toBeEnabled();
     enviar();
     expect(
-      await screen.findByRole('status', { name: 'Simulação concluída' })
-    ).toHaveTextContent('Simulação concluída.');
+      await screen.findByRole('status', { name: 'Solicitação enviada' })
+    ).toHaveTextContent('Recebemos sua solicitação com sucesso.');
   });
 });

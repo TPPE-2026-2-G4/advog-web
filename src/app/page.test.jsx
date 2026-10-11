@@ -21,9 +21,7 @@ describe('Home', () => {
       screen.getByRole('region', { name: 'Solicitar Atendimento' })
     );
     expect(
-      screen.getByText(
-        'Modo de demonstração: os dados preenchidos não serão enviados ao escritório.'
-      )
-    ).toBeInTheDocument();
+      screen.getByRole('button', { name: 'Enviar Solicitação' })
+    ).toBeEnabled();
   });
 });

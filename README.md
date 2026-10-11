@@ -10,16 +10,6 @@ O frontend é construído com [Next.js](https://nextjs.org/) (App Router), [Reac
 
 A aplicação publicada (versão mais recente da branch `main`) está disponível no [Vercel](https://advog-web.vercel.app/).
 
----
-
-## Solicitar Atendimento (US21)
-
-A rota pública `/` apresenta o formulário com nome completo, email, telefone e descrição da demanda. Todos os campos são obrigatórios. O envio é uma **simulação**: nenhum pedido é enviado ao escritório, e os dados não são persistidos.
-
-O componente `SolicitarAtendimento` apresenta a interface, o hook `useSolicitarAtendimento` controla validação e estados, e `src/services/solicitacoes.js` concentra o envio. Quando o contrato público do backend estiver definido, substituir a simulação de `enviarSolicitacaoServico({ nome, email, telefone, descricao })` pela integração HTTP e ajustar os avisos e a confirmação da interface para refletir o envio real. O endpoint autenticado de cadastro de clientes não atende esse fluxo público.
-
----
-
 ## Como rodar o projeto localmente
 
 Se você é desenvolvedor da equipe e precisa desenvolver novas funcionalidades ou corrigir bugs, siga os passos abaixo para preparar o seu ambiente local de desenvolvimento.
