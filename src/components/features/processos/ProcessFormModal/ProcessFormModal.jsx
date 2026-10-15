@@ -279,8 +279,8 @@ function ProcessFormDialog({
               <option value="">Sem responsável</option>
               {funcionarios.map((funcionario) => (
                 <option
-                  key={funcionario.funcionario_id}
-                  value={funcionario.funcionario_id}
+                  key={funcionario.funcionario_id || funcionario.id}
+                  value={funcionario.funcionario_id || funcionario.id}
                 >
                   {funcionario.nome}
                 </option>

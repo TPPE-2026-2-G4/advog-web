@@ -2,23 +2,23 @@
 
 import { Plus, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import DeleteProcessModal from '@/components/features/processos/DeleteProcessModal/DeleteProcessModal';
-import ProcessDetailsModal from '@/components/features/processos/ProcessDetailsModal/ProcessDetailsModal';
-import ProcessFormModal from '@/components/features/processos/ProcessFormModal/ProcessFormModal';
-import ProcessTable from '@/components/features/processos/ProcessTable/ProcessTable';
-import { useProcessos } from '@/hooks/useProcessos';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { getCurrentUser } from '@/utils/authSession';
+const emptySubscribe = () => () => {};
+import DeleteProcessModal from '@/components/features/processos/DeleteProcessModal/DeleteProcessModal';
+import ProcessDetailsModal from '@/components/features/processos/ProcessDetailsModal/ProcessDetailsModal';
+import ProcessFilters from '@/components/features/processos/ProcessFilters/ProcessFilters';
+import ProcessFormModal from '@/components/features/processos/ProcessFormModal/ProcessFormModal';
+import ProcessTable from '@/components/features/processos/ProcessTable/ProcessTable';
+import { useProcessos } from '@/hooks/useProcessos';
+import { toResponsavelOptions } from '@/utils/processo';
 import styles from './processos.module.css';
 
-const emptySubscribe = () => () => {};
-
 export default function ProcessosClient({
-  initialData = [],
+  initialPage,
   initialError = '',
-  initialClientes = [],
-  initialFuncionarios = [],
+  responsaveis = [],
 }) {
   const permissionsJson = useSyncExternalStore(
     emptySubscribe,
@@ -30,24 +30,30 @@ export default function ProcessosClient({
   const canCreate = permissions.criar_processos === true;
   const canEdit = permissions.editar_processos === true;
   const canDelete = permissions.excluir_processos === true;
-  const [clientes, setClientes] = useState(initialClientes);
-  const [funcionarios, setFuncionarios] = useState(initialFuncionarios);
+
+  const [clientes, setClientes] = useState([]);
+  const [funcionarios, setFuncionarios] = useState([]);
   const [referenceError, setReferenceError] = useState('');
 
   const {
-    visibleProcesses,
+    processos,
     totalItems,
+    pageSize,
     loadError,
     isReloading,
     currentPage,
     totalPages,
+    filters,
+    dateRangeError,
+    hasActiveFilters,
     isFormOpen,
     editingProcess,
     detailProcess,
     deletingProcess,
     isDeleting,
     deleteError,
-    changePage,
+    setFilter,
+    setCurrentPage,
     setDetailProcess,
     reloadProcesses,
     openCreateForm,
@@ -57,12 +63,11 @@ export default function ProcessosClient({
     openDeleteModal,
     closeDeleteModal,
     deleteSelectedProcess,
-  } = useProcessos(initialData, initialError);
+  } = useProcessos({ initialPage, initialError, responsaveis });
 
   useEffect(() => {
     if (!canView) return;
 
-    reloadProcesses();
     Promise.all([listarClientes(), listarFuncionarios()])
       .then(([receivedClients, receivedEmployees]) => {
         setClientes(receivedClients);
@@ -76,29 +81,54 @@ export default function ProcessosClient({
             : 'Não foi possível carregar clientes e responsáveis.'
         );
       });
-    // A permissão é lida uma vez ao hidratar a sessão do navegador.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canView]);
 
   const clientNames = useMemo(
-    () => new Map(clientes.map((item) => [item.cliente_id, item.nome])),
+    () =>
+      new Map(clientes.map((item) => [item.cliente_id || item.id, item.nome])),
     [clientes]
   );
   const employeeNames = useMemo(
-    () => new Map(funcionarios.map((item) => [item.funcionario_id, item.nome])),
+    () =>
+      new Map(
+        funcionarios.map((item) => [item.funcionario_id || item.id, item.nome])
+      ),
     [funcionarios]
   );
-  const enrichProcess = (process) =>
-    process && {
+
+  const responsaveisOptions = useMemo(
+    () => toResponsavelOptions(funcionarios),
+    [funcionarios]
+  );
+
+  const enrichProcess = (process) => {
+    if (!process) return null;
+
+    // Normalize IDs and fields that might have different names in the API
+    const procId = process.processo_id || process.id || process.cnj;
+    const respId = process.responsavel_id || process.funcionario_id;
+    const clienteId = process.cliente_id;
+    const title = process.titulo_proc || process.titulo;
+    const desc = process.descricao_proc || process.descricao;
+
+    return {
       ...process,
+      processo_id: procId,
+      id: procId,
+      titulo: title,
+      descricao: desc,
+      funcionario_id: respId,
+      responsavel_id: respId,
       cliente:
-        clientNames.get(process.cliente_id) ?? `Cliente #${process.cliente_id}`,
-      responsavel: process.funcionario_id
-        ? (employeeNames.get(process.funcionario_id) ??
-          `Responsável #${process.funcionario_id}`)
+        clientNames.get(clienteId) ??
+        (clienteId ? `Cliente #${clienteId}` : 'Sem cliente'),
+      responsavel: respId
+        ? (employeeNames.get(respId) ?? `Responsável #${respId}`)
         : 'Sem responsável',
     };
-  const enrichedProcesses = visibleProcesses.map(enrichProcess);
+  };
+
+  const enrichedProcesses = processos.map(enrichProcess);
   const enrichedDetails = enrichProcess(detailProcess);
 
   if (!canView) {
@@ -130,20 +160,19 @@ export default function ProcessosClient({
             type="button"
             className={styles.addButton}
             onClick={openCreateForm}
-            aria-haspopup="dialog"
-            aria-controls="process-form-dialog"
           >
-            <Plus size={16} strokeWidth={2.25} aria-hidden="true" />
+            <Plus size={18} aria-hidden="true" />
             Novo Processo
           </button>
         )}
       </div>
 
-      {referenceError && (
-        <p className={styles.referenceError} role="alert">
-          {referenceError}
-        </p>
-      )}
+      <ProcessFilters
+        filters={filters}
+        responsaveis={responsaveisOptions}
+        dateRangeError={dateRangeError}
+        onFilterChange={setFilter}
+      />
 
       {loadError ? (
         <div className={styles.errorState} role="alert">
@@ -154,7 +183,7 @@ export default function ProcessosClient({
           <button
             type="button"
             className={styles.retryButton}
-            onClick={() => reloadProcesses()}
+            onClick={reloadProcesses}
             disabled={isReloading}
           >
             <RefreshCw
@@ -168,20 +197,22 @@ export default function ProcessosClient({
       ) : (
         <ProcessTable
           processes={enrichedProcesses}
+          canEdit={canEdit}
+          canDelete={canDelete}
           totalItems={totalItems}
           currentPage={currentPage}
           totalPages={totalPages}
-          onPageChange={changePage}
+          pageSize={pageSize}
+          hasActiveFilters={hasActiveFilters}
+          onPageChange={setCurrentPage}
           onView={setDetailProcess}
           onEdit={openEditForm}
           onDelete={openDeleteModal}
-          canEdit={canEdit}
-          canDelete={canDelete}
         />
       )}
 
       <ProcessFormModal
-        process={editingProcess}
+        process={editingProcess ? enrichProcess(editingProcess) : null}
         isOpen={isFormOpen}
         clientes={clientes}
         funcionarios={funcionarios}
@@ -195,7 +226,7 @@ export default function ProcessosClient({
       />
 
       <DeleteProcessModal
-        process={deletingProcess}
+        process={deletingProcess ? enrichProcess(deletingProcess) : null}
         isDeleting={isDeleting}
         error={deleteError}
         onClose={closeDeleteModal}
