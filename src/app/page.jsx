@@ -1,9 +1,9 @@
-import Image from 'next/image';
+import SolicitarAtendimento from '@/components/features/atendimento/SolicitarAtendimento/SolicitarAtendimento';
 
 export default function Home() {
   return (
-    <div>
-      <h1>Home</h1>
-    </div>
+    <main>
+      <SolicitarAtendimento />
+    </main>
   );
 }

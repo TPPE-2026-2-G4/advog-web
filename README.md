@@ -10,8 +10,6 @@ O frontend é construído com [Next.js](https://nextjs.org/) (App Router), [Reac
 
 A aplicação publicada (versão mais recente da branch `main`) está disponível no [Vercel](https://advog-web.vercel.app/).
 
----
-
 ## Como rodar o projeto localmente
 
 Se você é desenvolvedor da equipe e precisa desenvolver novas funcionalidades ou corrigir bugs, siga os passos abaixo para preparar o seu ambiente local de desenvolvimento.
