@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   calcularResumoFinanceiro,
   formatCurrency,
@@ -160,6 +160,15 @@ describe('financas utils', () => {
   });
 
   describe('toLancamento e toApiLancamento', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-09-15T12:00:00Z'));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('converte resposta da API para modelo do frontend', () => {
       const apiItem = {
         lancamento_id: 15,
@@ -208,6 +217,18 @@ describe('financas utils', () => {
       expect(apiPayload.data_vencimento).toBe('2026-10-10');
       expect(apiPayload.status).toBe('Pendente');
       expect(apiPayload.recorrente).toBe(false);
+    });
+
+    it('permite passar dataReferencia personalizada para toApiLancamento', () => {
+      const frontItem = {
+        tipo: 'entrada',
+        dataVencimentoIso: '2026-10-10',
+      };
+      const pendente = toApiLancamento(frontItem, new Date('2026-10-01'));
+      expect(pendente.status).toBe('Pendente');
+
+      const atrasado = toApiLancamento(frontItem, new Date('2026-10-15'));
+      expect(atrasado.status).toBe('Atrasado');
     });
 
     it('converte resposta da API com data_pagamento para modelo do frontend', () => {
