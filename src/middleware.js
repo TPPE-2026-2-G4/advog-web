@@ -19,6 +19,7 @@ export function middleware(request) {
 
 export const config = {
   matcher: [
+    '/dashboard/:path*',
     '/equipe/:path*',
     '/financas/:path*',
     '/processos/:path*',

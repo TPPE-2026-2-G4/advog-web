@@ -70,8 +70,12 @@ export async function criarFuncionario(dados) {
 }
 
 export async function excluirFuncionario(funcionarioId) {
+  const token = getAccessToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+
   const response = await fetch(`${API_URL}/funcionarios/${funcionarioId}`, {
     method: 'DELETE',
+    ...(headers && { headers }),
   });
 
   if (!response.ok) {
@@ -81,10 +85,14 @@ export async function excluirFuncionario(funcionarioId) {
 }
 
 export async function mudarAcessoFuncionario(funcionarioId) {
+  const token = getAccessToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+
   const response = await fetch(
     `${API_URL}/funcionarios/${funcionarioId}/mudar-acesso`,
     {
       method: 'PATCH',
+      ...(headers && { headers }),
     }
   );
 

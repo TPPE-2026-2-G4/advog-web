@@ -1,3 +1,18 @@
+.pageWrapper {
+  min-height: 100vh;
+  width: 100%;
+}
+
+.sobreSection {
+  width: 100%;
+  background-color: #f5f3ef;
+}
+
+.equipeSection {
+  width: 100%;
+  background-color: #ffffff;
+}
+
 .container {
   width: 100%;
   max-width: 1200px;
@@ -177,14 +192,14 @@
 .teamRoleSecondary {
   font-size: 14px;
   font-weight: 400;
-  color: #9ca3af;
+  color: #6b7280;
   margin: 0;
 }
 
 .teamOab {
   font-size: 13px;
   font-weight: 400;
-  color: #d1d5db;
+  color: #6b7280;
   margin: 4px 0 0 0;
   letter-spacing: 0.5px;
 }

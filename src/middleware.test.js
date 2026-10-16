@@ -24,37 +24,63 @@ describe('middleware', () => {
     };
   };
 
-  it('redireciona para /login se não houver token e a rota não for /login', () => {
-    const request = createRequest('/equipe', false);
-    const response = middleware(request);
+  it.each([
+    [
+      'redireciona para /login se não houver token e a rota for privada (/equipe)',
+      '/equipe',
+      false,
+      'redirect',
+      '/login',
+    ],
+    [
+      'redireciona para /login se não houver token e a rota for privada (/dashboard)',
+      '/dashboard',
+      false,
+      'redirect',
+      '/login',
+    ],
+    [
+      'redireciona para /equipe se houver token e a rota for /login',
+      '/login',
+      true,
+      'redirect',
+      '/equipe',
+    ],
+    [
+      'permite o acesso se houver token em rota privada (/equipe)',
+      '/equipe',
+      true,
+      'next',
+      null,
+    ],
+    [
+      'permite o acesso se houver token em rota privada (/dashboard)',
+      '/dashboard',
+      true,
+      'next',
+      null,
+    ],
+    [
+      'permite o acesso se não houver token na rota /login',
+      '/login',
+      false,
+      'next',
+      null,
+    ],
+  ])(
+    '%s',
+    (_descricao, pathname, hasToken, expectedAction, expectedRedirectUrl) => {
+      const request = createRequest(pathname, hasToken);
+      const response = middleware(request);
 
-    expect(NextResponse.redirect).toHaveBeenCalled();
-    expect(response.type).toBe('redirect');
-    expect(response.url).toContain('/login');
-  });
-
-  it('redireciona para /equipe se houver token e a rota for /login', () => {
-    const request = createRequest('/login', true);
-    const response = middleware(request);
-
-    expect(NextResponse.redirect).toHaveBeenCalled();
-    expect(response.type).toBe('redirect');
-    expect(response.url).toContain('/equipe');
-  });
-
-  it('permite o acesso se houver token em rota privada', () => {
-    const request = createRequest('/equipe', true);
-    const response = middleware(request);
-
-    expect(NextResponse.next).toHaveBeenCalled();
-    expect(response.type).toBe('next');
-  });
-
-  it('permite o acesso se não houver token na rota /login', () => {
-    const request = createRequest('/login', false);
-    const response = middleware(request);
-
-    expect(NextResponse.next).toHaveBeenCalled();
-    expect(response.type).toBe('next');
-  });
+      if (expectedAction === 'redirect') {
+        expect(NextResponse.redirect).toHaveBeenCalled();
+        expect(response.type).toBe('redirect');
+        expect(response.url).toContain(expectedRedirectUrl);
+      } else {
+        expect(NextResponse.next).toHaveBeenCalled();
+        expect(response.type).toBe('next');
+      }
+    }
+  );
 });

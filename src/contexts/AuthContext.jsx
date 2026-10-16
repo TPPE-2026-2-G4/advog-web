@@ -1,12 +1,20 @@
 'use client';
 
-import { createContext, useState } from 'react';
+import { createContext, useState, useEffect } from 'react';
 import { login as loginService } from '@/services/auth';
-import { getCurrentUser } from '@/utils/authSession';
+import { clearAuthSession, getCurrentUser } from '@/utils/authSession';
 
 export const AuthContext = createContext(undefined);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getCurrentUser());
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setUser(getCurrentUser());
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   async function login(email, senha) {
     const data = await loginService(email, senha);
@@ -34,13 +42,7 @@ export function AuthProvider({ children }) {
 
   function logout() {
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('current_user');
-    sessionStorage.removeItem('access_token');
-    sessionStorage.removeItem('current_user');
-    document.cookie =
-      'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+    clearAuthSession();
   }
 
   return (

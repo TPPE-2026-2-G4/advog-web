@@ -24,7 +24,12 @@ export function useFirstLogin() {
       return;
     }
 
-    setErro('');
+    if (!token) {
+      setErro(
+        'Token de primeiro acesso ausente ou inválido. Acesse através do link recebido por e-mail.'
+      );
+      return;
+    }
 
     if (senha !== confirmarSenha) {
       setErro('As senhas não conferem.');

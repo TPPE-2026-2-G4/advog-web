@@ -8,6 +8,7 @@ vi.mock('@/utils/authSession', () => ({
     cargo: 'Advogado(a)',
     email: 'alexandre@carreiro.adv.br',
   })),
+  clearAuthSession: vi.fn(),
 }));
 
 describe('Navbar', () => {

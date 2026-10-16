@@ -17,6 +17,57 @@ export function getLawyerInitials(name) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
+export function formatOab(memberOrUf, maybeNumero) {
+  if (!memberOrUf) return '';
+
+  let uf = '';
+  let rawNumero = '';
+
+  if (typeof memberOrUf === 'object') {
+    uf = (
+      memberOrUf.uf_oab ||
+      memberOrUf.ufOab ||
+      memberOrUf.uf ||
+      memberOrUf.estado_oab ||
+      ''
+    )
+      .toString()
+      .trim()
+      .toUpperCase();
+
+    rawNumero =
+      memberOrUf.numero_oab ??
+      memberOrUf.numeroOab ??
+      memberOrUf.oab_numero ??
+      memberOrUf.numero ??
+      memberOrUf.oab ??
+      '';
+  } else {
+    uf = String(memberOrUf).trim().toUpperCase();
+    rawNumero = maybeNumero ?? '';
+  }
+
+  let numero = String(rawNumero).trim();
+  if (!numero) return '';
+
+  if (numero.toUpperCase().startsWith('OAB')) {
+    return numero;
+  }
+
+  numero = numero.replace(/^OAB\/?/i, '').trim();
+
+  // Formata o número com ponto separador de milhar se forem dígitos puros
+  if (/^\d{4,}$/.test(numero)) {
+    numero = Number(numero).toLocaleString('pt-BR');
+  }
+
+  if (uf) {
+    return `OAB/${uf} ${numero}`;
+  }
+
+  return `OAB ${numero}`;
+}
+
 export function toTeamMember(funcionario) {
   const cargo =
     (typeof funcionario.cargo === 'string' && funcionario.cargo) ||

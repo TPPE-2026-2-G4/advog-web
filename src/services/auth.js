@@ -21,7 +21,9 @@ export async function login(email, senha) {
 
     try {
       const errorData = await response.json();
-      if (errorData.message) {
+      if (typeof errorData?.detail === 'string') {
+        message = errorData.detail;
+      } else if (errorData?.message) {
         message = errorData.message;
       }
     } catch {}
@@ -31,7 +33,15 @@ export async function login(email, senha) {
   return response.json();
 }
 
-export async function firstLogin({ token, nome, senha, uf_oab, numero_oab }) {
+export async function firstLogin({
+  token,
+  nome,
+  senha,
+  uf_oab,
+  numero_oab,
+  uf,
+  numeroOab,
+}) {
   if (!apiUrl) {
     throw new Error('URL da API não configurada');
   }
@@ -45,8 +55,8 @@ export async function firstLogin({ token, nome, senha, uf_oab, numero_oab }) {
       token,
       nome,
       senha,
-      uf_oab: uf_oab || undefined,
-      numero_oab: numero_oab || undefined,
+      uf_oab: uf_oab || uf || undefined,
+      numero_oab: numero_oab || numeroOab || undefined,
     }),
   });
 
@@ -55,7 +65,23 @@ export async function firstLogin({ token, nome, senha, uf_oab, numero_oab }) {
 
     try {
       const errorData = await response.json();
-      if (errorData.message) {
+      if (typeof errorData?.detail === 'string') {
+        message = errorData.detail;
+      } else if (Array.isArray(errorData?.detail)) {
+        message = errorData.detail
+          .map((err) => {
+            const field = err.loc?.at(-1);
+            if (field === 'numero_oab') {
+              return 'Número da OAB deve conter exatamente 5 dígitos.';
+            }
+            if (field === 'uf_oab') {
+              return 'UF da OAB deve conter 2 letras.';
+            }
+            return err.msg || err.message;
+          })
+          .filter(Boolean)
+          .join(' ');
+      } else if (errorData?.message) {
         message = errorData.message;
       }
     } catch {}
