@@ -32,6 +32,28 @@ describe('Modal', () => {
     expect(screen.getByText('Conteúdo do Modal')).toBeInTheDocument();
   });
 
+  describe('Testes parametrizados de aria-modal', () => {
+    it.each([
+      ['verdadeiro', true, 'true'],
+      ['falso', false, null],
+    ])(
+      'define aria-modal corretamente quando prop for %s',
+      (desc, propValue, expectedAttr) => {
+        render(
+          <Modal isOpen onClose={vi.fn()} ariaModal={propValue}>
+            <div data-testid="modal-content">Conteúdo</div>
+          </Modal>
+        );
+        const dialog = screen.getByRole('dialog');
+        if (expectedAttr === null) {
+          expect(dialog).not.toHaveAttribute('aria-modal');
+        } else {
+          expect(dialog).toHaveAttribute('aria-modal', expectedAttr);
+        }
+      }
+    );
+  });
+
   it('fecha ao clicar fora (no overlay)', () => {
     const onClose = vi.fn();
     const { container } = render(

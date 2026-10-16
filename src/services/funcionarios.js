@@ -48,10 +48,14 @@ export async function listarFuncionarios() {
 }
 
 export async function criarFuncionario(dados) {
+  const token = getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
   const response = await fetch(`${API_URL}/funcionarios`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(dados),
   });

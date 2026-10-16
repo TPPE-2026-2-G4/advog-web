@@ -2,6 +2,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import LancamentoModal from './LancamentoModal';
 
+vi.mock('@/services/financas', () => ({
+  listarCategorias: vi.fn().mockResolvedValue([
+    { categoria_id: 1, nome: 'Honorários' },
+    { categoria_id: 2, nome: 'Custas' },
+    { categoria_id: 3, nome: 'Despesas Operacionais' },
+    { categoria_id: 4, nome: 'Consultoria' },
+    { categoria_id: 5, nome: 'Outros' },
+  ]),
+  criarCategoria: vi
+    .fn()
+    .mockResolvedValue({ categoria_id: 99, nome: 'Nova Categoria' }),
+  excluirCategoria: vi.fn().mockResolvedValue(true),
+  obterResumoFinancas: vi.fn(),
+}));
+
 const renderModal = (props = {}) =>
   render(
     <LancamentoModal
@@ -33,7 +48,7 @@ describe('LancamentoModal', () => {
     expect(screen.getByLabelText('Título')).toBeRequired();
     expect(screen.getByLabelText('Descrição')).toBeInTheDocument();
     expect(screen.getByLabelText('Valor')).toBeRequired();
-    expect(screen.getByLabelText('Data')).toBeRequired();
+    expect(screen.getByLabelText('Data de Criação')).toBeRequired();
     expect(screen.getByLabelText('Data de Vencimento')).toBeInTheDocument();
     expect(screen.getByLabelText('Categoria')).toBeInTheDocument();
     expect(
@@ -71,7 +86,7 @@ describe('LancamentoModal', () => {
     expect(screen.getByLabelText('Título')).toHaveValue('Conta de Energia');
     expect(screen.getByLabelText('Descrição')).toHaveValue('Referente ao mês');
     expect(screen.getByLabelText('Valor')).toHaveValue('350.5');
-    expect(screen.getByLabelText('Data')).toHaveValue('2026-09-10');
+    expect(screen.getByLabelText('Data de Criação')).toHaveValue('2026-09-10');
     expect(screen.getByLabelText('Data de Vencimento')).toHaveValue(
       '2026-09-15'
     );
@@ -140,7 +155,7 @@ describe('LancamentoModal', () => {
     fireEvent.change(screen.getByLabelText('Valor'), {
       target: { value: '1500,50' },
     });
-    fireEvent.change(screen.getByLabelText('Data'), {
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
       target: { value: '2026-09-15' },
     });
     fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
@@ -182,7 +197,7 @@ describe('LancamentoModal', () => {
       valor: 1000,
       data: '01/09/2026',
       dataIso: '2026-09-01',
-      status: 'recebido',
+      status: 'realizado',
     };
 
     renderModal({ initialItem: mockItem, onSave, onClose });
@@ -202,7 +217,7 @@ describe('LancamentoModal', () => {
           id: 99,
           titulo: 'Título Atualizado',
           valor: 2500,
-          status: 'recebido',
+          status: 'realizado',
         })
       );
       expect(onClose).toHaveBeenCalledOnce();
@@ -223,12 +238,12 @@ describe('LancamentoModal', () => {
       dataVencimento: '05/09/2026',
       dataVencimentoIso: '2026-09-05',
       data_vencimento: '2026-09-05',
-      status: 'recebido',
+      status: 'realizado',
     };
 
     renderModal({ initialItem: mockItem, onSave, onClose });
 
-    fireEvent.change(screen.getByLabelText('Data'), {
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
       target: { value: '2026-09-10' },
     });
     fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
@@ -250,6 +265,91 @@ describe('LancamentoModal', () => {
         })
       );
       expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('preserva data de vencimento ao editar apenas a data do lançamento', async () => {
+    const onSave = vi.fn().mockResolvedValue({});
+    const onClose = vi.fn();
+    const mockItem = {
+      id: 101,
+      tipo: 'entrada',
+      titulo: 'Serviço Consultoria',
+      valor: 500,
+      data: '01/10/2026',
+      dataIso: '2026-10-01',
+      data_pagamento: '2026-10-01',
+      dataVencimento: '20/10/2026',
+      dataVencimentoIso: '2026-10-20',
+      data_vencimento: '2026-10-20',
+      status: 'pendente',
+    };
+
+    renderModal({ initialItem: mockItem, onSave, onClose });
+
+    expect(screen.getByLabelText('Data de Criação').value).toBe('2026-10-01');
+    expect(screen.getByLabelText('Data de Vencimento').value).toBe(
+      '2026-10-20'
+    );
+
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
+      target: { value: '2026-10-05' },
+    });
+
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar Alterações' }));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 101,
+          data: '05/10/2026',
+          dataIso: '2026-10-05',
+          data_pagamento: '2026-10-05',
+          dataVencimento: '20/10/2026',
+          dataVencimentoIso: '2026-10-20',
+          data_vencimento: '2026-10-20',
+        })
+      );
+    });
+  });
+
+  it('preserva data do lançamento ao editar apenas a data de vencimento', async () => {
+    const onSave = vi.fn().mockResolvedValue({});
+    const onClose = vi.fn();
+    const mockItem = {
+      id: 102,
+      tipo: 'saida',
+      titulo: 'Conta de Energia',
+      valor: 350,
+      data: '01/10/2026',
+      dataIso: '2026-10-01',
+      data_pagamento: '2026-10-01',
+      dataVencimento: '20/10/2026',
+      dataVencimentoIso: '2026-10-20',
+      data_vencimento: '2026-10-20',
+      status: 'pendente',
+    };
+
+    renderModal({ initialItem: mockItem, onSave, onClose });
+
+    fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
+      target: { value: '2026-10-25' },
+    });
+
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar Alterações' }));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 102,
+          data: '01/10/2026',
+          dataIso: '2026-10-01',
+          data_pagamento: '2026-10-01',
+          dataVencimento: '25/10/2026',
+          dataVencimentoIso: '2026-10-25',
+          data_vencimento: '2026-10-25',
+        })
+      );
     });
   });
 
@@ -292,8 +392,9 @@ describe('LancamentoModal', () => {
       target: { value: '100' },
     });
 
-    // Forçar data inválida para que dataIso retorne vazio e use formData.data
-    fireEvent.change(screen.getByLabelText('Data'), { target: { value: 'T' } });
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
+      target: { value: 'T' },
+    });
     fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
       target: { value: 'T' },
     });
@@ -306,21 +407,14 @@ describe('LancamentoModal', () => {
   });
 
   it('cobre fallbacks de valores iniciais faltantes em edição', () => {
-    // Para atingir linhas 37-38, 41-45 (tipo e titulo fallback, valor fallback)
     const mockItem = {
       id: 99,
-      // tipo ausente
-      // titulo ausente
-      // valor ausente
-      status: 'pendente', // só para não dar problema no isStatusConcluido vazio
+      status: 'pendente',
     };
     renderModal({ initialItem: mockItem, onSave: vi.fn(), onClose: vi.fn() });
 
-    // Título fallback ''
     expect(screen.getByLabelText('Título')).toHaveValue('');
-    // Valor fallback ''
     expect(screen.getByLabelText('Valor')).toHaveValue('');
-    // Tipo fallback 'entrada'
     expect(screen.getByRole('button', { name: 'Entrada' })).toHaveAttribute(
       'aria-pressed',
       'true'
@@ -328,7 +422,6 @@ describe('LancamentoModal', () => {
   });
 
   it('cobre branch else if de status não-concluido e sem data', async () => {
-    // Para atingir fallback date em submit e não-concluido status
     const onSave = vi.fn().mockResolvedValue({});
     const mockItem = {
       id: 99,
@@ -336,14 +429,13 @@ describe('LancamentoModal', () => {
     };
     renderModal({ initialItem: mockItem, onSave, onClose: vi.fn() });
 
-    // Preenche pra não dar erro
     fireEvent.change(screen.getByLabelText('Título'), {
       target: { value: 'X' },
     });
     fireEvent.change(screen.getByLabelText('Valor'), {
       target: { value: '1' },
     });
-    fireEvent.change(screen.getByLabelText('Data'), {
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
       target: { value: '2026-01-01' },
     });
 
@@ -354,19 +446,17 @@ describe('LancamentoModal', () => {
   });
 
   it('cobre fallback message em catch block vazio', async () => {
-    // Para atingir linha 168: err?.message || 'Erro ao salvar o lançamento financeiro.'
-    const onSave = vi.fn().mockRejectedValue({}); // Sem mensagem
+    const onSave = vi.fn().mockRejectedValue({});
     const mockItem = { id: 99, status: 'pendente' };
     renderModal({ initialItem: mockItem, onSave, onClose: vi.fn() });
 
-    // Preenche pra não dar erro de validacao
     fireEvent.change(screen.getByLabelText('Título'), {
       target: { value: 'X' },
     });
     fireEvent.change(screen.getByLabelText('Valor'), {
       target: { value: '1' },
     });
-    fireEvent.change(screen.getByLabelText('Data'), {
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
       target: { value: '2026-01-01' },
     });
 
