@@ -194,6 +194,7 @@ describe('financas utils', () => {
     });
 
     it('converte dados do formulário frontend para payload da API', () => {
+      const dataReferencia = new Date(2026, 9, 10);
       const frontItem = {
         tipo: 'saida',
         titulo: '  Internet  ',
@@ -204,7 +205,7 @@ describe('financas utils', () => {
         status: 'pendente',
       };
 
-      const apiPayload = toApiLancamento(frontItem);
+      const apiPayload = toApiLancamento(frontItem, dataReferencia);
       expect(apiPayload.tipo).toBe('s');
       expect(apiPayload.titulo).toBe('Internet');
       expect(apiPayload.descricao).toBe('Mensalidade');
@@ -213,6 +214,47 @@ describe('financas utils', () => {
       expect(apiPayload.status).toBe('Pendente');
       expect(apiPayload.recorrente).toBe(false);
     });
+
+    test.each([
+      [
+        'vencimento igual à data de referência',
+        '2026-10-10',
+        'pendente',
+        'Pendente',
+      ],
+      [
+        'vencimento posterior à data de referência',
+        '2026-10-20',
+        'pendente',
+        'Pendente',
+      ],
+      [
+        'vencimento anterior à data de referência',
+        '2026-10-01',
+        'pendente',
+        'Atrasado',
+      ],
+      [
+        'status realizado preservado mesmo com vencimento anterior',
+        '2026-10-01',
+        'realizado',
+        'Realizado',
+      ],
+    ])(
+      'calcula status correto no payload da API (%s)',
+      (_cenario, dataVencimentoIso, statusEntrada, statusEsperado) => {
+        const dataReferencia = new Date(2026, 9, 10);
+        const apiPayload = toApiLancamento(
+          {
+            tipo: 'saida',
+            dataVencimentoIso,
+            status: statusEntrada,
+          },
+          dataReferencia
+        );
+        expect(apiPayload.status).toBe(statusEsperado);
+      }
+    );
 
     it('converte resposta da API com data_pagamento para modelo do frontend', () => {
       const apiItem = {

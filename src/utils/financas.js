@@ -183,7 +183,7 @@ export function toLancamento(apiItem) {
   };
 }
 
-export function toApiLancamento(item) {
+export function toApiLancamento(item, dataReferencia = new Date()) {
   if (!item) return {};
   const isSaida =
     item.tipo?.toLowerCase() === 'saida' ||
@@ -197,7 +197,7 @@ export function toApiLancamento(item) {
     item.data_vencimento ||
     item.dataIso ||
     item.data ||
-    new Date().toISOString().split('T')[0];
+    new Date(dataReferencia).toISOString().split('T')[0];
   const vencimento = formatDateToIso(rawVencimento) || rawVencimento;
 
   const rawPagamento =
@@ -216,10 +216,13 @@ export function toApiLancamento(item) {
   let rawStatus = item.status || 'Pendente';
 
   if (!isStatusConcluido(rawStatus)) {
-    rawStatus = verificarStatusPorVencimento({
-      ...item,
-      dataVencimentoIso: vencimento,
-    });
+    rawStatus = verificarStatusPorVencimento(
+      {
+        ...item,
+        dataVencimentoIso: vencimento,
+      },
+      dataReferencia
+    );
   }
 
   const status =
