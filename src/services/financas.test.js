@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   atualizarFinancas,
   atualizarLancamento,
@@ -29,8 +29,14 @@ const respostaComErroSemJson = () => ({
 
 describe('serviço de finanças', () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-15T12:00:00Z'));
     vi.restoreAllMocks();
     vi.stubGlobal('fetch', vi.fn());
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('listarFinancas', () => {
