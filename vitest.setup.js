@@ -12,6 +12,19 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+// Node >= 25 expõe um localStorage global experimental que sobrepõe o do jsdom
+// e fica indefinido sem --localstorage-file. Restaura os storages do jsdom.
+for (const nome of ['localStorage', 'sessionStorage']) {
+  const storage = globalThis.jsdom?.window?.[nome];
+  if (storage) {
+    Object.defineProperty(globalThis, nome, {
+      value: storage,
+      configurable: true,
+      writable: true,
+    });
+  }
+}
+
 process.env.NEXT_PUBLIC_MINIO_INTERNAL = 'minio:9000';
 process.env.NEXT_PUBLIC_MINIO_EXTERNAL = 'localhost:9000';
 process.env.NEXT_PUBLIC_MINIO_ALIAS = 'http://minio/';
