@@ -5,10 +5,6 @@ import { useEffect, useId, useState } from 'react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import styles from './EditUserModal.module.css';
 
-const emptyForm = {
-  cargo: '',
-};
-
 const findMemberRoleId = (member, roles) => {
   if (member?.cargo_id !== undefined && member?.cargo_id !== null) {
     return String(member.cargo_id);
@@ -66,9 +62,7 @@ export default function EditUserModal({
 }
 
 function EditUserDialog({ member, roles, isRoleLocked, onClose, onSave }) {
-  const [formData, setFormData] = useState(() =>
-    member ? toFormData(member, roles) : emptyForm
-  );
+  const [formData, setFormData] = useState(() => toFormData(member, roles));
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const titleId = useId();

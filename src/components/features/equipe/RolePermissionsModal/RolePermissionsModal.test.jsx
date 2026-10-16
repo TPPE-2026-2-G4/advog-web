@@ -41,6 +41,22 @@ describe('RolePermissionsModal', () => {
     }
   );
 
+  describe('Testes de fallback de chave do cargo (key)', () => {
+    it.each([
+      [
+        'com cargo_id',
+        { cargo_id: 2, nome_cargo: 'Advogado', permissao: initialPermission },
+      ],
+      [
+        'sem cargo_id',
+        { nome_cargo: 'Advogado', permissao: initialPermission },
+      ],
+    ])('renderiza o formulário %s', (desc, roleObj) => {
+      renderModal({ role: roleObj });
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+  });
+
   it('renderiza o cargo, o objeto recebido e o contador', () => {
     renderModal();
 
