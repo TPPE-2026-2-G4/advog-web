@@ -9,6 +9,7 @@ import {
   listarFinancas,
   listarLancamentos,
   mudarStatusLancamento,
+  obterResumoFinancas,
 } from './financas';
 
 const respostaJson = (dados, configuracao = {}) => ({
@@ -400,5 +401,83 @@ describe('serviço de finanças', () => {
     fetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
     await mudarStatusLancamento(1, {}); // Passando obj vazio sem .status
     expect(fetch).toHaveBeenCalled();
+  });
+
+  describe('filtros por categoria em listarFinancas e obterResumoFinancas', () => {
+    it('filtra por categoria existente mapeando para categoria_id na API', async () => {
+      // Mock de /categorias-lancamento
+      fetch.mockResolvedValueOnce(
+        respostaJson([{ categoria_id: 10, nome_categoria: 'Consultoria' }])
+      );
+      // Mock de /lancamentos/
+      fetch.mockResolvedValueOnce(
+        respostaJson([
+          {
+            lancamento_id: 1,
+            categoria_id: 10,
+            categoria: 'Consultoria',
+            titulo: 'Item 1',
+          },
+        ])
+      );
+
+      const res = await listarFinancas({ categoria: 'Consultoria' });
+      expect(res).toHaveLength(1);
+      expect(res[0].categoria).toBe('Consultoria');
+    });
+
+    it('filtra lançamentos de categoria Outros quando não há id cadastrado no backend', async () => {
+      // Mock de /categorias-lancamento retornando vazio
+      fetch.mockResolvedValueOnce(respostaJson([]));
+      // Mock de /lancamentos/ retornando itens mistos
+      fetch.mockResolvedValueOnce(
+        respostaJson([
+          { lancamento_id: 1, categoria_id: 1, categoria: 'Honorários' },
+          { lancamento_id: 2, categoria_id: null, categoria: null },
+          { lancamento_id: 3, categoria: 'Outros' },
+        ])
+      );
+
+      const res = await listarFinancas({
+        categoria: 'Outros',
+        page: 1,
+        page_size: 5,
+      });
+
+      expect(res.itens).toHaveLength(2);
+      expect(res.total).toBe(2);
+      expect(res.itens[0].id).toBe(2);
+      expect(res.itens[1].id).toBe(3);
+    });
+
+    it('calcula o resumo de finanças para categoria Outros', async () => {
+      // Mock de /categorias-lancamento
+      fetch.mockResolvedValueOnce(respostaJson([]));
+      // Mock do listarFinancas interno chamado por obterResumoFinancas
+      fetch.mockResolvedValueOnce(respostaJson([])); // /categorias-lancamento dentro de listarFinancas
+      fetch.mockResolvedValueOnce(
+        respostaJson([
+          {
+            lancamento_id: 1,
+            categoria: 'Outros',
+            tipo: 'e',
+            valor: 1000,
+            status: 'Realizado',
+          },
+          {
+            lancamento_id: 2,
+            categoria: 'Outros',
+            tipo: 's',
+            valor: 300,
+            status: 'Pendente',
+          },
+        ])
+      );
+
+      const resumo = await obterResumoFinancas({ categoria: 'Outros' });
+      expect(resumo).toBeDefined();
+      expect(resumo.realizado.total_entradas).toBe(1000);
+      expect(resumo.pendente.total_saidas).toBe(300);
+    });
   });
 });

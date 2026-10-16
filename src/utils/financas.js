@@ -207,7 +207,11 @@ export function toApiLancamento(item, dataReferencia = new Date()) {
         ? item.dataPagamento
         : item.data_pagamento !== undefined
           ? item.data_pagamento
-          : null;
+          : item.dataIso !== undefined
+            ? item.dataIso
+            : item.data !== undefined
+              ? item.data
+              : null;
 
   const pagamento = rawPagamento
     ? formatDateToIso(rawPagamento) || rawPagamento

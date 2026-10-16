@@ -163,14 +163,22 @@ export default function LancamentoModal({
         dataPagamento: dataBr || formData.data || null,
         dataPagamentoIso: dataIso || formData.data || null,
         data_pagamento: dataIso || formData.data || null,
-        dataVencimento: dataVencimentoBr || formData.dataVencimento,
-        dataVencimentoIso: dataVencimentoIso || formData.dataVencimento,
+        dataVencimento:
+          dataVencimentoBr ||
+          formData.dataVencimento ||
+          dataBr ||
+          formData.data,
+        dataVencimentoIso:
+          dataVencimentoIso ||
+          formData.dataVencimento ||
+          dataIso ||
+          formData.data,
         data_vencimento:
           dataVencimentoIso ||
           formData.dataVencimento ||
           dataIso ||
           formData.data,
-        categoria: categoriaNomeFinal,
+        categoria: categoriaNomeFinal || 'Outros',
         categoria_id: categoriaIdFinal,
         recorrente: formData.recorrente,
       };

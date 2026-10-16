@@ -18,7 +18,22 @@ import {
 
 export function useFinancas(initialData, options = {}) {
   const [lancamentos, setLancamentos] = useState(initialData || []);
-  const [categorias, setCategorias] = useState([]);
+  const [categorias, setCategorias] = useState(() => {
+    const cats = [];
+    if (initialData && Array.isArray(initialData)) {
+      const seen = new Set();
+      initialData.forEach((l) => {
+        if (l.categoria && l.categoria !== 'Outros' && !seen.has(l.categoria)) {
+          seen.add(l.categoria);
+          cats.push({
+            categoria_id: l.categoria_id,
+            nome_categoria: l.categoria,
+          });
+        }
+      });
+    }
+    return cats;
+  });
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 5,
@@ -28,7 +43,24 @@ export function useFinancas(initialData, options = {}) {
   const [resumoBackend, setResumoBackend] = useState(null);
 
   useEffect(() => {
-    listarCategorias().then(setCategorias).catch(console.error);
+    listarCategorias()
+      .then((cats) => {
+        if (cats && Array.isArray(cats)) {
+          setCategorias((prev) => {
+            const map = new Map();
+            prev.forEach((c) => {
+              const name = c.nome_categoria || c.nome;
+              if (name) map.set(name, c);
+            });
+            cats.forEach((c) => {
+              const name = c.nome_categoria || c.nome;
+              if (name) map.set(name, c);
+            });
+            return Array.from(map.values());
+          });
+        }
+      })
+      .catch(console.error);
   }, []);
 
   const lancamentosMapeados = useMemo(() => {
@@ -138,9 +170,30 @@ export function useFinancas(initialData, options = {}) {
     setSaveError('');
     try {
       const response = await criarFinancas(item);
+      const resolvedData =
+        response?.data_pagamento || response?.dataPagamento
+          ? response.data
+          : item.data || response?.data;
+      const resolvedDataIso =
+        response?.data_pagamento || response?.dataPagamentoIso
+          ? response.dataIso
+          : item.dataIso || response?.dataIso;
+      const resolvedVencimento =
+        response?.data_vencimento || response?.dataVencimento
+          ? response.dataVencimento
+          : item.dataVencimento;
+      const resolvedVencimentoIso =
+        response?.data_vencimento || response?.dataVencimentoIso
+          ? response.dataVencimentoIso
+          : item.dataVencimentoIso;
+
       const newItem = {
         ...item,
         ...(response || {}),
+        data: resolvedData,
+        dataIso: resolvedDataIso,
+        dataVencimento: resolvedVencimento,
+        dataVencimentoIso: resolvedVencimentoIso,
         categoria:
           response && response.categoria !== 'Outros' && response.categoria
             ? response.categoria
@@ -149,6 +202,23 @@ export function useFinancas(initialData, options = {}) {
       };
       setLancamentos((current = []) => [newItem, ...current]);
       setPagination((prev) => ({ ...prev, total: prev.total + 1 }));
+      if (newItem.categoria && newItem.categoria !== 'Outros') {
+        setCategorias((prev) => {
+          const exists = prev.some(
+            (c) => (c.nome_categoria || c.nome) === newItem.categoria
+          );
+          if (!exists) {
+            return [
+              ...prev,
+              {
+                categoria_id: newItem.categoria_id,
+                nome_categoria: newItem.categoria,
+              },
+            ];
+          }
+          return prev;
+        });
+      }
       options.onCreate?.(newItem);
       setIsNewModalOpen(false);
       return newItem;
@@ -165,9 +235,30 @@ export function useFinancas(initialData, options = {}) {
     setSaveError('');
     try {
       const response = await atualizarFinancas(item.id, item);
+      const resolvedData =
+        response?.data_pagamento || response?.dataPagamento
+          ? response.data
+          : item.data || response?.data;
+      const resolvedDataIso =
+        response?.data_pagamento || response?.dataPagamentoIso
+          ? response.dataIso
+          : item.dataIso || response?.dataIso;
+      const resolvedVencimento =
+        response?.data_vencimento || response?.dataVencimento
+          ? response.dataVencimento
+          : item.dataVencimento;
+      const resolvedVencimentoIso =
+        response?.data_vencimento || response?.dataVencimentoIso
+          ? response.dataVencimentoIso
+          : item.dataVencimentoIso;
+
       const updated = {
         ...item,
         ...(response || {}),
+        data: resolvedData,
+        dataIso: resolvedDataIso,
+        dataVencimento: resolvedVencimento,
+        dataVencimentoIso: resolvedVencimentoIso,
         categoria:
           response && response.categoria !== 'Outros' && response.categoria
             ? response.categoria
@@ -249,8 +340,19 @@ export function useFinancas(initialData, options = {}) {
           listarCategorias(),
         ]);
 
-        if (novasCats) {
-          setCategorias(novasCats);
+        if (novasCats && Array.isArray(novasCats)) {
+          setCategorias((prev) => {
+            const map = new Map();
+            prev.forEach((c) => {
+              const name = c.nome_categoria || c.nome;
+              if (name) map.set(name, c);
+            });
+            novasCats.forEach((c) => {
+              const name = c.nome_categoria || c.nome;
+              if (name) map.set(name, c);
+            });
+            return Array.from(map.values());
+          });
         }
 
         if (data && Array.isArray(data.itens)) {

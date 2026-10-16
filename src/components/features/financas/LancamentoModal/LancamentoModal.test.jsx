@@ -268,6 +268,91 @@ describe('LancamentoModal', () => {
     });
   });
 
+  it('preserva data de vencimento ao editar apenas a data do lançamento', async () => {
+    const onSave = vi.fn().mockResolvedValue({});
+    const onClose = vi.fn();
+    const mockItem = {
+      id: 101,
+      tipo: 'entrada',
+      titulo: 'Serviço Consultoria',
+      valor: 500,
+      data: '01/10/2026',
+      dataIso: '2026-10-01',
+      data_pagamento: '2026-10-01',
+      dataVencimento: '20/10/2026',
+      dataVencimentoIso: '2026-10-20',
+      data_vencimento: '2026-10-20',
+      status: 'pendente',
+    };
+
+    renderModal({ initialItem: mockItem, onSave, onClose });
+
+    expect(screen.getByLabelText('Data').value).toBe('2026-10-01');
+    expect(screen.getByLabelText('Data de Vencimento').value).toBe(
+      '2026-10-20'
+    );
+
+    fireEvent.change(screen.getByLabelText('Data'), {
+      target: { value: '2026-10-05' },
+    });
+
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar Alterações' }));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 101,
+          data: '05/10/2026',
+          dataIso: '2026-10-05',
+          data_pagamento: '2026-10-05',
+          dataVencimento: '20/10/2026',
+          dataVencimentoIso: '2026-10-20',
+          data_vencimento: '2026-10-20',
+        })
+      );
+    });
+  });
+
+  it('preserva data do lançamento ao editar apenas a data de vencimento', async () => {
+    const onSave = vi.fn().mockResolvedValue({});
+    const onClose = vi.fn();
+    const mockItem = {
+      id: 102,
+      tipo: 'saida',
+      titulo: 'Conta de Energia',
+      valor: 350,
+      data: '01/10/2026',
+      dataIso: '2026-10-01',
+      data_pagamento: '2026-10-01',
+      dataVencimento: '20/10/2026',
+      dataVencimentoIso: '2026-10-20',
+      data_vencimento: '2026-10-20',
+      status: 'pendente',
+    };
+
+    renderModal({ initialItem: mockItem, onSave, onClose });
+
+    fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
+      target: { value: '2026-10-25' },
+    });
+
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar Alterações' }));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 102,
+          data: '01/10/2026',
+          dataIso: '2026-10-01',
+          data_pagamento: '2026-10-01',
+          dataVencimento: '25/10/2026',
+          dataVencimentoIso: '2026-10-25',
+          data_vencimento: '2026-10-25',
+        })
+      );
+    });
+  });
+
   it('chama onClose ao clicar em Cancelar', () => {
     const onClose = vi.fn();
     renderModal({ onClose });

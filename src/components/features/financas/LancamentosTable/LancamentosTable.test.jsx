@@ -459,4 +459,91 @@ describe('LancamentosTable', () => {
       expect.objectContaining({ situacao: 'Realizado' })
     );
   });
+
+  it('filtra corretamente para categoria Outros ocultando lançamentos de outras categorias', () => {
+    render(<LancamentosTable lancamentos={mockLancamentos} pageSize={15} />);
+
+    const selectCategoria = screen.getByLabelText('Filtrar por categoria');
+    fireEvent.change(selectCategoria, { target: { value: 'Outros' } });
+
+    expect(screen.getByText('Sem data ISO')).toBeInTheDocument();
+    expect(screen.getByText('Sem data alguma')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Honorários Iniciais - João Santos')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Custas Processuais - Maria Souza')
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    {
+      categoriaSelecionada: 'Honorários',
+      outrasEsperadas: ['Custas', 'Despesas Operacionais', 'Outros'],
+    },
+    {
+      categoriaSelecionada: 'Custas',
+      outrasEsperadas: ['Honorários', 'Despesas Operacionais', 'Outros'],
+    },
+    {
+      categoriaSelecionada: 'Outros',
+      outrasEsperadas: ['Honorários', 'Custas', 'Despesas Operacionais'],
+    },
+  ])(
+    'mantém todas as opções de categorias no dropdown ao selecionar $categoriaSelecionada',
+    ({ categoriaSelecionada, outrasEsperadas }) => {
+      const { rerender } = render(
+        <LancamentosTable
+          lancamentos={mockLancamentos}
+          pageSize={10}
+          onFilter={vi.fn()}
+        />
+      );
+
+      const select = screen.getByLabelText('Filtrar por categoria');
+      fireEvent.change(select, { target: { value: categoriaSelecionada } });
+
+      // Simula a atualização de lancamentos no componente pai com apenas os itens da categoria filtrada
+      const lancamentosFiltrados = mockLancamentos.filter(
+        (l) => l.categoria === categoriaSelecionada
+      );
+      rerender(
+        <LancamentosTable
+          lancamentos={lancamentosFiltrados}
+          pageSize={10}
+          onFilter={vi.fn()}
+        />
+      );
+
+      // Verifica se a opção selecionada e todas as outras continuam no dropdown
+      expect(
+        screen.getByRole('option', { name: categoriaSelecionada })
+      ).toBeInTheDocument();
+      outrasEsperadas.forEach((nomeCat) => {
+        expect(
+          screen.getByRole('option', { name: nomeCat })
+        ).toBeInTheDocument();
+      });
+    }
+  );
+
+  it('adiciona novas categorias dinamicamente quando props mudam', () => {
+    const { rerender } = render(
+      <LancamentosTable lancamentos={[]} categorias={[]} />
+    );
+
+    rerender(
+      <LancamentosTable
+        lancamentos={[{ id: 99, categoria: 'Nova Cat Lancamento', valor: 10 }]}
+        categorias={[{ categoria_id: 88, nome_categoria: 'Nova Cat Prop' }]}
+      />
+    );
+
+    expect(
+      screen.getByRole('option', { name: 'Nova Cat Lancamento' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'Nova Cat Prop' })
+    ).toBeInTheDocument();
+  });
 });

@@ -37,22 +37,49 @@ export default function LancamentosTable({
   const [filterStatus, setFilterStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const categoriasUnicas = useMemo(() => {
+  const [knownCategorias, setKnownCategorias] = useState(() => {
     const names = new Set();
-
     if (categorias && categorias.length > 0) {
       categorias.forEach((c) => {
         const nome = c.nome_categoria || c.nome;
         if (nome) names.add(nome);
       });
     }
+    if (lancamentos && lancamentos.length > 0) {
+      lancamentos.forEach((l) => {
+        if (l.categoria) names.add(l.categoria);
+      });
+    }
+    return names;
+  });
 
-    lancamentos.forEach((l) => {
-      if (l.categoria) names.add(l.categoria);
+  let hasNewCategorias = false;
+  const nextKnownCategorias = new Set(knownCategorias);
+  if (categorias && categorias.length > 0) {
+    categorias.forEach((c) => {
+      const nome = c.nome_categoria || c.nome;
+      if (nome && !nextKnownCategorias.has(nome)) {
+        nextKnownCategorias.add(nome);
+        hasNewCategorias = true;
+      }
     });
+  }
+  if (lancamentos && lancamentos.length > 0) {
+    lancamentos.forEach((l) => {
+      if (l.categoria && !nextKnownCategorias.has(l.categoria)) {
+        nextKnownCategorias.add(l.categoria);
+        hasNewCategorias = true;
+      }
+    });
+  }
 
-    return Array.from(names).sort();
-  }, [lancamentos, categorias]);
+  if (hasNewCategorias) {
+    setKnownCategorias(nextKnownCategorias);
+  }
+
+  const categoriasUnicas = useMemo(() => {
+    return Array.from(knownCategorias).sort();
+  }, [knownCategorias]);
 
   const handleClearFilters = () => {
     setDateFrom('');
@@ -90,38 +117,38 @@ export default function LancamentosTable({
   ]);
 
   const filteredLancamentos = useMemo(() => {
-    if (onFilter) return lancamentos;
-
     return lancamentos.filter((item) => {
-      const itemDateStr = item.dataIso || item.data;
-      if (dateFrom && itemDateStr) {
-        const itemDate = new Date(itemDateStr).getTime();
-        const fromDate = new Date(dateFrom).getTime();
-        if (!isNaN(itemDate) && !isNaN(fromDate) && itemDate < fromDate) {
-          return false;
-        }
-      }
-      if (dateTo && itemDateStr) {
-        const itemDate = new Date(itemDateStr).getTime();
-        const toDate = new Date(dateTo).getTime();
-        if (!isNaN(itemDate) && !isNaN(toDate) && itemDate > toDate) {
-          return false;
-        }
-      }
-
       if (filterCategoria && item.categoria !== filterCategoria) {
         return false;
       }
 
-      if (filterStatus) {
-        const lowerFilter = filterStatus.toLowerCase();
-        const itemLabel = formatStatusLabel(
-          item.status,
-          item.tipo
-        ).toLowerCase();
+      if (!onFilter) {
+        const itemDateStr = item.dataIso || item.data;
+        if (dateFrom && itemDateStr) {
+          const itemDate = new Date(itemDateStr).getTime();
+          const fromDate = new Date(dateFrom).getTime();
+          if (!isNaN(itemDate) && !isNaN(fromDate) && itemDate < fromDate) {
+            return false;
+          }
+        }
+        if (dateTo && itemDateStr) {
+          const itemDate = new Date(itemDateStr).getTime();
+          const toDate = new Date(dateTo).getTime();
+          if (!isNaN(itemDate) && !isNaN(toDate) && itemDate > toDate) {
+            return false;
+          }
+        }
 
-        if (itemLabel !== lowerFilter) {
-          return false;
+        if (filterStatus) {
+          const lowerFilter = filterStatus.toLowerCase();
+          const itemLabel = formatStatusLabel(
+            item.status,
+            item.tipo
+          ).toLowerCase();
+
+          if (itemLabel !== lowerFilter) {
+            return false;
+          }
         }
       }
 
@@ -130,7 +157,9 @@ export default function LancamentosTable({
   }, [lancamentos, dateFrom, dateTo, filterCategoria, filterStatus, onFilter]);
 
   const isBackendPaginated =
-    Boolean(pagination) && filteredLancamentos.length <= pageSize;
+    Boolean(pagination) &&
+    (!filterCategoria || filteredLancamentos.length === lancamentos.length) &&
+    filteredLancamentos.length <= pageSize;
 
   const totalResults =
     isBackendPaginated && pagination.total > 0

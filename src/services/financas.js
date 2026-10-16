@@ -11,6 +11,7 @@ export async function listarFinancas(filters = {}) {
     if (filters.tipo) queryParams.append('tipo', filters.tipo);
     if (filters.situacao) queryParams.append('status', filters.situacao);
 
+    let isOutrosSemId = false;
     if (filters.categoria) {
       try {
         const token = getAccessToken();
@@ -20,12 +21,22 @@ export async function listarFinancas(filters = {}) {
         if (catRes.ok) {
           const categorias = await catRes.json();
           const cat = categorias.find(
-            (c) => c.nome_categoria === filters.categoria
+            (c) =>
+              (c.nome_categoria || c.nome || '').toLowerCase() ===
+              filters.categoria.toLowerCase()
           );
-          if (cat) queryParams.append('categoria_id', cat.categoria_id);
+          if (cat) {
+            queryParams.append('categoria_id', cat.categoria_id || cat.id);
+          } else if (filters.categoria.toLowerCase() === 'outros') {
+            isOutrosSemId = true;
+          }
+        } else if (filters.categoria.toLowerCase() === 'outros') {
+          isOutrosSemId = true;
         }
       } catch (e) {
-        // ignora
+        if (filters.categoria.toLowerCase() === 'outros') {
+          isOutrosSemId = true;
+        }
       }
     }
 
@@ -33,14 +44,45 @@ export async function listarFinancas(filters = {}) {
       queryParams.append('categoria_id', filters.categoria_id);
     if (filters.cliente_id)
       queryParams.append('cliente_id', filters.cliente_id);
+
+    const token = getAccessToken();
+
+    if (isOutrosSemId) {
+      const queryString = queryParams.toString()
+        ? `?${queryParams.toString()}`
+        : '';
+      const response = await fetch(`${API_URL}/lancamentos/${queryString}`, {
+        cache: 'no-store',
+        ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+      });
+      if (!response.ok) return filters.page ? { itens: [], total: 0 } : [];
+      const dados = await response.json();
+      const todos = Array.isArray(dados) ? dados.map(toLancamento) : [];
+      const outrosItens = todos.filter(
+        (item) => !item.categoria_id || item.categoria === 'Outros'
+      );
+
+      if (filters.page) {
+        const page = Number(filters.page) || 1;
+        const pageSize = Number(filters.page_size) || 5;
+        const start = (page - 1) * pageSize;
+        return {
+          itens: outrosItens.slice(start, start + pageSize),
+          total: outrosItens.length,
+          page,
+          page_size: pageSize,
+          total_pages: Math.ceil(outrosItens.length / pageSize) || 1,
+        };
+      }
+      return outrosItens;
+    }
+
     if (filters.page) queryParams.append('page', filters.page);
     if (filters.page_size) queryParams.append('page_size', filters.page_size);
 
     const queryString = queryParams.toString()
       ? `?${queryParams.toString()}`
       : '';
-
-    const token = getAccessToken();
 
     if (filters.page) {
       const response = await fetch(
@@ -78,6 +120,7 @@ export async function obterResumoFinancas(filters = {}) {
     if (filters.tipo) queryParams.append('tipo', filters.tipo);
     if (filters.situacao) queryParams.append('status', filters.situacao);
 
+    let isOutrosSemId = false;
     if (filters.categoria) {
       try {
         const token = getAccessToken();
@@ -87,16 +130,54 @@ export async function obterResumoFinancas(filters = {}) {
         if (catRes.ok) {
           const categorias = await catRes.json();
           const cat = categorias.find(
-            (c) => c.nome_categoria === filters.categoria
+            (c) =>
+              (c.nome_categoria || c.nome || '').toLowerCase() ===
+              filters.categoria.toLowerCase()
           );
-          if (cat) queryParams.append('categoria_id', cat.categoria_id);
+          if (cat) {
+            queryParams.append('categoria_id', cat.categoria_id || cat.id);
+          } else if (filters.categoria.toLowerCase() === 'outros') {
+            isOutrosSemId = true;
+          }
+        } else if (filters.categoria.toLowerCase() === 'outros') {
+          isOutrosSemId = true;
         }
       } catch (e) {
-        // ignora
+        if (filters.categoria.toLowerCase() === 'outros') {
+          isOutrosSemId = true;
+        }
       }
     }
     if (filters.categoria_id)
       queryParams.append('categoria_id', filters.categoria_id);
+
+    if (isOutrosSemId) {
+      const outrosItens = await listarFinancas({ ...filters, page: undefined });
+      const itens = Array.isArray(outrosItens)
+        ? outrosItens
+        : outrosItens.itens || [];
+      const realizado = { quantidade: 0, total_entradas: 0, total_saidas: 0 };
+      const pendente = { quantidade: 0, total_entradas: 0, total_saidas: 0 };
+      const atrasado = { quantidade: 0, total_entradas: 0, total_saidas: 0 };
+
+      itens.forEach((item) => {
+        const status = item.status?.toLowerCase();
+        const target =
+          status === 'realizado'
+            ? realizado
+            : status === 'atrasado'
+              ? atrasado
+              : pendente;
+        target.quantidade += 1;
+        if (item.tipo === 'entrada') {
+          target.total_entradas += Number(item.valor) || 0;
+        } else {
+          target.total_saidas += Number(item.valor) || 0;
+        }
+      });
+
+      return { realizado, pendente, atrasado };
+    }
 
     const queryString = queryParams.toString()
       ? `?${queryParams.toString()}`
