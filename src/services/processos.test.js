@@ -1,30 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { listarFuncionarios } from '@/services/funcionarios';
 import {
   atualizarProcesso,
   criarProcesso,
   excluirProcesso,
+  getProcessosData,
   listarProcessos,
 } from './processos';
-import { getAccessToken } from '@/utils/authSession';
 
-vi.mock('@/utils/authSession', () => ({
-  getAccessToken: vi.fn(),
+vi.mock('@/services/funcionarios', () => ({
+  listarFuncionarios: vi.fn(),
 }));
 
 const processData = {
-  processo_id: 1,
-  cnj: '0061234-56.2026.8.26.0100',
+  id: '0061234-56.2026.8.26.0100',
   titulo: 'Caso Teste',
-  descricao: null,
+  cliente: 'Maria',
   status: 'Ativo',
   tribunal: 'TJDFT',
   area: 'Civil',
-  data_inicio: null,
-  data_realizado: null,
-  data_prazo: '2026-10-05T00:00:00',
-  cliente_id: 10,
-  funcionario_id: 5,
+  responsavel: 'Ana',
+  prazo: '2026-10-05',
+  diasRestantes: 8,
 };
+
+const authorization = { Authorization: 'Bearer token-jwt' };
 
 const jsonResponse = (data, overrides = {}) => ({
   ok: true,
@@ -43,47 +43,38 @@ describe('serviço de processos', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.stubGlobal('fetch', vi.fn());
-    getAccessToken.mockReturnValue('token-jwt');
+    sessionStorage.clear();
+    localStorage.clear();
+    sessionStorage.setItem('access_token', 'token-jwt');
   });
 
-  it('lista processos paginados sem usar cache', async () => {
-    const paginatedResponse = {
-      itens: [processData],
-      total: 6,
+  it('lista processos sem usar cache', async () => {
+    const page = { itens: [processData], total: 1, page: 1, page_size: 5 };
+    fetch.mockResolvedValue(jsonResponse(page));
+
+    await expect(listarProcessos()).resolves.toEqual(page);
+    expect(fetch).toHaveBeenCalledWith('http://localhost:8000/processos/', {
+      cache: 'no-store',
+      headers: authorization,
+    });
+  });
+
+  it('envia filtros e página preenchidos na query string', async () => {
+    fetch.mockResolvedValue(jsonResponse({ itens: [], total: 0 }));
+
+    await listarProcessos({
+      busca: '0061234',
+      status: 'Ativo',
+      responsavelId: '3',
+      prazoInicio: '2026-09-01',
+      prazoFim: '2026-09-30',
       page: 2,
-      page_size: 5,
-      total_pages: 2,
-    };
-    fetch.mockResolvedValue(jsonResponse(paginatedResponse));
-
-    await expect(listarProcessos({ page: 2, pageSize: 5 })).resolves.toEqual(
-      paginatedResponse
-    );
-    expect(fetch).toHaveBeenCalledWith(
-      'http://localhost:8000/processos/?page=2&page_size=5',
-      {
-        cache: 'no-store',
-        headers: { Authorization: 'Bearer token-jwt' },
-      }
-    );
-  });
-
-  it('usa a primeira página com cinco itens por padrão', async () => {
-    fetch.mockResolvedValue(
-      jsonResponse({
-        itens: [processData],
-        total: 1,
-        page: 1,
-        page_size: 5,
-        total_pages: 1,
-      })
-    );
-
-    await listarProcessos();
+      pageSize: 5,
+    });
 
     expect(fetch).toHaveBeenCalledWith(
-      'http://localhost:8000/processos/?page=1&page_size=5',
-      expect.any(Object)
+      'http://localhost:8000/processos/?busca=0061234&status=Ativo&responsavel_id=3&prazo_inicio=2026-09-01&prazo_fim=2026-09-30&page=2&page_size=5',
+      { cache: 'no-store', headers: authorization }
     );
   });
 
@@ -93,10 +84,7 @@ describe('serviço de processos', () => {
     await expect(criarProcesso(processData)).resolves.toEqual(processData);
     expect(fetch).toHaveBeenCalledWith('http://localhost:8000/processos/', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer token-jwt',
-      },
+      headers: { 'Content-Type': 'application/json', ...authorization },
       body: JSON.stringify(processData),
     });
   });
@@ -110,10 +98,7 @@ describe('serviço de processos', () => {
       'http://localhost:8000/processos/processo%2Fcom%20barra',
       {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer token-jwt',
-        },
+        headers: { 'Content-Type': 'application/json', ...authorization },
         body: JSON.stringify({ status: 'Concluído' }),
       }
     );
@@ -123,16 +108,11 @@ describe('serviço de processos', () => {
     const response = jsonResponse(null, { status: 204 });
     fetch.mockResolvedValue(response);
 
-    await expect(
-      excluirProcesso(processData.processo_id)
-    ).resolves.toBeUndefined();
+    await expect(excluirProcesso(processData.id)).resolves.toBeUndefined();
     expect(response.json).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledWith(
-      `http://localhost:8000/processos/${processData.processo_id}`,
-      {
-        method: 'DELETE',
-        headers: { Authorization: 'Bearer token-jwt' },
-      }
+      `http://localhost:8000/processos/${processData.id}`,
+      { method: 'DELETE', headers: authorization }
     );
   });
 
@@ -201,6 +181,23 @@ describe('serviço de processos', () => {
     );
   });
 
+  it('não faz a requisição sem token de acesso', async () => {
+    sessionStorage.clear();
+
+    await expect(listarProcessos()).rejects.toThrow(
+      'Sessão expirada. Faça login novamente.'
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('informa falta de permissão em respostas 403', async () => {
+    fetch.mockResolvedValue(errorResponse('Forbidden', 403));
+
+    await expect(excluirProcesso('1')).rejects.toThrow(
+      'Você não possui permissão para realizar esta ação.'
+    );
+  });
+
   it('ignora itens inválidos em uma lista de validação', async () => {
     fetch.mockResolvedValue(errorResponse([{}], 422));
 
@@ -209,20 +206,62 @@ describe('serviço de processos', () => {
     );
   });
 
-  it('exige sessão e traduz respostas de autorização', async () => {
-    getAccessToken.mockReturnValueOnce(null);
-    await expect(listarProcessos()).rejects.toThrow(
-      'Sessão expirada. Faça login novamente.'
-    );
+  describe('getProcessosData', () => {
+    it('carrega a primeira página e as opções de responsável', async () => {
+      fetch.mockResolvedValue(
+        jsonResponse({
+          itens: [{ processo_id: 1 }],
+          total: 1,
+          page: 1,
+          page_size: 5,
+          total_pages: 1,
+        })
+      );
+      listarFuncionarios.mockResolvedValue([
+        { funcionario_id: 3, nome: 'Ana Paula Ribeiro' },
+      ]);
 
-    fetch.mockResolvedValueOnce(errorResponse('Not authenticated', 401));
-    await expect(listarProcessos()).rejects.toThrow(
-      'Sessão expirada. Faça login novamente.'
-    );
+      await expect(getProcessosData()).resolves.toEqual({
+        initialPage: {
+          itens: [{ processo_id: 1 }],
+          total: 1,
+          page: 1,
+          pageSize: 5,
+          totalPages: 1,
+        },
+        responsaveis: [{ value: '3', label: 'Ana Paula Ribeiro' }],
+        initialError: '',
+      });
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/processos/?page=1&page_size=5',
+        { cache: 'no-store', headers: authorization }
+      );
+    });
 
-    fetch.mockResolvedValueOnce(errorResponse('Forbidden', 403));
-    await expect(criarProcesso(processData)).rejects.toThrow(
-      'Você não possui permissão para realizar esta ação.'
-    );
+    it('devolve a página vazia e a mensagem quando a API falha', async () => {
+      fetch.mockResolvedValue(errorResponse('API indisponível', 500));
+      listarFuncionarios.mockResolvedValue([]);
+
+      await expect(getProcessosData()).resolves.toEqual({
+        initialPage: {
+          itens: [],
+          total: 0,
+          page: 1,
+          pageSize: 5,
+          totalPages: 1,
+        },
+        responsaveis: [],
+        initialError: 'API indisponível',
+      });
+    });
+
+    it('usa a mensagem padrão para rejeições que não são erros', async () => {
+      fetch.mockResolvedValue(jsonResponse({ itens: [] }));
+      listarFuncionarios.mockRejectedValue('falha');
+
+      const { initialError } = await getProcessosData();
+
+      expect(initialError).toBe('Não foi possível carregar os processos.');
+    });
   });
 });
