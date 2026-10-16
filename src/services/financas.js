@@ -62,8 +62,7 @@ export async function listarFinancas(filters = {}) {
       const outrosItens = todos.filter((item) => {
         if (!item.categoria_id) return true;
         if (outrosCatId && item.categoria_id === outrosCatId) return true;
-        const nomeCat = item.categoria || catMap.get(item.categoria_id) || '';
-        return nomeCat.toLowerCase() === 'outros';
+        return item.categoria.toLowerCase() === 'outros';
       });
 
       if (filters.page) {
@@ -158,10 +157,7 @@ export async function obterResumoFinancas(filters = {}) {
       filters.categoria.trim().toLowerCase() === 'outros';
 
     if (isOutros) {
-      const outrosItens = await listarFinancas({ ...filters, page: undefined });
-      const itens = Array.isArray(outrosItens)
-        ? outrosItens
-        : outrosItens.itens || [];
+      const itens = await listarFinancas({ ...filters, page: undefined });
       const realizado = { quantidade: 0, total_entradas: 0, total_saidas: 0 };
       const pendente = { quantidade: 0, total_entradas: 0, total_saidas: 0 };
       const atrasado = { quantidade: 0, total_entradas: 0, total_saidas: 0 };
