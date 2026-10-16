@@ -365,4 +365,98 @@ describe('LancamentosTable', () => {
       expect.objectContaining({ situacao: 'Atrasado' })
     );
   });
+
+  it('exibe apenas pageSize itens por página no corpo da tabela', () => {
+    render(<LancamentosTable lancamentos={mockLancamentos} pageSize={5} />);
+
+    expect(
+      screen.getByText('Exibindo 1–5 de 10 resultados')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
+    expect(
+      screen.getByText('Honorários Iniciais - João Santos')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Software Jurídico Mensalidade')
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    {
+      cenario: 'categoria Honorários',
+      setup: () => {
+        fireEvent.change(screen.getByLabelText('Filtrar por categoria'), {
+          target: { value: 'Honorários' },
+        });
+      },
+      esperadoVisivel: 'Honorários Iniciais - João Santos',
+      esperadoOculto: 'Custas Processuais - Maria Souza',
+    },
+    {
+      cenario: 'status pendente',
+      setup: () => {
+        fireEvent.change(screen.getByLabelText('Filtrar por status'), {
+          target: { value: 'pendente' },
+        });
+      },
+      esperadoVisivel: 'Consultoria Jurídica - Tech Solutions',
+      esperadoOculto: 'Honorários Iniciais - João Santos',
+    },
+    {
+      cenario: 'intervalo de datas (De / Até)',
+      setup: () => {
+        fireEvent.change(screen.getByLabelText('Data inicial'), {
+          target: { value: '2026-08-10' },
+        });
+        fireEvent.change(screen.getByLabelText('Data final'), {
+          target: { value: '2026-08-18' },
+        });
+      },
+      esperadoVisivel: 'Honorários de Êxito - Costa Indústrias',
+      esperadoOculto: 'Honorários Iniciais - João Santos',
+    },
+  ])(
+    'filtra lançamentos localmente por $cenario quando onFilter não é fornecido',
+    ({ setup, esperadoVisivel, esperadoOculto }) => {
+      render(<LancamentosTable lancamentos={mockLancamentos} pageSize={10} />);
+
+      setup();
+
+      expect(screen.getByText(esperadoVisivel)).toBeInTheDocument();
+      expect(screen.queryByText(esperadoOculto)).not.toBeInTheDocument();
+    }
+  );
+
+  it('utiliza categorias e dados de paginação vindos do backend quando fornecidos', () => {
+    const handleFilter = vi.fn();
+    render(
+      <LancamentosTable
+        lancamentos={mockLancamentos.slice(0, 5)}
+        categorias={[
+          { categoria_id: 1, nome_categoria: 'Consultoria Especial' },
+          { categoria_id: 2, nome: 'Tributos' },
+        ]}
+        pagination={{ page: 1, pageSize: 5, total: 8, totalPages: 2 }}
+        pageSize={5}
+        onFilter={handleFilter}
+      />
+    );
+
+    expect(
+      screen.getByText('Exibindo 1–5 de 8 resultados')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'Consultoria Especial' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'Tributos' })
+    ).toBeInTheDocument();
+
+    const selectStatus = screen.getByLabelText('Filtrar por status');
+    fireEvent.change(selectStatus, { target: { value: 'realizado' } });
+    expect(handleFilter).toHaveBeenCalledWith(
+      expect.objectContaining({ situacao: 'Realizado' })
+    );
+  });
 });

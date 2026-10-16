@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Pencil,
   RotateCcw,
-  Search,
   Trash2,
   X,
 } from 'lucide-react';
@@ -43,7 +42,8 @@ export default function LancamentosTable({
 
     if (categorias && categorias.length > 0) {
       categorias.forEach((c) => {
-        if (c.nome_categoria) names.add(c.nome_categoria);
+        const nome = c.nome_categoria || c.nome;
+        if (nome) names.add(nome);
       });
     }
 
@@ -89,22 +89,59 @@ export default function LancamentosTable({
     onFilter,
   ]);
 
+  const filteredLancamentos = useMemo(() => {
+    if (onFilter) return lancamentos;
+
+    return lancamentos.filter((item) => {
+      const itemDateStr = item.dataIso || item.data;
+      if (dateFrom && itemDateStr) {
+        const itemDate = new Date(itemDateStr).getTime();
+        const fromDate = new Date(dateFrom).getTime();
+        if (!isNaN(itemDate) && !isNaN(fromDate) && itemDate < fromDate) {
+          return false;
+        }
+      }
+      if (dateTo && itemDateStr) {
+        const itemDate = new Date(itemDateStr).getTime();
+        const toDate = new Date(dateTo).getTime();
+        if (!isNaN(itemDate) && !isNaN(toDate) && itemDate > toDate) {
+          return false;
+        }
+      }
+
+      if (filterCategoria && item.categoria !== filterCategoria) {
+        return false;
+      }
+
+      if (filterStatus) {
+        const lowerFilter = filterStatus.toLowerCase();
+        const itemLabel = formatStatusLabel(
+          item.status,
+          item.tipo
+        ).toLowerCase();
+
+        if (itemLabel !== lowerFilter) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [lancamentos, dateFrom, dateTo, filterCategoria, filterStatus, onFilter]);
+
   const isBackendPaginated =
-    Boolean(pagination) && lancamentos.length <= pageSize;
+    Boolean(pagination) && filteredLancamentos.length <= pageSize;
 
   const totalResults =
     isBackendPaginated && pagination.total > 0
       ? pagination.total
-      : lancamentos.length;
-  const totalPages =
-    isBackendPaginated && pagination.totalPages > 0
-      ? pagination.totalPages
-      : Math.ceil(totalResults / pageSize) || 1;
+      : filteredLancamentos.length;
+  const totalPages = Math.ceil(totalResults / pageSize) || 1;
   const actualCurrentPage = isBackendPaginated ? pagination.page : currentPage;
 
   const globalStartIndex = (actualCurrentPage - 1) * pageSize;
   const arrayStartIndex = isBackendPaginated ? 0 : globalStartIndex;
-  const paginatedLancamentos = lancamentos.slice(
+  const paginatedLancamentos = filteredLancamentos.slice(
     arrayStartIndex,
     arrayStartIndex + pageSize
   );
@@ -229,14 +266,14 @@ export default function LancamentosTable({
             </tr>
           </thead>
           <tbody>
-            {lancamentos.length === 0 ? (
+            {paginatedLancamentos.length === 0 ? (
               <tr>
                 <td colSpan={7} className={styles.emptyState}>
                   Nenhum lançamento encontrado.
                 </td>
               </tr>
             ) : (
-              lancamentos.map((item) => {
+              paginatedLancamentos.map((item) => {
                 const isEntrada = item.tipo?.toLowerCase() === 'entrada';
                 const statusLower = item.status?.toLowerCase();
                 const isPago = isStatusConcluido(item.status);
