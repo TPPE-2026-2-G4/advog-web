@@ -118,8 +118,16 @@ export default function LancamentosTable({
 
   const filteredLancamentos = useMemo(() => {
     return lancamentos.filter((item) => {
-      if (filterCategoria && item.categoria !== filterCategoria) {
-        return false;
+      if (filterCategoria) {
+        const itemCat = (item.categoria || '').trim().toLowerCase();
+        const filterCat = filterCategoria.trim().toLowerCase();
+        if (filterCat === 'outros') {
+          if (itemCat && itemCat !== 'outros') {
+            return false;
+          }
+        } else if (itemCat !== filterCat) {
+          return false;
+        }
       }
 
       if (!onFilter) {
@@ -302,7 +310,7 @@ export default function LancamentosTable({
                 </td>
               </tr>
             ) : (
-              paginatedLancamentos.map((item) => {
+              paginatedLancamentos.map((item, index) => {
                 const isEntrada = item.tipo?.toLowerCase() === 'entrada';
                 const statusLower = item.status?.toLowerCase();
                 const isPago = isStatusConcluido(item.status);
@@ -310,7 +318,14 @@ export default function LancamentosTable({
                 const statusLabel = formatStatusLabel(item.status, item.tipo);
 
                 return (
-                  <tr key={item.id} className={styles.tr}>
+                  <tr
+                    key={
+                      item.id ??
+                      item.lancamento_id ??
+                      `${item.titulo}-${item.data}-${index}`
+                    }
+                    className={styles.tr}
+                  >
                     <td className={styles.td} data-label="Data">
                       <span className={styles.dateCell}>{item.data}</span>
                     </td>

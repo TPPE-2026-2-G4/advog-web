@@ -11,43 +11,36 @@ export async function listarFinancas(filters = {}) {
     if (filters.tipo) queryParams.append('tipo', filters.tipo);
     if (filters.situacao) queryParams.append('status', filters.situacao);
 
-    let isOutrosSemId = false;
-    if (filters.categoria) {
-      try {
-        const token = getAccessToken();
-        const catRes = await fetch(`${API_URL}/categorias-lancamento`, {
-          ...(token && { headers: { Authorization: `Bearer ${token}` } }),
-        });
-        if (catRes.ok) {
-          const categorias = await catRes.json();
-          const cat = categorias.find(
-            (c) =>
-              (c.nome_categoria || c.nome || '').toLowerCase() ===
-              filters.categoria.toLowerCase()
-          );
-          if (cat) {
-            queryParams.append('categoria_id', cat.categoria_id || cat.id);
-          } else if (filters.categoria.toLowerCase() === 'outros') {
-            isOutrosSemId = true;
-          }
-        } else if (filters.categoria.toLowerCase() === 'outros') {
-          isOutrosSemId = true;
-        }
-      } catch (e) {
-        if (filters.categoria.toLowerCase() === 'outros') {
-          isOutrosSemId = true;
+    const token = getAccessToken();
+    const catMap = new Map();
+    let outrosCatId = null;
+
+    try {
+      const catRes = await fetch(`${API_URL}/categorias-lancamento`, {
+        ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+      });
+      if (catRes.ok) {
+        const categorias = await catRes.json();
+        if (Array.isArray(categorias)) {
+          categorias.forEach((c) => {
+            const id = c.categoria_id || c.id;
+            const nome = c.nome_categoria || c.nome;
+            if (id) catMap.set(id, nome);
+            if (nome && nome.toLowerCase() === 'outros') {
+              outrosCatId = id;
+            }
+          });
         }
       }
+    } catch {
+      // Ignora erro ao obter categorias
     }
 
-    if (filters.categoria_id)
-      queryParams.append('categoria_id', filters.categoria_id);
-    if (filters.cliente_id)
-      queryParams.append('cliente_id', filters.cliente_id);
+    const isOutros =
+      Boolean(filters.categoria) &&
+      filters.categoria.trim().toLowerCase() === 'outros';
 
-    const token = getAccessToken();
-
-    if (isOutrosSemId) {
+    if (isOutros) {
       const queryString = queryParams.toString()
         ? `?${queryParams.toString()}`
         : '';
@@ -57,10 +50,21 @@ export async function listarFinancas(filters = {}) {
       });
       if (!response.ok) return filters.page ? { itens: [], total: 0 } : [];
       const dados = await response.json();
-      const todos = Array.isArray(dados) ? dados.map(toLancamento) : [];
-      const outrosItens = todos.filter(
-        (item) => !item.categoria_id || item.categoria === 'Outros'
-      );
+      const todos = Array.isArray(dados)
+        ? dados.map((d) => {
+            const l = toLancamento(d);
+            if (l.categoria_id && catMap.has(l.categoria_id)) {
+              l.categoria = catMap.get(l.categoria_id);
+            }
+            return l;
+          })
+        : [];
+      const outrosItens = todos.filter((item) => {
+        if (!item.categoria_id) return true;
+        if (outrosCatId && item.categoria_id === outrosCatId) return true;
+        const nomeCat = item.categoria || catMap.get(item.categoria_id) || '';
+        return nomeCat.toLowerCase() === 'outros';
+      });
 
       if (filters.page) {
         const page = Number(filters.page) || 1;
@@ -76,6 +80,24 @@ export async function listarFinancas(filters = {}) {
       }
       return outrosItens;
     }
+
+    if (filters.categoria) {
+      let matchedId = null;
+      for (const [id, nome] of catMap.entries()) {
+        if (nome && nome.toLowerCase() === filters.categoria.toLowerCase()) {
+          matchedId = id;
+          break;
+        }
+      }
+      if (matchedId) {
+        queryParams.append('categoria_id', matchedId);
+      }
+    }
+
+    if (filters.categoria_id)
+      queryParams.append('categoria_id', filters.categoria_id);
+    if (filters.cliente_id)
+      queryParams.append('cliente_id', filters.cliente_id);
 
     if (filters.page) queryParams.append('page', filters.page);
     if (filters.page_size) queryParams.append('page_size', filters.page_size);
@@ -94,9 +116,18 @@ export async function listarFinancas(filters = {}) {
       );
       if (!response.ok) return { itens: [], total: 0 };
       const dados = await response.json();
+      const itensMapeados = Array.isArray(dados.itens)
+        ? dados.itens.map((d) => {
+            const l = toLancamento(d);
+            if (l.categoria_id && catMap.has(l.categoria_id)) {
+              l.categoria = catMap.get(l.categoria_id);
+            }
+            return l;
+          })
+        : [];
       return {
         ...dados,
-        itens: Array.isArray(dados.itens) ? dados.itens.map(toLancamento) : [],
+        itens: itensMapeados,
       };
     } else {
       const response = await fetch(`${API_URL}/lancamentos/${queryString}`, {
@@ -105,7 +136,15 @@ export async function listarFinancas(filters = {}) {
       });
       if (!response.ok) return [];
       const dados = await response.json();
-      return Array.isArray(dados) ? dados.map(toLancamento) : [];
+      return Array.isArray(dados)
+        ? dados.map((d) => {
+            const l = toLancamento(d);
+            if (l.categoria_id && catMap.has(l.categoria_id)) {
+              l.categoria = catMap.get(l.categoria_id);
+            }
+            return l;
+          })
+        : [];
     }
   } catch {
     return filters.page ? { itens: [], total: 0 } : [];
@@ -114,44 +153,11 @@ export async function listarFinancas(filters = {}) {
 
 export async function obterResumoFinancas(filters = {}) {
   try {
-    const queryParams = new URLSearchParams();
-    if (filters.inicio) queryParams.append('inicio', filters.inicio);
-    if (filters.fim) queryParams.append('fim', filters.fim);
-    if (filters.tipo) queryParams.append('tipo', filters.tipo);
-    if (filters.situacao) queryParams.append('status', filters.situacao);
+    const isOutros =
+      Boolean(filters.categoria) &&
+      filters.categoria.trim().toLowerCase() === 'outros';
 
-    let isOutrosSemId = false;
-    if (filters.categoria) {
-      try {
-        const token = getAccessToken();
-        const catRes = await fetch(`${API_URL}/categorias-lancamento`, {
-          ...(token && { headers: { Authorization: `Bearer ${token}` } }),
-        });
-        if (catRes.ok) {
-          const categorias = await catRes.json();
-          const cat = categorias.find(
-            (c) =>
-              (c.nome_categoria || c.nome || '').toLowerCase() ===
-              filters.categoria.toLowerCase()
-          );
-          if (cat) {
-            queryParams.append('categoria_id', cat.categoria_id || cat.id);
-          } else if (filters.categoria.toLowerCase() === 'outros') {
-            isOutrosSemId = true;
-          }
-        } else if (filters.categoria.toLowerCase() === 'outros') {
-          isOutrosSemId = true;
-        }
-      } catch (e) {
-        if (filters.categoria.toLowerCase() === 'outros') {
-          isOutrosSemId = true;
-        }
-      }
-    }
-    if (filters.categoria_id)
-      queryParams.append('categoria_id', filters.categoria_id);
-
-    if (isOutrosSemId) {
+    if (isOutros) {
       const outrosItens = await listarFinancas({ ...filters, page: undefined });
       const itens = Array.isArray(outrosItens)
         ? outrosItens
@@ -178,6 +184,35 @@ export async function obterResumoFinancas(filters = {}) {
 
       return { realizado, pendente, atrasado };
     }
+
+    const queryParams = new URLSearchParams();
+    if (filters.inicio) queryParams.append('inicio', filters.inicio);
+    if (filters.fim) queryParams.append('fim', filters.fim);
+    if (filters.tipo) queryParams.append('tipo', filters.tipo);
+    if (filters.situacao) queryParams.append('status', filters.situacao);
+
+    if (filters.categoria) {
+      try {
+        const token = getAccessToken();
+        const catRes = await fetch(`${API_URL}/categorias-lancamento`, {
+          ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+        });
+        if (catRes.ok) {
+          const categorias = await catRes.json();
+          const cat = categorias.find(
+            (c) =>
+              (c.nome_categoria || c.nome || '').toLowerCase() ===
+              filters.categoria.toLowerCase()
+          );
+          if (cat)
+            queryParams.append('categoria_id', cat.categoria_id || cat.id);
+        }
+      } catch {
+        // ignora
+      }
+    }
+    if (filters.categoria_id)
+      queryParams.append('categoria_id', filters.categoria_id);
 
     const queryString = queryParams.toString()
       ? `?${queryParams.toString()}`

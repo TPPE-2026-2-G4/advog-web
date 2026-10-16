@@ -451,10 +451,9 @@ describe('serviço de finanças', () => {
     });
 
     it('calcula o resumo de finanças para categoria Outros', async () => {
-      // Mock de /categorias-lancamento
+      // Mock de /categorias-lancamento dentro de listarFinancas
       fetch.mockResolvedValueOnce(respostaJson([]));
-      // Mock do listarFinancas interno chamado por obterResumoFinancas
-      fetch.mockResolvedValueOnce(respostaJson([])); // /categorias-lancamento dentro de listarFinancas
+      // Mock de /lancamentos/ dentro de listarFinancas
       fetch.mockResolvedValueOnce(
         respostaJson([
           {
@@ -478,6 +477,58 @@ describe('serviço de finanças', () => {
       expect(resumo).toBeDefined();
       expect(resumo.realizado.total_entradas).toBe(1000);
       expect(resumo.pendente.total_saidas).toBe(300);
+    });
+
+    it('retorna todos os lançamentos com categoria Outros mesmo com categoria Outros cadastrada no backend e nomes/descrições idênticos', async () => {
+      // Mock de /categorias-lancamento retornando categoria "Outros" com id 5 e "Honorários" com id 1
+      fetch.mockResolvedValueOnce(
+        respostaJson([
+          { categoria_id: 1, nome_categoria: 'Honorários' },
+          { categoria_id: 5, nome_categoria: 'Outros' },
+        ])
+      );
+      // Mock de /lancamentos/
+      fetch.mockResolvedValueOnce(
+        respostaJson([
+          {
+            lancamento_id: 1,
+            categoria_id: 1,
+            titulo: 'Honorários João',
+            descricao: null,
+          },
+          {
+            lancamento_id: 2,
+            categoria_id: null,
+            titulo: 'Lançamento Teste',
+            descricao: null,
+          },
+          {
+            lancamento_id: 3,
+            categoria_id: null,
+            titulo: 'Lançamento Teste',
+            descricao: null,
+          },
+          {
+            lancamento_id: 4,
+            categoria_id: 5,
+            titulo: 'Lançamento Teste',
+            descricao: null,
+          },
+        ])
+      );
+
+      const res = await listarFinancas({
+        categoria: 'Outros',
+        page: 1,
+        page_size: 5,
+      });
+
+      expect(res.itens).toHaveLength(3);
+      expect(res.total).toBe(3);
+      expect(res.itens.map((i) => i.id)).toEqual([2, 3, 4]);
+      expect(res.itens[0].titulo).toBe('Lançamento Teste');
+      expect(res.itens[1].titulo).toBe('Lançamento Teste');
+      expect(res.itens[2].titulo).toBe('Lançamento Teste');
     });
   });
 });
