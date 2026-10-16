@@ -48,7 +48,7 @@ describe('LancamentoModal', () => {
     expect(screen.getByLabelText('Título')).toBeRequired();
     expect(screen.getByLabelText('Descrição')).toBeInTheDocument();
     expect(screen.getByLabelText('Valor')).toBeRequired();
-    expect(screen.getByLabelText('Data')).toBeRequired();
+    expect(screen.getByLabelText('Data de Criação')).toBeRequired();
     expect(screen.getByLabelText('Data de Vencimento')).toBeInTheDocument();
     expect(screen.getByLabelText('Categoria')).toBeInTheDocument();
     expect(
@@ -86,7 +86,7 @@ describe('LancamentoModal', () => {
     expect(screen.getByLabelText('Título')).toHaveValue('Conta de Energia');
     expect(screen.getByLabelText('Descrição')).toHaveValue('Referente ao mês');
     expect(screen.getByLabelText('Valor')).toHaveValue('350.5');
-    expect(screen.getByLabelText('Data')).toHaveValue('2026-09-10');
+    expect(screen.getByLabelText('Data de Criação')).toHaveValue('2026-09-10');
     expect(screen.getByLabelText('Data de Vencimento')).toHaveValue(
       '2026-09-15'
     );
@@ -155,7 +155,7 @@ describe('LancamentoModal', () => {
     fireEvent.change(screen.getByLabelText('Valor'), {
       target: { value: '1500,50' },
     });
-    fireEvent.change(screen.getByLabelText('Data'), {
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
       target: { value: '2026-09-15' },
     });
     fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
@@ -243,7 +243,7 @@ describe('LancamentoModal', () => {
 
     renderModal({ initialItem: mockItem, onSave, onClose });
 
-    fireEvent.change(screen.getByLabelText('Data'), {
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
       target: { value: '2026-09-10' },
     });
     fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
@@ -287,12 +287,12 @@ describe('LancamentoModal', () => {
 
     renderModal({ initialItem: mockItem, onSave, onClose });
 
-    expect(screen.getByLabelText('Data').value).toBe('2026-10-01');
+    expect(screen.getByLabelText('Data de Criação').value).toBe('2026-10-01');
     expect(screen.getByLabelText('Data de Vencimento').value).toBe(
       '2026-10-20'
     );
 
-    fireEvent.change(screen.getByLabelText('Data'), {
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
       target: { value: '2026-10-05' },
     });
 
@@ -392,7 +392,9 @@ describe('LancamentoModal', () => {
       target: { value: '100' },
     });
 
-    fireEvent.change(screen.getByLabelText('Data'), { target: { value: 'T' } });
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
+      target: { value: 'T' },
+    });
     fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
       target: { value: 'T' },
     });
@@ -433,7 +435,7 @@ describe('LancamentoModal', () => {
     fireEvent.change(screen.getByLabelText('Valor'), {
       target: { value: '1' },
     });
-    fireEvent.change(screen.getByLabelText('Data'), {
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
       target: { value: '2026-01-01' },
     });
 
@@ -454,7 +456,7 @@ describe('LancamentoModal', () => {
     fireEvent.change(screen.getByLabelText('Valor'), {
       target: { value: '1' },
     });
-    fireEvent.change(screen.getByLabelText('Data'), {
+    fireEvent.change(screen.getByLabelText('Data de Criação'), {
       target: { value: '2026-01-01' },
     });
 

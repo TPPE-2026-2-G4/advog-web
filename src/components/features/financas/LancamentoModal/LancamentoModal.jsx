@@ -305,7 +305,7 @@ export default function LancamentoModal({
 
           <div className={styles.inputGroup}>
             <label className={styles.label} htmlFor="lancamento-data">
-              Data
+              Data de Criação
             </label>
             <input
               id="lancamento-data"
