@@ -24,3 +24,8 @@ for (const nome of ['localStorage', 'sessionStorage']) {
     });
   }
 }
+
+process.env.NEXT_PUBLIC_MINIO_INTERNAL = 'minio:9000';
+process.env.NEXT_PUBLIC_MINIO_EXTERNAL = 'localhost:9000';
+process.env.NEXT_PUBLIC_MINIO_ALIAS = 'http://minio/';
+process.env.NEXT_PUBLIC_MINIO_ALIAS_EXTERNAL = 'http://localhost:9000/';

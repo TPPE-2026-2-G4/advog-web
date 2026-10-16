@@ -4,6 +4,7 @@
 import { useRef } from 'react';
 import { Scale, Upload, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import styles from './site.module.css';
+import { getImageUrl } from '@/utils/institucional';
 
 export default function VisualIdentityTab({
   logoPreview,
@@ -49,7 +50,7 @@ export default function VisualIdentityTab({
           <div className={styles.logoBox}>
             {logoPreview ? (
               <img
-                src={logoPreview}
+                src={getImageUrl(logoPreview)}
                 alt="Logotipo do escritório"
                 className={styles.logoImage}
               />
@@ -98,7 +99,7 @@ export default function VisualIdentityTab({
         {bannerPreview ? (
           <div className={styles.bannerPreviewBox}>
             <img
-              src={bannerPreview}
+              src={getImageUrl(bannerPreview)}
               alt="Banner Hero"
               className={styles.bannerImage}
             />
