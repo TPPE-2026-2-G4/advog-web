@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { middleware } from './middleware';
+import { proxy } from './proxy';
 import { NextResponse } from 'next/server';
 
 vi.mock('next/server', () => ({
@@ -9,7 +9,7 @@ vi.mock('next/server', () => ({
   },
 }));
 
-describe('middleware', () => {
+describe('proxy', () => {
   const createRequest = (pathname, hasToken = false) => {
     return {
       nextUrl: {
@@ -71,7 +71,7 @@ describe('middleware', () => {
     '%s',
     (_descricao, pathname, hasToken, expectedAction, expectedRedirectUrl) => {
       const request = createRequest(pathname, hasToken);
-      const response = middleware(request);
+      const response = proxy(request);
 
       if (expectedAction === 'redirect') {
         expect(NextResponse.redirect).toHaveBeenCalled();
