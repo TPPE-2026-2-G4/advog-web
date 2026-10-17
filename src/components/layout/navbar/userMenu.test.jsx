@@ -1,14 +1,29 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import UserMenu from './userMenu';
+import { AuthContext } from '@/contexts/AuthContext';
 import { getCurrentUser } from '@/utils/authSession';
+
+const { pushMock, clearAuthSessionMock } = vi.hoisted(() => ({
+  pushMock: vi.fn(),
+  clearAuthSessionMock: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: pushMock,
+  }),
+}));
 
 vi.mock('@/utils/authSession', () => ({
   getCurrentUser: vi.fn(),
+  clearAuthSession: clearAuthSessionMock,
 }));
 
 describe('UserMenu', () => {
   beforeEach(() => {
+    pushMock.mockClear();
+    clearAuthSessionMock.mockClear();
     getCurrentUser.mockReturnValue({
       nome: 'Alexandre Carreiro',
       cargo: 'Advogado(a)',
@@ -147,5 +162,72 @@ describe('UserMenu', () => {
       expect.any(Function)
     );
     removeEventListener.mockRestore();
+  });
+
+  it('abre o modal de confirmação ao clicar em Sair e fecha ao cancelar sem deslogar', async () => {
+    render(<UserMenu />);
+    const triggerText = await screen.findByText('Alexandre C.');
+    fireEvent.click(triggerText.closest('button'));
+
+    const logoutButton = screen.getByRole('button', { name: /Sair/i });
+    fireEvent.click(logoutButton);
+
+    expect(screen.getByText('Deseja sair da sua conta?')).toBeInTheDocument();
+    expect(clearAuthSessionMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(
+      screen.queryByText('Deseja sair da sua conta?')
+    ).not.toBeInTheDocument();
+    expect(clearAuthSessionMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('desloga limpando a sessão e redirecionando para /login ao confirmar no modal', async () => {
+    render(<UserMenu />);
+    const triggerText = await screen.findByText('Alexandre C.');
+    fireEvent.click(triggerText.closest('button'));
+
+    const logoutButton = screen.getByRole('button', { name: /Sair/i });
+    fireEvent.click(logoutButton);
+
+    const confirmButton = screen.getByRole('button', {
+      name: 'Confirmar e sair',
+    });
+    fireEvent.click(confirmButton);
+
+    expect(clearAuthSessionMock).toHaveBeenCalledTimes(1);
+    expect(pushMock).toHaveBeenCalledWith('/login');
+    expect(screen.queryByText('Alexandre Carreiro')).not.toBeInTheDocument();
+  });
+
+  it('chama auth.logout e redireciona para /login ao confirmar no modal com AuthContext presente', async () => {
+    const mockLogout = vi.fn();
+    const mockUser = {
+      nome: 'Alexandre Carreiro',
+      cargo: 'Advogado(a)',
+      email: 'alexandre@carreiro.adv.br',
+    };
+
+    render(
+      <AuthContext.Provider value={{ user: mockUser, logout: mockLogout }}>
+        <UserMenu />
+      </AuthContext.Provider>
+    );
+
+    const triggerText = await screen.findByText('Alexandre C.');
+    fireEvent.click(triggerText.closest('button'));
+
+    const logoutButton = screen.getByRole('button', { name: /Sair/i });
+    fireEvent.click(logoutButton);
+
+    const confirmButton = screen.getByRole('button', {
+      name: 'Confirmar e sair',
+    });
+    fireEvent.click(confirmButton);
+
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+    expect(pushMock).toHaveBeenCalledWith('/login');
   });
 });

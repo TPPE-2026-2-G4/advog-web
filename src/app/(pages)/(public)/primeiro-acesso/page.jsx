@@ -145,7 +145,8 @@ function FirstLoginContent() {
                 id="numeroOab"
                 className={styles.input}
                 type="text"
-                placeholder="Ex.: 123456"
+                placeholder="Ex.: 12345"
+                maxLength={5}
                 value={numeroOab}
                 onChange={(event) => setNumeroOab(event.target.value)}
                 required

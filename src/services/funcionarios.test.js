@@ -168,6 +168,22 @@ describe('serviço de funcionários', () => {
       );
     });
 
+    it('envia DELETE para o funcionário informado com cabeçalho de autorização quando logado', async () => {
+      sessionStorage.setItem('access_token', 'token-admin');
+      fetch.mockResolvedValue(respostaJson(null));
+
+      await expect(excluirFuncionario(8)).resolves.toBeUndefined();
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/funcionarios/8',
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: 'Bearer token-admin',
+          },
+        }
+      );
+    });
+
     it.each([
       [
         'mensagem da API',
@@ -203,6 +219,23 @@ describe('serviço de funcionários', () => {
         );
       }
     );
+
+    it('envia PATCH com cabeçalho de autorização quando logado', async () => {
+      sessionStorage.setItem('access_token', 'token-admin');
+      const funcionario = { funcionario_id: 8, status: 'Inativo' };
+      fetch.mockResolvedValue(respostaJson(funcionario));
+
+      await expect(mudarAcessoFuncionario(8)).resolves.toEqual(funcionario);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/funcionarios/8/mudar-acesso',
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: 'Bearer token-admin',
+          },
+        }
+      );
+    });
 
     it.each([
       [
