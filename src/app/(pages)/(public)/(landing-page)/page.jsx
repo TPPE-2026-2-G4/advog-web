@@ -1,14 +1,20 @@
 import { buscarDadosInstitucionais } from '@/services/institucional';
+import { listarAtuacoes } from '@/services/atuacoes';
 import { Scale } from 'lucide-react';
 import styles from './page.module.css';
 
 import { getImageUrl, formatParagraphs } from '@/utils/institucional';
 
 export default async function Home() {
-  const dados = await buscarDadosInstitucionais();
-  console.log('DADOS RECEBIDOS DO BACKEND:', dados.imagemSobre);
+  const [dados, atuacoes] = await Promise.all([
+    buscarDadosInstitucionais(),
+    listarAtuacoes(),
+  ]);
 
   const sobreTextos = formatParagraphs(dados?.sobreEscritorio);
+  const atuacoesVisiveis = (atuacoes || []).filter(
+    (area) => area.exibicaoInstitucional
+  );
 
   return (
     <div style={{ backgroundColor: '#FAF9F6', minHeight: '100vh' }}>
@@ -43,6 +49,22 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        {atuacoesVisiveis.length > 0 && (
+          <section className={styles.areasSection}>
+            <h2 className={styles.title}>Áreas de Atuação</h2>
+            <div className={styles.areasGrid}>
+              {atuacoesVisiveis.map((area) => (
+                <div key={area.atuacao_id} className={styles.areaCard}>
+                  <h3 className={styles.areaCardTitle}>
+                    {area.titulo || area.nome}
+                  </h3>
+                  <p className={styles.areaCardDesc}>{area.descricao}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

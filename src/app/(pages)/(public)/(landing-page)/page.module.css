@@ -85,3 +85,40 @@
   height: 100%;
   object-fit: cover;
 }
+
+.areasSection {
+  margin-top: 64px;
+  padding-top: 48px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.areasGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.areaCard {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-top: 3px solid #b79a63;
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.areaCardTitle {
+  font-family: var(--font-cormorant), serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: #172133;
+  margin: 0 0 8px 0;
+}
+
+.areaCardDesc {
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}

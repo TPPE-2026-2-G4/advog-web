@@ -7,7 +7,13 @@ import { getLawyerInitials } from '@/utils/funcionario';
 import styles from './site.module.css';
 import { getImageUrl } from '@/utils/institucional';
 
-export default function PreviewModal({ isOpen, onClose, formData, team = [] }) {
+export default function PreviewModal({
+  isOpen,
+  onClose,
+  formData,
+  team = [],
+  areas = [],
+}) {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -35,6 +41,7 @@ export default function PreviewModal({ isOpen, onClose, formData, team = [] }) {
     formData.sobreEscritorio ||
     'Fundado em 2010 por Dr. Alexandre Carreiro, o escritório nasceu com a missão de oferecer atendimento jurídico de excelência, combinando tradição e inovação tecnológica.';
   const visibleTeam = team.filter((member) => member.exibicaoInstitucional);
+  const visibleAreas = areas.filter((area) => area.exibicaoInstitucional);
 
   return (
     <div
@@ -149,6 +156,33 @@ export default function PreviewModal({ isOpen, onClose, formData, team = [] }) {
               </span>
             )}
           </section>
+
+          {/* Seção Áreas de Atuação */}
+          {visibleAreas.length > 0 && (
+            <section
+              className={styles.previewSection}
+              style={{ borderTop: '1px solid #e5e7eb', paddingTop: '32px' }}
+            >
+              <h2 className={styles.previewSectionTitle}>Áreas de Atuação</h2>
+              <div className={styles.previewAreasGrid}>
+                {visibleAreas.map((area) => {
+                  const nomeArea = area.titulo || area.nome;
+                  return (
+                    <div
+                      key={area.atuacao_id}
+                      className={styles.previewAreaCard}
+                      style={{ borderTopColor: corSecundaria }}
+                    >
+                      <span className={styles.previewTeamName}>{nomeArea}</span>
+                      <span className={styles.previewTeamRole}>
+                        {area.descricao}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {/* Seção Nossa Equipe */}
           {visibleTeam.length > 0 && (
