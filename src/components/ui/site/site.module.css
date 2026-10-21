@@ -905,3 +905,248 @@
   color: #6b7280;
   margin: 0;
 }
+
+/* Aba Áreas de Atuação */
+
+.areaHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.areaAddBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #172133;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.areaAddBtn:hover {
+  background-color: #24344f;
+}
+
+.areaFormCard {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background-color: #fafaf9;
+}
+
+.areaFormTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #172133;
+  margin: 0 0 14px 0;
+}
+
+.requiredAsterisk {
+  color: #dc2626;
+  margin-left: 3px;
+}
+
+.areaFormActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.areaCancelBtn {
+  background-color: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.areaSaveBtn {
+  background-color: #b79a63;
+  color: #172133;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.areaActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.areaIconBtn {
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px;
+  color: #4b5563;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.areaIconBtn:hover {
+  background-color: #f3f4f6;
+  color: #172133;
+}
+
+.areaIconBtnDanger:hover {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.areaAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background-color: #f3efe6;
+  color: #b79a63;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.previewAreasGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.previewAreaCard {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-top: 3px solid #b79a63;
+  border-radius: 8px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deleteModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background-color: rgba(17, 24, 39, 0.6);
+}
+
+.deleteModal {
+  width: 100%;
+  max-width: 440px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.deleteModalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px 24px 0;
+}
+
+.deleteModalIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  color: #b91c1c;
+  background-color: #fef2f2;
+  border-radius: 50%;
+}
+
+.deleteModalClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: #9ca3af;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+}
+
+.deleteModalClose:hover {
+  color: #374151;
+  background-color: #f3f4f6;
+}
+
+.deleteModalBody {
+  padding: 18px 24px 22px;
+}
+
+.deleteModalTitle {
+  margin: 0 0 8px;
+  color: #172133;
+  font-family: var(--font-cormorant), serif;
+  font-size: 22px;
+}
+
+.deleteModalMessage {
+  margin: 0;
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.deleteModalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 18px 24px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.deleteModalCancelBtn {
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  background-color: transparent;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.deleteModalConfirmBtn {
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #b91c1c;
+  border: 1px solid #b91c1c;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.deleteModalConfirmBtn:hover {
+  background-color: #991b1b;
+}
