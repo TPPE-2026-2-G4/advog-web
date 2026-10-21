@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SiteClient from './siteClient';
 import { salvarDadosInstitucionais } from '@/services/institucional';
 import { mudarExibicaoInstitucional } from '@/services/funcionarios';
+import { mudarExibicaoAtuacao } from '@/services/atuacoes';
 
 vi.mock('@/services/institucional', () => ({
   DEFAULT_INSTITUCIONAL: {
@@ -34,12 +35,30 @@ vi.mock('@/services/institucional', () => ({
       exibicaoInstitucional: false,
     },
   ],
+  buscarDadosInstitucionais: vi.fn().mockResolvedValue({}),
   salvarDadosInstitucionais: vi.fn(),
   uploadImagemInstitucional: vi.fn(),
 }));
 
 vi.mock('@/services/funcionarios', () => ({
+  listarFuncionarios: vi.fn().mockResolvedValue([]),
   mudarExibicaoInstitucional: vi.fn(),
+}));
+
+vi.mock('@/services/atuacoes', () => ({
+  DEFAULT_ATUACOES_SITE: [
+    {
+      atuacao_id: 1,
+      nome: 'Direito Civil',
+      descricao: 'Contratos e obrigações',
+      exibicaoInstitucional: true,
+    },
+  ],
+  criarAtuacao: vi.fn(),
+  atualizarAtuacao: vi.fn(),
+  excluirAtuacao: vi.fn(),
+  listarAtuacoes: vi.fn().mockResolvedValue([]),
+  mudarExibicaoAtuacao: vi.fn(),
 }));
 
 describe('Integração: Módulo de Personalização do Site', () => {
@@ -47,7 +66,7 @@ describe('Integração: Módulo de Personalização do Site', () => {
     vi.clearAllMocks();
   });
 
-  it('permite navegar entre as 4 abas e interagir com os formulários', () => {
+  it('permite navegar entre as 5 abas e interagir com os formulários', () => {
     render(<SiteClient />);
 
     expect(screen.getByText('Logotipo')).toBeInTheDocument();
@@ -58,6 +77,12 @@ describe('Integração: Módulo de Personalização do Site', () => {
     expect(screen.getByLabelText('Nome do escritório')).toHaveValue(
       'Carreiro Advogados'
     );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Áreas de Atuação' }));
+    expect(
+      screen.getByText('Áreas de Atuação exibidas no site')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Direito Civil')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: /equipe no site/i }));
     expect(screen.getByText('Advogados exibidos no site')).toBeInTheDocument();
@@ -134,14 +159,20 @@ describe('Integração: Módulo de Personalização do Site', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('permite alternar visibilidade da equipe e salvar com sucesso', async () => {
+  it('permite alternar visibilidade da equipe e áreas e salvar com sucesso', async () => {
     salvarDadosInstitucionais.mockResolvedValueOnce({
       id: 1,
       nomeEscritorio: 'Carreiro Advogados',
     });
     mudarExibicaoInstitucional.mockResolvedValue({});
+    mudarExibicaoAtuacao.mockResolvedValue({});
 
     render(<SiteClient />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Áreas de Atuação' }));
+    fireEvent.click(
+      screen.getByRole('switch', { name: 'Exibir Direito Civil no site' })
+    );
 
     fireEvent.click(screen.getByRole('tab', { name: /equipe no site/i }));
     const toggleAlexandre = screen.getByRole('switch', {
@@ -158,5 +189,6 @@ describe('Integração: Módulo de Personalização do Site', () => {
     });
 
     expect(mudarExibicaoInstitucional).toHaveBeenCalledWith(1, false);
+    expect(mudarExibicaoAtuacao).toHaveBeenCalledWith(1, false);
   });
 });

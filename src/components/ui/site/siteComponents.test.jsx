@@ -1,9 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import VisualIdentityTab from './visualIdentityTab';
 import ContentTab from './contentTab';
 import ColorsTab from './colorsTab';
 import TeamTab from './teamTab';
+import AreasTab from './areasTab';
 import PreviewModal from './previewModal';
 
 describe('Componentes UI do Módulo Site', () => {
@@ -351,6 +352,191 @@ describe('Componentes UI do Módulo Site', () => {
     });
   });
 
+  describe('AreasTab', () => {
+    const mockAreas = [
+      {
+        atuacao_id: 1,
+        titulo: 'Direito Civil',
+        descricao: 'Contratos e obrigações.',
+        exibicaoInstitucional: true,
+      },
+      {
+        atuacao_id: 2,
+        nome: 'Direito Trabalhista',
+        descricao: 'Defesa trabalhista.',
+        exibicaoInstitucional: false,
+      },
+    ];
+
+    it('renderiza as áreas de atuação e contador de visibilidade', () => {
+      render(<AreasTab areas={mockAreas} onToggleArea={vi.fn()} />);
+
+      expect(
+        screen.getByText('Áreas de Atuação exibidas no site')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Direito Civil')).toBeInTheDocument();
+      expect(screen.getByText('Contratos e obrigações.')).toBeInTheDocument();
+      expect(screen.getByText('Direito Trabalhista')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          '1 de 2 áreas de atuação visíveis no site institucional'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('permite alternar visibilidade e confirmar ou cancelar a exclusão de uma área', async () => {
+      const handleToggle = vi.fn();
+      const handleDelete = vi.fn().mockResolvedValue({});
+      render(
+        <AreasTab
+          areas={mockAreas}
+          onToggleArea={handleToggle}
+          onDeleteArea={handleDelete}
+        />
+      );
+
+      fireEvent.click(
+        screen.getByRole('switch', { name: 'Exibir Direito Civil no site' })
+      );
+      expect(handleToggle).toHaveBeenCalledWith(1);
+
+      // Abre modal e cancela pelo botão Cancelar
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Excluir Direito Civil' })
+      );
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByText('Excluir área de atuação?')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(handleDelete).not.toHaveBeenCalled();
+
+      // Abre modal para item com nome (sem titulo) e fecha pelo botão X (Fechar)
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Excluir Direito Trabalhista' })
+      );
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      // Abre modal, clica dentro do dialog (não fecha) e depois no overlay (fecha)
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Excluir Direito Civil' })
+      );
+      const dialog = screen.getByRole('dialog');
+      fireEvent.click(dialog);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      fireEvent.click(dialog.parentElement);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      // Abre modal e confirma exclusão
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Excluir Direito Civil' })
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Excluir área' }));
+      await waitFor(() => {
+        expect(handleDelete).toHaveBeenCalledWith(1);
+      });
+    });
+
+    it('permite abrir o formulário, validar campos curtos, criar e cancelar', async () => {
+      const handleCreate = vi.fn().mockResolvedValue({});
+      render(<AreasTab areas={[]} onCreateArea={handleCreate} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /nova área/i }));
+      expect(screen.getByText('Nova área de atuação')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Adicionar área' }));
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Informe o título e a descrição com pelo menos 2 caracteres.'
+      );
+
+      fireEvent.change(screen.getByLabelText(/título da área/i), {
+        target: { value: 'Direito Previdenciário' },
+      });
+      fireEvent.change(screen.getByLabelText(/descrição da área/i), {
+        target: { value: 'Aposentadorias e benefícios.' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Adicionar área' }));
+      await waitFor(() => {
+        expect(handleCreate).toHaveBeenCalledWith({
+          nome: 'Direito Previdenciário',
+          descricao: 'Aposentadorias e benefícios.',
+          exibicaoInstitucional: true,
+        });
+      });
+    });
+
+    it('permite editar uma área existente e cancelar o formulário', async () => {
+      const handleUpdate = vi.fn().mockResolvedValue({});
+      render(
+        <AreasTab
+          areas={[
+            {
+              atuacao_id: 10,
+              nome: '',
+              descricao: '',
+              exibicaoInstitucional: true,
+            },
+            ...mockAreas,
+          ]}
+          onUpdateArea={handleUpdate}
+        />
+      );
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Editar Direito Trabalhista' })
+      );
+      expect(screen.getByText('Editar área de atuação')).toBeInTheDocument();
+      expect(screen.getByLabelText(/título da área/i)).toHaveValue(
+        'Direito Trabalhista'
+      );
+
+      fireEvent.change(screen.getByLabelText(/título da área/i), {
+        target: { value: 'Direito Empresarial' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar área' }));
+
+      await waitFor(() => {
+        expect(handleUpdate).toHaveBeenCalledWith(2, {
+          nome: 'Direito Empresarial',
+          descricao: 'Defesa trabalhista.',
+        });
+      });
+
+      // Testa abrir edição de item vazio e cancelar
+      fireEvent.click(screen.getAllByRole('button', { name: /editar/i })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+      expect(
+        screen.queryByText('Editar área de atuação')
+      ).not.toBeInTheDocument();
+    });
+
+    it.each([
+      [new Error('Área já cadastrada'), 'Área já cadastrada'],
+      [{}, 'Não foi possível salvar a área de atuação.'],
+    ])(
+      'exibe erro no formulário quando onCreateArea falha (%j)',
+      async (errObj, msgEsperada) => {
+        const handleCreate = vi.fn().mockRejectedValueOnce(errObj);
+        render(<AreasTab onCreateArea={handleCreate} />);
+
+        fireEvent.click(screen.getByRole('button', { name: /nova área/i }));
+        fireEvent.change(screen.getByLabelText(/título da área/i), {
+          target: { value: 'Direito Civil' },
+        });
+        fireEvent.change(screen.getByLabelText(/descrição da área/i), {
+          target: { value: 'Descrição válida' },
+        });
+        fireEvent.click(screen.getByRole('button', { name: 'Adicionar área' }));
+
+        await waitFor(() => {
+          expect(screen.getByRole('alert')).toHaveTextContent(msgEsperada);
+        });
+      }
+    );
+  });
+
   describe('TeamTab', () => {
     const mockTeam = [
       {
@@ -583,7 +769,7 @@ describe('Componentes UI do Módulo Site', () => {
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
 
-    it('renderiza imagemSobre, textoAdicionalSobre e advogados visíveis da equipe', () => {
+    it('renderiza imagemSobre, textoAdicionalSobre, áreas de atuação e advogados visíveis', () => {
       const mockTeam = [
         {
           funcionario_id: 1,
@@ -622,6 +808,26 @@ describe('Componentes UI do Módulo Site', () => {
           exibicaoInstitucional: false,
         },
       ];
+      const mockAreas = [
+        {
+          atuacao_id: 1,
+          titulo: 'Direito Civil',
+          descricao: 'Contratos e obrigações',
+          exibicaoInstitucional: true,
+        },
+        {
+          atuacao_id: 2,
+          nome: 'Direito Trabalhista',
+          descricao: 'Relações de trabalho',
+          exibicaoInstitucional: true,
+        },
+        {
+          atuacao_id: 3,
+          nome: 'Área Oculta',
+          descricao: 'Oculta',
+          exibicaoInstitucional: false,
+        },
+      ];
 
       render(
         <PreviewModal
@@ -632,6 +838,7 @@ describe('Componentes UI do Módulo Site', () => {
             textoAdicionalSobre: 'Mais de 500 casos atendidos',
           }}
           team={mockTeam}
+          areas={mockAreas}
         />
       );
 
@@ -644,6 +851,11 @@ describe('Componentes UI do Módulo Site', () => {
         screen.getByText('Mais de 500 casos atendidos')
       ).toBeInTheDocument();
 
+      expect(screen.getByText('Áreas de Atuação')).toBeInTheDocument();
+      expect(screen.getByText('Direito Civil')).toBeInTheDocument();
+      expect(screen.getByText('Direito Trabalhista')).toBeInTheDocument();
+      expect(screen.queryByText('Área Oculta')).not.toBeInTheDocument();
+
       expect(screen.getByText('Nossa Equipe')).toBeInTheDocument();
       expect(screen.getByText('Dr. Alexandre Carreiro')).toBeInTheDocument();
       expect(screen.getByText('Sócio Fundador')).toBeInTheDocument();
@@ -655,7 +867,6 @@ describe('Componentes UI do Módulo Site', () => {
       expect(screen.getByText('Dra. Ana Paula Ribeiro')).toBeInTheDocument();
       expect(screen.getByText('Advogada Sênior')).toBeInTheDocument();
 
-      // Advogado não visível não deve aparecer
       expect(screen.queryByText('Advogado Oculto')).not.toBeInTheDocument();
     });
 
