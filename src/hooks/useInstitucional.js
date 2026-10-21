@@ -1,11 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DEFAULT_INSTITUCIONAL,
   DEFAULT_EQUIPE_SITE,
+  buscarDadosInstitucionais,
   salvarDadosInstitucionais,
   uploadImagemInstitucional,
 } from '@/services/institucional';
-import { mudarExibicaoInstitucional } from '@/services/funcionarios';
+import {
+  listarFuncionarios,
+  mudarExibicaoInstitucional,
+} from '@/services/funcionarios';
+import {
+  DEFAULT_ATUACOES_SITE,
+  atualizarAtuacao,
+  criarAtuacao,
+  excluirAtuacao,
+  listarAtuacoes,
+  mudarExibicaoAtuacao,
+} from '@/services/atuacoes';
 
 export function useInstitucional(initialData, options = {}) {
   const [formData, setFormData] = useState(
@@ -31,6 +43,48 @@ export function useInstitucional(initialData, options = {}) {
       ? options.initialTeam
       : DEFAULT_EQUIPE_SITE
   );
+  const [areas, setAreas] = useState(
+    Array.isArray(options.initialAreas)
+      ? options.initialAreas
+      : DEFAULT_ATUACOES_SITE
+  );
+
+  useEffect(() => {
+    if (initialData && !initialData.nomeEscritorio) {
+      buscarDadosInstitucionais().then((dados) => {
+        if (dados?.nomeEscritorio) {
+          setFormData(dados);
+          setLogoPreview(dados.logotipo || DEFAULT_INSTITUCIONAL.logotipo);
+          setBannerPreview(
+            dados.bannerHero || DEFAULT_INSTITUCIONAL.bannerHero
+          );
+          setSobreImagePreview(
+            dados.imagemSobre || DEFAULT_INSTITUCIONAL.imagemSobre
+          );
+        }
+      });
+    }
+    if (
+      Array.isArray(options.initialTeam) &&
+      options.initialTeam.length === 0
+    ) {
+      listarFuncionarios().then((lista) => {
+        if (Array.isArray(lista) && lista.length > 0) {
+          setTeam(lista);
+        }
+      });
+    }
+    if (
+      Array.isArray(options.initialAreas) &&
+      options.initialAreas.length === 0
+    ) {
+      listarAtuacoes().then((lista) => {
+        if (Array.isArray(lista) && lista.length > 0) {
+          setAreas(lista);
+        }
+      });
+    }
+  }, [initialData, options.initialTeam, options.initialAreas]);
 
   const isAdmin = options.isAdmin !== undefined ? options.isAdmin : true;
 
@@ -141,6 +195,46 @@ export function useInstitucional(initialData, options = {}) {
     setSaveError('');
   };
 
+  const handleToggleAreaVisibility = (atuacaoId) => {
+    setAreas((prevAreas) =>
+      prevAreas.map((area) =>
+        area.atuacao_id === atuacaoId
+          ? { ...area, exibicaoInstitucional: !area.exibicaoInstitucional }
+          : area
+      )
+    );
+    setSaveSuccess(false);
+    setSaveError('');
+  };
+
+  const handleCreateArea = async (dados) => {
+    setSaveError('');
+    const criada = await criarAtuacao(dados);
+    setAreas((prev) => [...prev, criada]);
+    return criada;
+  };
+
+  const handleUpdateArea = async (atuacaoId, dados) => {
+    setSaveError('');
+    const atualizada = await atualizarAtuacao(atuacaoId, dados);
+    setAreas((prev) =>
+      prev.map((area) => (area.atuacao_id === atuacaoId ? atualizada : area))
+    );
+    return atualizada;
+  };
+
+  const handleDeleteArea = async (atuacaoId) => {
+    setSaveError('');
+    try {
+      await excluirAtuacao(atuacaoId);
+      setAreas((prev) => prev.filter((area) => area.atuacao_id !== atuacaoId));
+    } catch (error) {
+      setSaveError(
+        error.message || 'Não foi possível excluir a área de atuação.'
+      );
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     setSaveError('');
@@ -156,6 +250,17 @@ export function useInstitucional(initialData, options = {}) {
             mudarExibicaoInstitucional(
               member.funcionario_id,
               Boolean(member.exibicaoInstitucional)
+            )
+          )
+        );
+      }
+
+      if (areas && areas.length > 0) {
+        await Promise.allSettled(
+          areas.map((area) =>
+            mudarExibicaoAtuacao(
+              area.atuacao_id,
+              Boolean(area.exibicaoInstitucional)
             )
           )
         );
@@ -184,12 +289,17 @@ export function useInstitucional(initialData, options = {}) {
     bannerPreview,
     sobreImagePreview,
     team,
+    areas,
     isAdmin,
     handleInputChange,
     handleUploadLogo,
     handleUploadBanner,
     handleUploadImagemSobre,
     handleToggleLawyerVisibility,
+    handleToggleAreaVisibility,
+    handleCreateArea,
+    handleUpdateArea,
+    handleDeleteArea,
     handleSave,
   };
 }

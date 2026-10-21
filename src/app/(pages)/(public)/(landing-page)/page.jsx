@@ -1,5 +1,6 @@
 import { buscarDadosInstitucionais } from '@/services/institucional';
 import { listarFuncionarios } from '@/services/funcionarios';
+import { listarAtuacoes } from '@/services/atuacoes';
 import { getLawyerInitials, formatOab } from '@/utils/funcionario';
 import { getImageUrl, formatParagraphs } from '@/utils/institucional';
 import { Scale } from 'lucide-react';
@@ -8,12 +9,16 @@ import styles from './page.module.css';
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const [institucional, funcionarios] = await Promise.all([
+  const [institucional, funcionarios, atuacoes] = await Promise.all([
     buscarDadosInstitucionais(),
     listarFuncionarios(),
+    listarAtuacoes(),
   ]);
 
   const sobreTextos = formatParagraphs(institucional?.sobreEscritorio);
+  const atuacoesVisiveis = (atuacoes || []).filter(
+    (area) => area.exibicaoInstitucional
+  );
   const visibleTeam = (funcionarios || []).filter(
     (f) => f.exibicaoInstitucional
   );
@@ -61,6 +66,24 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        {atuacoesVisiveis.length > 0 && (
+          <section className={styles.areasSection}>
+            <div className={styles.container}>
+              <h2 className={styles.title}>Áreas de Atuação</h2>
+              <div className={styles.areasGrid}>
+                {atuacoesVisiveis.map((area) => (
+                  <div key={area.atuacao_id} className={styles.areaCard}>
+                    <h3 className={styles.areaCardTitle}>
+                      {area.titulo || area.nome}
+                    </h3>
+                    <p className={styles.areaCardDesc}>{area.descricao}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {visibleTeam.length > 0 && (
           <section className={styles.equipeSection}>

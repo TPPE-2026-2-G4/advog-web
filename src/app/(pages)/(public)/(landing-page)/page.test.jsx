@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import Home from './page';
 import { buscarDadosInstitucionais } from '@/services/institucional';
 import { listarFuncionarios } from '@/services/funcionarios';
+import { listarAtuacoes } from '@/services/atuacoes';
 
 vi.mock('@/services/institucional', () => ({
   buscarDadosInstitucionais: vi.fn(),
@@ -12,10 +13,15 @@ vi.mock('@/services/funcionarios', () => ({
   listarFuncionarios: vi.fn(),
 }));
 
+vi.mock('@/services/atuacoes', () => ({
+  listarAtuacoes: vi.fn(),
+}));
+
 describe('Landing Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     listarFuncionarios.mockResolvedValue([]);
+    listarAtuacoes.mockResolvedValue([]);
     buscarDadosInstitucionais.mockResolvedValue({});
   });
 
@@ -66,6 +72,52 @@ describe('Landing Page', () => {
         screen.queryByAltText('Imagem do escritório')
       ).not.toBeInTheDocument();
       expect(screen.getByText('Imagem do escritório')).toBeInTheDocument(); // Texto do placeholder
+    });
+  });
+
+  describe('Áreas de Atuação', () => {
+    it('renderiza o título e áreas de atuação visíveis fornecidos pela API', async () => {
+      listarAtuacoes.mockResolvedValue([
+        {
+          atuacao_id: 1,
+          titulo: 'Direito Civil',
+          descricao: 'Contratos e obrigações.',
+          exibicaoInstitucional: true,
+        },
+        {
+          atuacao_id: 2,
+          nome: 'Direito Trabalhista',
+          descricao: 'Defesa trabalhista.',
+          exibicaoInstitucional: true,
+        },
+        {
+          atuacao_id: 3,
+          nome: 'Direito Oculto',
+          descricao: 'Não deve aparecer.',
+          exibicaoInstitucional: false,
+        },
+      ]);
+
+      const jsx = await Home();
+      render(jsx);
+
+      expect(
+        screen.getByRole('heading', { name: 'Áreas de Atuação' })
+      ).toBeInTheDocument();
+      expect(screen.getByText('Direito Civil')).toBeInTheDocument();
+      expect(screen.getByText('Direito Trabalhista')).toBeInTheDocument();
+      expect(screen.queryByText('Direito Oculto')).not.toBeInTheDocument();
+    });
+
+    it('não renderiza a seção Áreas de Atuação se não houver áreas visíveis', async () => {
+      listarAtuacoes.mockResolvedValue([]);
+
+      const jsx = await Home();
+      render(jsx);
+
+      expect(
+        screen.queryByRole('heading', { name: 'Áreas de Atuação' })
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -242,10 +294,18 @@ describe('Landing Page', () => {
       }
     );
 
-    it('renderiza as seções Sobre o Escritório e Nossa Equipe com seus respectivos containers e classes', async () => {
+    it('renderiza as seções Sobre o Escritório, Áreas de Atuação e Nossa Equipe com seus respectivos containers e classes', async () => {
       buscarDadosInstitucionais.mockResolvedValue({
         sobreEscritorio: 'História do escritório.',
       });
+      listarAtuacoes.mockResolvedValue([
+        {
+          atuacao_id: 1,
+          titulo: 'Direito Trabalhista',
+          descricao: 'Atuação trabalhista.',
+          exibicaoInstitucional: true,
+        },
+      ]);
       listarFuncionarios.mockResolvedValue([
         {
           funcionario_id: 1,
@@ -260,16 +320,23 @@ describe('Landing Page', () => {
       const sobreHeading = screen.getByRole('heading', {
         name: 'Sobre o Escritório',
       });
+      const areasHeading = screen.getByRole('heading', {
+        name: 'Áreas de Atuação',
+      });
       const equipeHeading = screen.getByRole('heading', {
         name: 'Nossa Equipe',
       });
 
       const sobreSection = sobreHeading.closest('section');
+      const areasSection = areasHeading.closest('section');
       const equipeSection = equipeHeading.closest('section');
 
       expect(sobreSection).toBeInTheDocument();
+      expect(areasSection).toBeInTheDocument();
       expect(equipeSection).toBeInTheDocument();
       expect(sobreSection).not.toBe(equipeSection);
+      expect(areasSection).not.toBe(equipeSection);
+      expect(sobreSection).not.toBe(areasSection);
     });
   });
 });
