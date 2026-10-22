@@ -263,5 +263,14 @@ describe('serviço de processos', () => {
 
       expect(initialError).toBe('Não foi possível carregar os processos.');
     });
+
+    it('retorna mensagem de sessão expirada para status 401', async () => {
+      fetch.mockResolvedValue(errorResponse({}, 401));
+      listarFuncionarios.mockResolvedValue([]);
+
+      const { initialError } = await getProcessosData();
+
+      expect(initialError).toBe('Sessão expirada. Faça login novamente.');
+    });
   });
 });
