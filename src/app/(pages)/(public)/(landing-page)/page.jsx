@@ -4,6 +4,7 @@ import { listarAtuacoes } from '@/services/atuacoes';
 import { getLawyerInitials, formatOab } from '@/utils/funcionario';
 import { getImageUrl, formatParagraphs } from '@/utils/institucional';
 import { Scale } from 'lucide-react';
+import SolicitarAtendimento from '@/components/features/atendimento/SolicitarAtendimento/SolicitarAtendimento';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -166,6 +167,7 @@ export default async function Home() {
             </div>
           </section>
         )}
+        <SolicitarAtendimento />
       </main>
     </div>
   );
