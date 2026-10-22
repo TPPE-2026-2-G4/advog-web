@@ -67,4 +67,36 @@ describe('ProcessDetailsModal', () => {
       screen.getByRole('button', { name: 'Fazer Upload' })
     ).toBeInTheDocument();
   });
+
+  it('exibe estilo correto para diferentes status e fallback para sem sincronização', () => {
+    const processConcluido = {
+      ...processData,
+      status: 'Concluído',
+      data_realizado: null,
+      descricao: null,
+    };
+    const { rerender } = render(
+      <ProcessDetailsModal process={processConcluido} onClose={vi.fn()} />
+    );
+    expect(screen.getByText('Concluído')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Movimentações' }));
+    expect(screen.getByText('Decisão Publicada')).toBeInTheDocument();
+    expect(screen.getByText(/Sincronizado recentemente/)).toBeInTheDocument();
+
+    const processArquivado = {
+      ...processData,
+      status: 'Arquivado',
+    };
+    rerender(
+      <ProcessDetailsModal process={processArquivado} onClose={vi.fn()} />
+    );
+    expect(screen.getByText('Arquivado')).toBeInTheDocument();
+
+    const processOutro = {
+      ...processData,
+      status: 'Em Análise',
+    };
+    rerender(<ProcessDetailsModal process={processOutro} onClose={vi.fn()} />);
+    expect(screen.getByText('Em Análise')).toBeInTheDocument();
+  });
 });
