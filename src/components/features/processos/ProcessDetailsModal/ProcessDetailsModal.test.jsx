@@ -60,6 +60,10 @@ describe('ProcessDetailsModal', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('DataJud')).toBeInTheDocument();
 
+    // Volta para a aba Resumo
+    fireEvent.click(screen.getByRole('tab', { name: 'Resumo' }));
+    expect(screen.getByText('15/10/2026')).toBeInTheDocument();
+
     // Clica na aba Documentos
     fireEvent.click(screen.getByRole('tab', { name: 'Documentos' }));
     expect(screen.getByText('Nenhum documento anexado.')).toBeInTheDocument();
