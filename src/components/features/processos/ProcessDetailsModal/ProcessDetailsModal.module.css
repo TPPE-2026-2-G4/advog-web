@@ -1,4 +1,5 @@
 .modal {
+  width: 100%;
   max-width: 640px;
 }
 
@@ -27,9 +28,9 @@
 }
 
 .areaBadge {
-  color: #374151;
-  background-color: #f3f4f6;
-  border-color: #e5e7eb;
+  color: #1e3a8a;
+  background-color: #dbeafe;
+  border-color: #bfdbfe;
 }
 
 .statusActive {
@@ -57,31 +58,82 @@
 }
 
 .body {
-  padding: 20px 24px 28px;
+  padding: 16px 24px 24px;
 }
 
 .title {
   margin: 0;
-  color: #172133;
-  font-size: 28px;
-  line-height: 1.15;
+  color: #0f172a;
+  font-family: Georgia, Cambria, 'Times New Roman', Times, serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .processNumber {
-  margin: 8px 0 24px;
-  color: #6b7280;
+  margin: 6px 0 20px;
+  color: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
 }
 
+.description {
+  margin: 0 0 16px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Tabs */
+.tabsContainer {
+  margin-top: 8px;
+}
+
+.tabsList {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+  gap: 4px;
+}
+
+.tabButton {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tabButton:hover {
+  color: #0f172a;
+  border-bottom-color: rgba(100, 116, 139, 0.3);
+}
+
+.tabButtonActive {
+  color: #0f172a;
+  font-weight: 600;
+  border-bottom-color: #c5a059;
+}
+
+.tabContent {
+  padding-top: 18px;
+}
+
+/* Detalhes Resumo */
 .detailsGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 16px;
   margin: 0;
-  padding: 20px;
-  background-color: #f9fafb;
-  border-radius: 10px;
+  padding: 16px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
 }
 
 .detailItem {
@@ -89,17 +141,119 @@
 }
 
 .detailItem dt {
-  margin-bottom: 5px;
-  color: #6b7280;
+  margin-bottom: 4px;
+  color: #64748b;
   font-size: 12px;
 }
 
 .detailItem dd {
   margin: 0;
   overflow-wrap: anywhere;
-  color: #172133;
+  color: #0f172a;
   font-size: 14px;
   font-weight: 600;
+}
+
+/* Movimentações / Sincronização Datajud */
+.movementsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.movementItem {
+  display: flex;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.movementItem:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.movementIconWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background-color: rgba(15, 23, 42, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #0f172a;
+}
+
+.movementInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.movementTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.movementMeta {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.movementTag {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+  color: #1e3a8a;
+  background-color: #eff6ff;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  border: 1px solid #bfdbfe;
+}
+
+/* Documentos */
+.emptyDocuments {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.emptyDocumentsIcon {
+  width: 44px;
+  height: 44px;
+  color: #cbd5e1;
+  margin-bottom: 8px;
+}
+
+.emptyDocumentsText {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.uploadButton {
+  margin-top: 14px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.uploadButton:hover {
+  background-color: #f8fafc;
 }
 
 @media (max-width: 560px) {
@@ -108,11 +262,11 @@
   }
 
   .body {
-    padding: 18px 16px 22px;
+    padding: 16px 16px 20px;
   }
 
   .title {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .detailsGrid {
