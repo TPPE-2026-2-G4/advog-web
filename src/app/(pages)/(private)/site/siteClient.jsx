@@ -11,6 +11,7 @@ import { useInstitucional } from '@/hooks/useInstitucional';
 import VisualIdentityTab from '@/components/ui/site/visualIdentityTab';
 import ContentTab from '@/components/ui/site/contentTab';
 import TeamTab from '@/components/ui/site/teamTab';
+import AreasTab from '@/components/ui/site/areasTab';
 import ColorsTab from '@/components/ui/site/colorsTab';
 import PreviewModal from '@/components/ui/site/previewModal';
 import styles from '@/components/ui/site/site.module.css';
@@ -18,6 +19,7 @@ import styles from '@/components/ui/site/site.module.css';
 export default function SiteClient({
   initialData,
   initialTeam,
+  initialAreas,
   isAdmin = true,
 }) {
   const {
@@ -34,13 +36,18 @@ export default function SiteClient({
     bannerPreview,
     sobreImagePreview,
     team,
+    areas,
     handleInputChange,
     handleUploadLogo,
     handleUploadBanner,
     handleUploadImagemSobre,
     handleToggleLawyerVisibility,
+    handleToggleAreaVisibility,
+    handleCreateArea,
+    handleUpdateArea,
+    handleDeleteArea,
     handleSave,
-  } = useInstitucional(initialData, { isAdmin, initialTeam });
+  } = useInstitucional(initialData, { isAdmin, initialTeam, initialAreas });
 
   if (!isAdmin) {
     return (
@@ -141,6 +148,18 @@ export default function SiteClient({
         <button
           type="button"
           role="tab"
+          aria-selected={activeTab === 'areas'}
+          className={`${styles.tabItem} ${
+            activeTab === 'areas' ? styles.tabItemActive : ''
+          }`}
+          onClick={() => setActiveTab('areas')}
+        >
+          Áreas de Atuação
+        </button>
+
+        <button
+          type="button"
+          role="tab"
           aria-selected={activeTab === 'team'}
           className={`${styles.tabItem} ${
             activeTab === 'team' ? styles.tabItemActive : ''
@@ -183,6 +202,16 @@ export default function SiteClient({
         />
       )}
 
+      {activeTab === 'areas' && (
+        <AreasTab
+          areas={areas}
+          onToggleArea={handleToggleAreaVisibility}
+          onCreateArea={handleCreateArea}
+          onUpdateArea={handleUpdateArea}
+          onDeleteArea={handleDeleteArea}
+        />
+      )}
+
       {activeTab === 'team' && (
         <TeamTab team={team} onToggleLawyer={handleToggleLawyerVisibility} />
       )}
@@ -197,6 +226,7 @@ export default function SiteClient({
         onClose={() => setIsPreviewOpen(false)}
         formData={formData}
         team={team}
+        areas={areas}
       />
     </div>
   );

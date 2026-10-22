@@ -15,15 +15,43 @@ describe('Modal', () => {
 
   it('renderiza o conteúdo e atributos de diálogo quando isOpen é verdadeiro', () => {
     render(
-      <Modal isOpen onClose={vi.fn()} ariaLabel="Diálogo de Teste">
+      <Modal
+        isOpen
+        id="modal-de-teste"
+        onClose={vi.fn()}
+        ariaLabel="Diálogo de Teste"
+      >
         <div>Conteúdo do Modal</div>
       </Modal>
     );
 
     const dialog = screen.getByRole('dialog', { name: 'Diálogo de Teste' });
     expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute('id', 'modal-de-teste');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(screen.getByText('Conteúdo do Modal')).toBeInTheDocument();
+  });
+
+  describe('Testes parametrizados de aria-modal', () => {
+    it.each([
+      ['verdadeiro', true, 'true'],
+      ['falso', false, null],
+    ])(
+      'define aria-modal corretamente quando prop for %s',
+      (desc, propValue, expectedAttr) => {
+        render(
+          <Modal isOpen onClose={vi.fn()} ariaModal={propValue}>
+            <div data-testid="modal-content">Conteúdo</div>
+          </Modal>
+        );
+        const dialog = screen.getByRole('dialog');
+        if (expectedAttr === null) {
+          expect(dialog).not.toHaveAttribute('aria-modal');
+        } else {
+          expect(dialog).toHaveAttribute('aria-modal', expectedAttr);
+        }
+      }
+    );
   });
 
   it('fecha ao clicar fora (no overlay)', () => {

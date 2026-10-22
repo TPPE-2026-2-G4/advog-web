@@ -9,6 +9,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Home from './page';
 import { API_URL } from '@/services/api';
 
+vi.mock('@/services/institucional', () => ({
+  buscarDadosInstitucionais: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@/services/funcionarios', () => ({
+  listarFuncionarios: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@/services/atuacoes', () => ({
+  listarAtuacoes: vi.fn().mockResolvedValue([]),
+}));
+
 const values = {
   'Nome completo': ' Maria Silva ',
   Email: 'maria@example.com',
@@ -22,8 +34,8 @@ const dados = {
   descricao: 'Gostaria de solicitar atendimento.',
 };
 
-function preencherEEnviar() {
-  render(<Home />);
+async function preencherEEnviar() {
+  render(await Home());
   for (const [label, value] of Object.entries(values)) {
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
   }
@@ -41,7 +53,7 @@ describe('Integração: solicitação pública de atendimento', () => {
         resolve = done;
       })
     );
-    preencherEEnviar();
+    await preencherEEnviar();
 
     expect(fetch).toHaveBeenCalledOnce();
     expect(fetch).toHaveBeenCalledWith(`${API_URL}/solicitacoes`, {
@@ -88,7 +100,7 @@ describe('Integração: solicitação pública de atendimento', () => {
         ],
       }),
     });
-    preencherEEnviar();
+    await preencherEEnviar();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Confira os dados informados e tente novamente.'
@@ -127,7 +139,7 @@ describe('Integração: solicitação pública de atendimento', () => {
     ],
   ])('preserva os dados após %s', async (_scenario, response, message) => {
     fetch.mockImplementationOnce(response);
-    preencherEEnviar();
+    await preencherEEnviar();
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
     for (const [label, value] of Object.entries(values)) {
       expect(screen.getByLabelText(label)).toHaveValue(value);

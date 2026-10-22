@@ -3,10 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_INSTITUCIONAL,
   DEFAULT_EQUIPE_SITE,
+  buscarDadosInstitucionais,
   salvarDadosInstitucionais,
   uploadImagemInstitucional,
 } from '@/services/institucional';
-import { mudarExibicaoInstitucional } from '@/services/funcionarios';
+import {
+  listarFuncionarios,
+  mudarExibicaoInstitucional,
+} from '@/services/funcionarios';
+import {
+  atualizarAtuacao,
+  criarAtuacao,
+  excluirAtuacao,
+  listarAtuacoes,
+  mudarExibicaoAtuacao,
+} from '@/services/atuacoes';
 import { useInstitucional } from './useInstitucional';
 
 vi.mock('@/services/institucional', () => ({
@@ -39,12 +50,36 @@ vi.mock('@/services/institucional', () => ({
       exibicaoInstitucional: true,
     },
   ],
+  buscarDadosInstitucionais: vi.fn().mockResolvedValue({}),
   salvarDadosInstitucionais: vi.fn(),
   uploadImagemInstitucional: vi.fn(),
 }));
 
 vi.mock('@/services/funcionarios', () => ({
+  listarFuncionarios: vi.fn().mockResolvedValue([]),
   mudarExibicaoInstitucional: vi.fn(),
+}));
+
+vi.mock('@/services/atuacoes', () => ({
+  DEFAULT_ATUACOES_SITE: [
+    {
+      atuacao_id: 1,
+      nome: 'Direito Civil',
+      descricao: 'Contratos',
+      exibicaoInstitucional: true,
+    },
+    {
+      atuacao_id: 2,
+      nome: 'Direito Trabalhista',
+      descricao: 'Relações de trabalho',
+      exibicaoInstitucional: true,
+    },
+  ],
+  criarAtuacao: vi.fn(),
+  atualizarAtuacao: vi.fn(),
+  excluirAtuacao: vi.fn(),
+  listarAtuacoes: vi.fn().mockResolvedValue([]),
+  mudarExibicaoAtuacao: vi.fn(),
 }));
 
 describe('useInstitucional', () => {
@@ -60,6 +95,7 @@ describe('useInstitucional', () => {
     expect(result.current.isPreviewOpen).toBe(false);
     expect(result.current.isSaving).toBe(false);
     expect(result.current.isAdmin).toBe(true);
+    expect(result.current.areas).toHaveLength(2);
   });
 
   it('permite alterar a aba ativa', () => {
@@ -300,15 +336,22 @@ describe('useInstitucional', () => {
     expect(result.current.activeTab).toBe('team');
   });
 
-  it('inicializa team com options.initialTeam quando fornecido', () => {
+  it('inicializa team e areas com opções customizadas quando fornecidas', () => {
     const customTeam = [
       { funcionario_id: 99, nome: 'Dr. Teste', exibicaoInstitucional: false },
     ];
+    const customAreas = [
+      { atuacao_id: 50, nome: 'Direito Penal', exibicaoInstitucional: true },
+    ];
     const { result } = renderHook(() =>
-      useInstitucional(null, { initialTeam: customTeam })
+      useInstitucional(null, {
+        initialTeam: customTeam,
+        initialAreas: customAreas,
+      })
     );
 
     expect(result.current.team).toEqual(customTeam);
+    expect(result.current.areas).toEqual(customAreas);
   });
 
   it('valida formato e tamanho ao fazer upload de imagem sobre', async () => {
@@ -389,21 +432,80 @@ describe('useInstitucional', () => {
     );
     expect(updatedMember.exibicaoInstitucional).toBe(false);
 
-    // Toggle de id que não existe não altera os demais
     act(() => {
       result.current.handleToggleLawyerVisibility(9999);
     });
     expect(result.current.team.length).toBe(DEFAULT_EQUIPE_SITE.length);
   });
 
-  it('sincroniza a visibilidade da equipe no salvar com mudarExibicaoInstitucional', async () => {
+  it('gerencia áreas de atuação (alternar visibilidade, criar, editar e excluir)', async () => {
+    const { result } = renderHook(() => useInstitucional());
+
+    act(() => {
+      result.current.handleToggleAreaVisibility(1);
+      result.current.handleToggleAreaVisibility(999);
+    });
+    expect(result.current.areas[0].exibicaoInstitucional).toBe(false);
+
+    criarAtuacao.mockResolvedValueOnce({
+      atuacao_id: 3,
+      nome: 'Direito Tributário',
+      descricao: 'Impostos',
+      exibicaoInstitucional: true,
+    });
+    await act(async () => {
+      await result.current.handleCreateArea({
+        nome: 'Direito Tributário',
+        descricao: 'Impostos',
+      });
+    });
+    expect(result.current.areas).toHaveLength(3);
+
+    atualizarAtuacao.mockResolvedValueOnce({
+      atuacao_id: 3,
+      nome: 'Direito Tributário e Fiscal',
+      descricao: 'Impostos',
+      exibicaoInstitucional: true,
+    });
+    await act(async () => {
+      await result.current.handleUpdateArea(3, {
+        nome: 'Direito Tributário e Fiscal',
+      });
+    });
+    expect(result.current.areas[2].nome).toBe('Direito Tributário e Fiscal');
+
+    excluirAtuacao.mockResolvedValueOnce({ atuacao_id: 3 });
+    await act(async () => {
+      await result.current.handleDeleteArea(3);
+    });
+    expect(result.current.areas).toHaveLength(2);
+
+    // Erro ao excluir com mensagem e sem mensagem
+    excluirAtuacao.mockRejectedValueOnce(new Error('Falha ao excluir'));
+    await act(async () => {
+      await result.current.handleDeleteArea(1);
+    });
+    expect(result.current.saveError).toBe('Falha ao excluir');
+
+    excluirAtuacao.mockRejectedValueOnce({});
+    await act(async () => {
+      await result.current.handleDeleteArea(1);
+    });
+    expect(result.current.saveError).toBe(
+      'Não foi possível excluir a área de atuação.'
+    );
+  });
+
+  it('sincroniza a visibilidade da equipe e áreas no salvar', async () => {
     salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
     mudarExibicaoInstitucional.mockResolvedValue({});
+    mudarExibicaoAtuacao.mockResolvedValue({});
 
     const { result } = renderHook(() => useInstitucional());
 
     act(() => {
       result.current.handleToggleLawyerVisibility(1);
+      result.current.handleToggleAreaVisibility(1);
     });
 
     await act(async () => {
@@ -414,6 +516,7 @@ describe('useInstitucional', () => {
       result.current.formData
     );
     expect(mudarExibicaoInstitucional).toHaveBeenCalledWith(1, false);
+    expect(mudarExibicaoAtuacao).toHaveBeenCalledWith(1, false);
     expect(result.current.saveSuccess).toBe(true);
   });
 
@@ -428,11 +531,11 @@ describe('useInstitucional', () => {
     expect(result.current.saveError).toBe('Erro ao salvar as configurações.');
   });
 
-  it('salva com sucesso quando team é vazio ou inexistente', async () => {
+  it('salva com sucesso quando team e areas são vazios ou inexistentes', async () => {
     salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
 
     const { result } = renderHook(() =>
-      useInstitucional(null, { initialTeam: [] })
+      useInstitucional(null, { initialTeam: [], initialAreas: [] })
     );
 
     await act(async () => {
@@ -441,5 +544,68 @@ describe('useInstitucional', () => {
 
     expect(salvarDadosInstitucionais).toHaveBeenCalled();
     expect(result.current.saveSuccess).toBe(true);
+  });
+
+  it('busca dados, equipe e áreas no cliente quando SSR retorna vazio', async () => {
+    buscarDadosInstitucionais.mockResolvedValueOnce({
+      id: 1,
+      nomeEscritorio: 'Escritório Carregado',
+      logotipo: 'http://logo.png',
+      bannerHero: 'http://banner.jpg',
+      imagemSobre: 'http://sobre.jpg',
+    });
+    listarFuncionarios.mockResolvedValueOnce([
+      {
+        funcionario_id: 7,
+        nome: 'Dra. Juliana',
+        exibicaoInstitucional: true,
+      },
+    ]);
+    listarAtuacoes.mockResolvedValueOnce([
+      {
+        atuacao_id: 99,
+        nome: 'Direito Tributário',
+        descricao: 'Planejamento fiscal',
+        exibicaoInstitucional: true,
+      },
+    ]);
+
+    const { result } = renderHook(() =>
+      useInstitucional(
+        { id: 1, nomeEscritorio: '' },
+        { initialTeam: [], initialAreas: [] }
+      )
+    );
+
+    await act(async () => {});
+
+    expect(buscarDadosInstitucionais).toHaveBeenCalled();
+    expect(listarFuncionarios).toHaveBeenCalled();
+    expect(listarAtuacoes).toHaveBeenCalled();
+    expect(result.current.formData.nomeEscritorio).toBe('Escritório Carregado');
+    expect(result.current.logoPreview).toBe('http://logo.png');
+    expect(result.current.bannerPreview).toBe('http://banner.jpg');
+    expect(result.current.sobreImagePreview).toBe('http://sobre.jpg');
+    expect(result.current.team).toHaveLength(1);
+    expect(result.current.areas).toHaveLength(1);
+    expect(result.current.areas[0].nome).toBe('Direito Tributário');
+
+    // Testa também retorno sem logotipo/banner/imagemSobre e sem nomeEscritorio
+    buscarDadosInstitucionais.mockResolvedValueOnce({
+      id: 1,
+      nomeEscritorio: 'Escritório Sem Mídia',
+    });
+    const { result: res2 } = renderHook(() =>
+      useInstitucional({ id: 1, nomeEscritorio: '' })
+    );
+    await act(async () => {});
+    expect(res2.current.formData.nomeEscritorio).toBe('Escritório Sem Mídia');
+
+    buscarDadosInstitucionais.mockResolvedValueOnce({
+      id: 1,
+      nomeEscritorio: '',
+    });
+    renderHook(() => useInstitucional({ id: 1, nomeEscritorio: '' }));
+    await act(async () => {});
   });
 });

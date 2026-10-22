@@ -48,8 +48,8 @@ describe('AuthProvider', () => {
 
   it('autentica o usuário, salva o token e repassa os dados do serviço', async () => {
     const authData = {
-      user: { id: 1, email: 'ana@exemplo.com' },
-      token: 'token-de-teste',
+      funcionario: { id: 1, email: 'ana@exemplo.com' },
+      access_token: 'token-de-teste',
     };
     loginServiceMock.mockResolvedValue(authData);
 
@@ -73,8 +73,8 @@ describe('AuthProvider', () => {
 
   it('remove o usuário ao fazer logout', async () => {
     loginServiceMock.mockResolvedValue({
-      user: { email: 'ana@exemplo.com' },
-      token: 'token-de-teste',
+      funcionario: { email: 'ana@exemplo.com' },
+      access_token: 'token-de-teste',
     });
 
     render(

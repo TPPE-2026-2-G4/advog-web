@@ -159,7 +159,9 @@ describe('integração da página de equipe', () => {
     });
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining('/funcionarios/1'),
-      { method: 'DELETE' }
+      expect.objectContaining({
+        method: 'DELETE',
+      })
     );
   });
 

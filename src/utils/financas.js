@@ -26,17 +26,17 @@ export function formatDateToIso(brDate) {
 
 export function isStatusConcluido(status) {
   const s = status?.toLowerCase();
-  return s === 'pago' || s === 'recebido';
+  return s === 'realizado';
 }
 
 export function getStatusConcluido(tipo) {
-  return tipo?.toLowerCase() === 'entrada' ? 'recebido' : 'pago';
+  return 'realizado';
 }
 
 export function formatStatusLabel(status, tipo) {
   const s = status?.toLowerCase();
-  if (s === 'pago' || s === 'recebido') {
-    return tipo?.toLowerCase() === 'entrada' ? 'Recebido' : 'Pago';
+  if (s === 'realizado') {
+    return 'Realizado';
   }
   if (s === 'atrasado') return 'Atrasado';
   return 'Pendente';
@@ -153,7 +153,10 @@ export function toLancamento(apiItem) {
   const dataIso = pagamentoIso || dataIsoFallback || vencimentoIso;
 
   const rawTipo = String(apiItem.tipo || '').toLowerCase();
-  const tipo = rawTipo === 'saída' || rawTipo === 'saida' ? 'saida' : 'entrada';
+  const tipo =
+    rawTipo === 'saída' || rawTipo === 'saida' || rawTipo === 's'
+      ? 'saida'
+      : 'entrada';
   const status = (apiItem.status || 'Pendente').toLowerCase();
 
   return {
@@ -173,17 +176,20 @@ export function toLancamento(apiItem) {
     dataVencimentoIso: vencimentoIso || dataIso,
     data_vencimento: vencimentoIso || dataIso,
     categoria: apiItem.categoria || 'Outros',
+    categoria_id: apiItem.categoria_id || null,
+    cliente_id: apiItem.cliente_id || null,
     status,
     recorrente: Boolean(apiItem.recorrente),
   };
 }
 
-export function toApiLancamento(item) {
+export function toApiLancamento(item, dataReferencia = new Date()) {
   if (!item) return {};
   const isSaida =
     item.tipo?.toLowerCase() === 'saida' ||
-    item.tipo?.toLowerCase() === 'saída';
-  const tipo = isSaida ? 'Saída' : 'Entrada';
+    item.tipo?.toLowerCase() === 'saída' ||
+    item.tipo?.toLowerCase() === 's';
+  const tipo = isSaida ? 's' : 'e';
 
   const rawVencimento =
     item.dataVencimentoIso ||
@@ -191,7 +197,7 @@ export function toApiLancamento(item) {
     item.data_vencimento ||
     item.dataIso ||
     item.data ||
-    new Date().toISOString().split('T')[0];
+    new Date(dataReferencia).toISOString().split('T')[0];
   const vencimento = formatDateToIso(rawVencimento) || rawVencimento;
 
   const rawPagamento =
@@ -201,7 +207,11 @@ export function toApiLancamento(item) {
         ? item.dataPagamento
         : item.data_pagamento !== undefined
           ? item.data_pagamento
-          : null;
+          : item.dataIso !== undefined
+            ? item.dataIso
+            : item.data !== undefined
+              ? item.data
+              : null;
 
   const pagamento = rawPagamento
     ? formatDateToIso(rawPagamento) || rawPagamento
@@ -210,10 +220,13 @@ export function toApiLancamento(item) {
   let rawStatus = item.status || 'Pendente';
 
   if (!isStatusConcluido(rawStatus)) {
-    rawStatus = verificarStatusPorVencimento({
-      ...item,
-      dataVencimentoIso: vencimento,
-    });
+    rawStatus = verificarStatusPorVencimento(
+      {
+        ...item,
+        dataVencimentoIso: vencimento,
+      },
+      dataReferencia
+    );
   }
 
   const status =
@@ -227,6 +240,8 @@ export function toApiLancamento(item) {
     data_vencimento: vencimento,
     data_pagamento: pagamento,
     categoria: item.categoria || 'Honorários',
+    categoria_id: item.categoria_id || null,
+    cliente_id: item.cliente_id || null,
     status,
     recorrente: Boolean(item.recorrente),
   };

@@ -10,6 +10,7 @@ export function useFirstLogin() {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [uf, setUf] = useState('');
   const [numeroOab, setNumeroOab] = useState('');
+  const [semOab, setSemOab] = useState(false);
   const [erro, setErro] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
@@ -23,7 +24,12 @@ export function useFirstLogin() {
       return;
     }
 
-    setErro('');
+    if (!token) {
+      setErro(
+        'Token de primeiro acesso ausente ou inválido. Acesse através do link recebido por e-mail.'
+      );
+      return;
+    }
 
     if (senha !== confirmarSenha) {
       setErro('As senhas não conferem.');
@@ -35,11 +41,15 @@ export function useFirstLogin() {
 
     try {
       await firstLogin({
-        token: token,
+        token,
         nome,
         senha,
-        uf,
-        numeroOab,
+        ...(semOab
+          ? {}
+          : {
+              uf,
+              numeroOab,
+            }),
       });
       router.push('/login?cadastro=sucesso');
     } catch (error) {
@@ -65,6 +75,8 @@ export function useFirstLogin() {
     setUf,
     numeroOab,
     setNumeroOab,
+    semOab,
+    setSemOab,
     erro,
     setErro,
     isSubmitting,

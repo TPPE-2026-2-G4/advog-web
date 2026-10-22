@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getInitials, getLawyerInitials, toTeamMember } from './funcionario';
+import {
+  formatOab,
+  getInitials,
+  getLawyerInitials,
+  toTeamMember,
+} from './funcionario';
 
 describe('getInitials', () => {
   it.each([
@@ -140,5 +145,55 @@ describe('getLawyerInitials', () => {
     [undefined, ''],
   ])('retorna as iniciais corretas para %s como %s', (name, expected) => {
     expect(getLawyerInitials(name)).toBe(expected);
+  });
+});
+
+describe('formatOab', () => {
+  it('retorna string vazia quando o objeto é nulo, indefinido ou vazio', () => {
+    expect(formatOab(null)).toBe('');
+    expect(formatOab(undefined)).toBe('');
+    expect(formatOab({})).toBe('');
+    expect(formatOab({ uf_oab: 'DF' })).toBe('');
+    expect(formatOab({ uf_oab: null, numero_oab: null })).toBe('');
+  });
+
+  it('formata corretamente OAB com uf_oab e numero_oab', () => {
+    expect(formatOab({ uf_oab: 'DF', numero_oab: '12345' })).toBe(
+      'OAB/DF 12.345'
+    );
+    expect(formatOab({ uf_oab: 'sp', numero_oab: '123456' })).toBe(
+      'OAB/SP 123.456'
+    );
+    expect(formatOab({ uf_oab: 'DF', numero_oab: '34.567' })).toBe(
+      'OAB/DF 34.567'
+    );
+  });
+
+  it('suporta formatos alternativos de chaves (camelCase)', () => {
+    expect(formatOab({ ufOab: 'df', numeroOab: '12345' })).toBe(
+      'OAB/DF 12.345'
+    );
+    expect(formatOab({ uf: 'RJ', numero: '99999' })).toBe('OAB/RJ 99.999');
+  });
+
+  it('retorna apenas OAB e número quando não possui UF', () => {
+    expect(formatOab({ numero_oab: '12345' })).toBe('OAB 12.345');
+  });
+
+  it.each([
+    ['chamada com apenas UF como string', 'DF', undefined, ''],
+    ['chamada com UF e número vazio', 'DF', '', ''],
+    ['chamada com UF e número com prefixo OAB', 'DF', 'OAB 54321', 'OAB 54321'],
+    ['chamada com parâmetros separados', 'RJ', '65432', 'OAB/RJ 65.432'],
+    ['chamada com uf vazio', '', '12345', ''],
+  ])(
+    'avalia formatOab com argumentos posicionais: %s',
+    (_desc, uf, num, expected) => {
+      expect(formatOab(uf, num)).toBe(expected);
+    }
+  );
+
+  it('preserva strings que já começam com OAB', () => {
+    expect(formatOab({ oab: 'OAB/DF 12.345' })).toBe('OAB/DF 12.345');
   });
 });
