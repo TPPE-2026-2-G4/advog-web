@@ -3,15 +3,14 @@
   width: 100%;
 }
 
+.areasSection {
+  width: 100%;
+  background-color: #ffffff;
+}
+
 .sobreSection {
   width: 100%;
   background-color: #f5f3ef;
-}
-
-.areasSection {
-  width: 100%;
-  background-color: #faf9f6;
-  border-top: 1px solid #e5e7eb;
 }
 
 .equipeSection {
@@ -25,6 +24,97 @@
   margin: 0 auto;
   padding: 80px 24px;
   font-family: var(--font-inter), sans-serif;
+}
+
+/* Seção Áreas de Atuação */
+.areasTitle {
+  font-family: var(--font-cormorant), serif;
+  font-size: 36px;
+  color: #172133;
+  margin: 0 0 16px 0;
+  font-weight: 600;
+  text-align: center;
+}
+
+.areasSubtitle {
+  color: #4b5563;
+  font-size: 18px;
+  line-height: 1.6;
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto 48px auto;
+}
+
+.areasGrid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+}
+
+.areaCard {
+  box-sizing: border-box;
+  flex: 0 0 270px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 24px;
+  background-color: #f5f3ef;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.areaCard:hover {
+  border-color: rgba(183, 154, 99, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .areaCard {
+    transition: none;
+  }
+}
+
+.areaCardTitle {
+  font-family: var(--font-cormorant), serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #172133;
+  margin: 0 0 14px 0;
+}
+
+.areaCardDesc {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .areasContainer {
+    padding: 64px 24px;
+  }
+
+  .areasTitle {
+    font-size: 32px;
+  }
+
+  .areasSubtitle {
+    margin-bottom: 36px;
+    font-size: 18px;
+  }
+
+  .areasGrid {
+    gap: 20px;
+  }
 }
 
 /* Seção Sobre o Escritório */
@@ -107,38 +197,6 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-/* Seção Áreas de Atuação */
-.areasGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
-  margin-top: 24px;
-}
-
-.areaCard {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-top: 3px solid #b79a63;
-  border-radius: 10px;
-  padding: 24px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-}
-
-.areaCardTitle {
-  font-family: var(--font-cormorant), serif;
-  font-size: 22px;
-  font-weight: 600;
-  color: #172133;
-  margin: 0 0 8px 0;
-}
-
-.areaCardDesc {
-  color: #4b5563;
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 0;
 }
 
 /* Seção Nossa Equipe */

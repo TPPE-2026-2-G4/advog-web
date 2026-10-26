@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "lucide-react": "^1.41.0",
-    "next": "^16.3.8",
+    "next": "^16.4.2",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -41,7 +41,7 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^6.1.0",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.0.5",
     "babel-plugin-react-compiler": "1.0.0",
     "commitizen": "^4.3.2",
     "cz-conventional-changelog": "^3.3.0",
@@ -53,7 +53,7 @@
     "lint-staged": "^17.3.0",
     "prettier": "^3.9.6",
     "tailwindcss": "^4",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.5"
   },
   "overrides": {
     "braces": "npm:@dieub/braces-depth-guard@3.0.3-pn.0"
