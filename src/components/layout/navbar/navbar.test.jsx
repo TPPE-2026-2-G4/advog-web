@@ -12,25 +12,34 @@ vi.mock('@/utils/authSession', () => ({
 }));
 
 describe('Navbar', () => {
-  it('renderiza o botão de notificações e a quantidade de notificações', () => {
-    render(<Navbar />);
-
-    expect(
-      screen.getByRole('button', { name: 'Notificações' })
-    ).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-  });
-
-  it('renderiza o divisor e o menu do usuário', async () => {
+  it.each([
+    {
+      description: 'botão de notificações',
+      verify: () =>
+        expect(
+          screen.getByRole('button', { name: 'Notificações' })
+        ).toBeInTheDocument(),
+    },
+    {
+      description: 'badge com a quantidade de notificações',
+      verify: () => expect(screen.getByText('2')).toBeInTheDocument(),
+    },
+    {
+      description: 'divisor visual entre notificações e menu do usuário',
+      verify: (container) =>
+        expect(
+          container.querySelector('[class*="divider"]')
+        ).toBeInTheDocument(),
+    },
+  ])('renderiza o $description', ({ verify }) => {
     const { container } = render(<Navbar />);
-
-    expect(container.querySelector('[class*="divider"]')).toBeInTheDocument();
-    expect(await screen.findByText('Alexandre C.')).toBeInTheDocument();
+    verify(container);
   });
 
-  it('mantém o menu do usuário fechado inicialmente', () => {
+  it('renderiza o menu do usuário recolhido inicialmente', async () => {
     render(<Navbar />);
 
+    expect(await screen.findByText('Alexandre C.')).toBeInTheDocument();
     expect(screen.queryByText('Alexandre Carreiro')).not.toBeInTheDocument();
   });
 });

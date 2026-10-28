@@ -62,115 +62,189 @@ describe('useClientes', () => {
     expect(result.current.searchTerm).toBe('');
   });
 
-  it('filtra clientes por busca de nome, email e documento', () => {
-    const { result } = renderHook(() =>
-      useClientes({
-        initialClientes: mockClientes,
-        initialFuncionarios: mockFuncionarios,
-      })
-    );
+  it.each([
+    {
+      criterio: 'nome',
+      termo: 'João',
+      clientesEsperados: ['João Santos'],
+    },
+    {
+      criterio: 'email',
+      termo: 'maria@email.com',
+      clientesEsperados: ['Maria Oliveira'],
+    },
+    {
+      criterio: 'CPF',
+      termo: '12345678900',
+      clientesEsperados: ['João Santos'],
+    },
+    {
+      criterio: 'CNPJ',
+      termo: '86765432000112',
+      clientesEsperados: ['Maria Oliveira'],
+    },
+    {
+      criterio: 'documento alfanumérico',
+      termo: 'DOC-998877',
+      initialClientes: [
+        ...mockClientes,
+        { id: 3, nome: 'Doc Generico', documento: 'DOC-998877' },
+        { id: 4, nome: 'Sem Documento' },
+      ],
+      clientesEsperados: ['Doc Generico'],
+    },
+    {
+      criterio: 'termo inexistente',
+      termo: 'termo_inexistente',
+      clientesEsperados: [],
+    },
+  ])(
+    'filtra clientes por busca ($criterio: "$termo")',
+    ({ termo, initialClientes = mockClientes, clientesEsperados }) => {
+      const { result } = renderHook(() =>
+        useClientes({
+          initialClientes,
+          initialFuncionarios: mockFuncionarios,
+        })
+      );
 
-    act(() => {
-      result.current.setSearchTerm('João');
-    });
-    expect(result.current.filteredClientes).toHaveLength(1);
-    expect(result.current.filteredClientes[0].nome).toBe('João Santos');
+      act(() => {
+        result.current.setSearchTerm(termo);
+      });
 
-    act(() => {
-      result.current.setSearchTerm('maria@email.com');
-    });
-    expect(result.current.filteredClientes).toHaveLength(1);
-    expect(result.current.filteredClientes[0].nome).toBe('Maria Oliveira');
+      expect(result.current.filteredClientes.map((c) => c.nome)).toEqual(
+        clientesEsperados
+      );
+    }
+  );
 
-    act(() => {
-      result.current.setSearchTerm('12345678900');
-    });
-    expect(result.current.filteredClientes).toHaveLength(1);
+  it.each([
+    {
+      cenario: 'responsavel_id coincidente',
+      responsavelFilter: '1',
+      statusFilter: '',
+      initialClientes: mockClientes,
+      initialFuncionarios: mockFuncionarios,
+      idsEsperados: [1],
+    },
+    {
+      cenario: 'etapa_id coincidente',
+      responsavelFilter: '',
+      statusFilter: '1',
+      initialClientes: mockClientes,
+      initialFuncionarios: mockFuncionarios,
+      idsEsperados: [2],
+    },
+    {
+      cenario: 'status_id coincidente em clientes com .id',
+      responsavelFilter: '',
+      statusFilter: '2',
+      initialClientes: [
+        { id: 100, nome: 'Cliente ID 100', status_id: 2, responsavel_id: 99 },
+        { id: 200, nome: 'Cliente ID 200', status_id: 3, responsavel_id: 1 },
+      ],
+      initialFuncionarios: mockFuncionarios,
+      idsEsperados: [100],
+    },
+    {
+      cenario:
+        'responsavel_nome ou responsavel string/objeto quando responsavel_id é nulo',
+      responsavelFilter: '1',
+      statusFilter: '',
+      initialClientes: [
+        {
+          cliente_id: 11,
+          nome: 'Cliente Um',
+          responsavel_id: null,
+          responsavel_nome: 'Alexandre Carreiro',
+        },
+        {
+          cliente_id: 12,
+          nome: 'Cliente Dois',
+          responsavel_id: null,
+          responsavel: { nome: 'Ana Paula' },
+        },
+        {
+          cliente_id: 13,
+          nome: 'Cliente Três',
+          responsavel_id: null,
+          responsavel: 'Alexandre Carreiro',
+        },
+        {
+          cliente_id: 14,
+          nome: 'Cliente Quatro',
+          responsavel_id: null,
+          responsavel: null,
+        },
+      ],
+      initialFuncionarios: mockFuncionarios,
+      idsEsperados: [11, 13],
+    },
+    {
+      cenario: 'responsavel não encontrado na lista de funcionários',
+      responsavelFilter: '999',
+      statusFilter: '',
+      initialClientes: [
+        { id: 3, nome: 'Outro', responsavel_id: 15 },
+        { id: 4, nome: 'Sem Resp ID', responsavel_id: null },
+      ],
+      initialFuncionarios: [{ id: 99, nome: 'Dr. Sem Func ID' }],
+      idsEsperados: [],
+    },
+    {
+      cenario: 'responsavelFilter zero coincidindo com responsavel_id nulo',
+      responsavelFilter: '0',
+      statusFilter: '',
+      initialClientes: [{ id: 5, nome: 'Resp Zero', responsavel_id: null }],
+      initialFuncionarios: mockFuncionarios,
+      idsEsperados: [5],
+    },
+    {
+      cenario: 'funcionário identificado por .id sem clientes associados',
+      responsavelFilter: '99',
+      statusFilter: '',
+      initialClientes: [{ id: 1, nome: 'Sem Resp', responsavel_id: null }],
+      initialFuncionarios: [{ id: 99, nome: 'Dr. Sem Func ID' }],
+      idsEsperados: [],
+    },
+  ])(
+    'filtra clientes por responsável e etapa/status ($cenario)',
+    ({
+      responsavelFilter,
+      statusFilter,
+      initialClientes,
+      initialFuncionarios,
+      idsEsperados,
+    }) => {
+      const { result } = renderHook(() =>
+        useClientes({
+          initialClientes,
+          initialFuncionarios,
+        })
+      );
 
-    act(() => {
-      result.current.setSearchTerm('termo_inexistente');
-    });
-    expect(result.current.filteredClientes).toHaveLength(0);
-  });
+      act(() => {
+        result.current.setResponsavelFilter(responsavelFilter);
+        result.current.setStatusFilter(statusFilter);
+      });
 
-  it('filtra clientes por responsável e por etapa/status', () => {
-    const { result } = renderHook(() =>
-      useClientes({
-        initialClientes: mockClientes,
-        initialFuncionarios: mockFuncionarios,
-      })
-    );
+      expect(
+        result.current.filteredClientes.map((c) => c.cliente_id ?? c.id)
+      ).toEqual(idsEsperados);
+    }
+  );
 
-    act(() => {
-      result.current.setResponsavelFilter('1');
-    });
-    expect(result.current.filteredClientes).toHaveLength(1);
-    expect(result.current.filteredClientes[0].nome).toBe('João Santos');
-
-    act(() => {
-      result.current.setResponsavelFilter('');
-      result.current.setStatusFilter('1');
-    });
-    expect(result.current.filteredClientes).toHaveLength(1);
-    expect(result.current.filteredClientes[0].nome).toBe('Maria Oliveira');
-  });
-
-  it('cadastra cliente e atualiza o estado com sucesso', async () => {
-    const novo = {
-      cliente_id: 3,
+  it('cadastra cliente, preserva cpf/documento locais e atualiza o estado com sucesso', async () => {
+    const payload = {
       nome: 'Novo Cliente',
       email: 'novo@email.com',
-    };
-    criarCliente.mockResolvedValueOnce(novo);
-
-    const { result } = renderHook(() =>
-      useClientes({
-        initialClientes: mockClientes,
-      })
-    );
-
-    await act(async () => {
-      await result.current.handleCreateClient(novo);
-    });
-
-    expect(result.current.clientes).toHaveLength(3);
-    expect(result.current.clientes[0].nome).toBe('Novo Cliente');
-    expect(result.current.feedbackMessage).toBe(
-      'Cliente cadastrado com sucesso!'
-    );
-  });
-
-  it('trata erro no cadastro de cliente', async () => {
-    criarCliente.mockRejectedValueOnce(new Error('Erro ao cadastrar'));
-
-    const { result } = renderHook(() =>
-      useClientes({
-        initialClientes: mockClientes,
-      })
-    );
-
-    let caughtError;
-    await act(async () => {
-      try {
-        await result.current.handleCreateClient({});
-      } catch (err) {
-        caughtError = err;
-      }
-    });
-
-    expect(caughtError?.message).toBe('Erro ao cadastrar');
-    expect(result.current.errorMessage).toBe('Erro ao cadastrar');
-  });
-
-  it('preserva cpf e documento no estado local ao criar cliente mesmo se API não retornar', async () => {
-    const payload = {
-      nome: 'Cliente Novo',
       cpf: '12345678901',
       documento: '123.456.789-01',
     };
     criarCliente.mockResolvedValueOnce({
-      cliente_id: 88,
-      nome: 'Cliente Novo',
+      cliente_id: 3,
+      nome: 'Novo Cliente',
+      email: 'novo@email.com',
     });
 
     const { result } = renderHook(() =>
@@ -183,48 +257,34 @@ describe('useClientes', () => {
       await result.current.handleCreateClient(payload);
     });
 
+    expect(result.current.clientes).toHaveLength(3);
+    expect(result.current.clientes[0].nome).toBe('Novo Cliente');
     expect(result.current.clientes[0].cpf).toBe('12345678901');
     expect(result.current.clientes[0].documento).toBe('123.456.789-01');
+    expect(result.current.feedbackMessage).toBe(
+      'Cliente cadastrado com sucesso!'
+    );
   });
 
-  it('trata erro de rede no cadastro com mensagem amigável', async () => {
-    criarCliente.mockRejectedValueOnce(
-      new Error('NetworkError when attempting to fetch resource.')
-    );
-
-    const { result } = renderHook(() =>
-      useClientes({
-        initialClientes: mockClientes,
+  it('atualiza cliente com sucesso (por cliente_id ou id) e preserva documento', async () => {
+    atualizarCliente
+      .mockResolvedValueOnce({
+        cliente_id: 1,
+        nome: 'João Santos Atualizado',
       })
-    );
-
-    await act(async () => {
-      try {
-        await result.current.handleCreateClient({});
-      } catch {}
-    });
-
-    expect(result.current.errorMessage).toBe(
-      'Erro de conexão com o servidor. Tente novamente em instantes.'
-    );
-  });
-
-  it('atualiza cliente com sucesso e preserva documento', async () => {
-    const atualizado = {
-      cliente_id: 1,
-      nome: 'João Santos Atualizado',
-    };
-    atualizarCliente.mockResolvedValueOnce(atualizado);
+      .mockResolvedValueOnce({
+        nome: 'Cliente ID 100 Atualizado',
+      });
 
     const { result } = renderHook(() =>
       useClientes({
-        initialClientes: mockClientes,
+        initialClientes: [...mockClientes, { id: 100, nome: 'Cliente ID 100' }],
       })
     );
 
     await act(async () => {
       await result.current.handleUpdateClient(1, {
-        ...atualizado,
+        nome: 'João Santos Atualizado',
         cpf: '99988877766',
       });
     });
@@ -234,58 +294,24 @@ describe('useClientes', () => {
     expect(result.current.feedbackMessage).toBe(
       'Cliente atualizado com sucesso!'
     );
-  });
-
-  it('trata erro na atualização de cliente', async () => {
-    atualizarCliente.mockRejectedValueOnce(new Error('Erro na atualização'));
-
-    const { result } = renderHook(() =>
-      useClientes({
-        initialClientes: mockClientes,
-      })
-    );
-
-    let caughtError;
-    await act(async () => {
-      try {
-        await result.current.handleUpdateClient(1, {});
-      } catch (err) {
-        caughtError = err;
-      }
-    });
-
-    expect(caughtError?.message).toBe('Erro na atualização');
-    expect(result.current.errorMessage).toBe('Erro na atualização');
-  });
-
-  it('trata erro de rede na atualização com mensagem amigável', async () => {
-    atualizarCliente.mockRejectedValueOnce(
-      new Error('NetworkError when attempting to fetch resource.')
-    );
-
-    const { result } = renderHook(() =>
-      useClientes({
-        initialClientes: mockClientes,
-      })
-    );
 
     await act(async () => {
-      try {
-        await result.current.handleUpdateClient(1, {});
-      } catch {}
+      await result.current.handleUpdateClient(100, {
+        nome: 'Cliente ID 100 Atualizado',
+      });
     });
 
-    expect(result.current.errorMessage).toBe(
-      'Erro de conexão com o servidor. Tente novamente em instantes.'
+    expect(result.current.clientes.find((c) => c.id === 100)?.nome).toBe(
+      'Cliente ID 100 Atualizado'
     );
   });
 
-  it('exclui cliente com sucesso', async () => {
-    excluirCliente.mockResolvedValueOnce(true);
+  it('exclui cliente com sucesso (por cliente_id ou id)', async () => {
+    excluirCliente.mockResolvedValue(true);
 
     const { result } = renderHook(() =>
       useClientes({
-        initialClientes: mockClientes,
+        initialClientes: [...mockClientes, { id: 100, nome: 'Cliente ID 100' }],
       })
     );
 
@@ -293,76 +319,164 @@ describe('useClientes', () => {
       await result.current.handleDeleteClient(1);
     });
 
-    expect(result.current.clientes).toHaveLength(1);
+    expect(result.current.clientes).toHaveLength(2);
     expect(result.current.feedbackMessage).toBe(
       'Cliente excluído com sucesso!'
     );
-  });
 
-  it('trata erro na exclusão de cliente', async () => {
-    excluirCliente.mockRejectedValueOnce(new Error('Erro ao excluir'));
-
-    const { result } = renderHook(() =>
-      useClientes({
-        initialClientes: mockClientes,
-      })
-    );
-
-    let caughtError;
     await act(async () => {
-      try {
-        await result.current.handleDeleteClient(1);
-      } catch (err) {
-        caughtError = err;
+      await result.current.handleDeleteClient(100);
+    });
+
+    expect(result.current.clientes.find((c) => c.id === 100)).toBeUndefined();
+  });
+
+  it.each([
+    {
+      operacao: 'cadastro com mensagem de erro da API',
+      mockFn: criarCliente,
+      invoke: (hook) => hook.handleCreateClient({}),
+      erroSimulado: new Error('Erro ao cadastrar'),
+      mensagemEsperada: 'Erro ao cadastrar',
+    },
+    {
+      operacao: 'cadastro com erro de rede (NetworkError)',
+      mockFn: criarCliente,
+      invoke: (hook) => hook.handleCreateClient({}),
+      erroSimulado: new Error(
+        'NetworkError when attempting to fetch resource.'
+      ),
+      mensagemEsperada:
+        'Erro de conexão com o servidor. Tente novamente em instantes.',
+    },
+    {
+      operacao: 'cadastro com erro sem mensagem explícita',
+      mockFn: criarCliente,
+      invoke: (hook) => hook.handleCreateClient({}),
+      erroSimulado: {},
+      mensagemEsperada: 'Erro ao cadastrar cliente.',
+    },
+    {
+      operacao: 'atualização com mensagem de erro da API',
+      mockFn: atualizarCliente,
+      invoke: (hook) => hook.handleUpdateClient(1, {}),
+      erroSimulado: new Error('Erro na atualização'),
+      mensagemEsperada: 'Erro na atualização',
+    },
+    {
+      operacao: 'atualização com erro de rede (NetworkError)',
+      mockFn: atualizarCliente,
+      invoke: (hook) => hook.handleUpdateClient(1, {}),
+      erroSimulado: new Error(
+        'NetworkError when attempting to fetch resource.'
+      ),
+      mensagemEsperada:
+        'Erro de conexão com o servidor. Tente novamente em instantes.',
+    },
+    {
+      operacao: 'atualização com erro sem mensagem explícita',
+      mockFn: atualizarCliente,
+      invoke: (hook) => hook.handleUpdateClient(1, {}),
+      erroSimulado: {},
+      mensagemEsperada: 'Erro ao atualizar cliente.',
+    },
+    {
+      operacao: 'exclusão com mensagem de erro da API',
+      mockFn: excluirCliente,
+      invoke: (hook) => hook.handleDeleteClient(1),
+      erroSimulado: new Error('Erro ao excluir'),
+      mensagemEsperada: 'Erro ao excluir',
+    },
+    {
+      operacao: 'exclusão com erro sem mensagem explícita',
+      mockFn: excluirCliente,
+      invoke: (hook) => hook.handleDeleteClient(1),
+      erroSimulado: {},
+      mensagemEsperada: 'Erro ao excluir cliente.',
+    },
+  ])(
+    'trata falha na operação de $operacao',
+    async ({ mockFn, invoke, erroSimulado, mensagemEsperada }) => {
+      mockFn.mockRejectedValueOnce(erroSimulado);
+
+      const { result } = renderHook(() =>
+        useClientes({ initialClientes: mockClientes })
+      );
+
+      let caughtError;
+      await act(async () => {
+        try {
+          await invoke(result.current);
+        } catch (err) {
+          caughtError = err;
+        }
+      });
+
+      expect(caughtError).toBe(erroSimulado);
+      expect(result.current.errorMessage).toBe(mensagemEsperada);
+    }
+  );
+
+  it.each([
+    {
+      modal: 'adição',
+      openFn: 'handleOpenAdd',
+      closeFn: 'handleCloseAdd',
+      stateKey: 'isAddOpen',
+      targetKey: null,
+      payload: undefined,
+    },
+    {
+      modal: 'detalhes',
+      openFn: 'handleOpenDetails',
+      closeFn: 'handleCloseDetails',
+      stateKey: 'isDetailsOpen',
+      targetKey: 'viewingClient',
+      payload: mockClientes[0],
+    },
+    {
+      modal: 'edição',
+      openFn: 'handleOpenEdit',
+      closeFn: 'handleCloseEdit',
+      stateKey: 'isEditOpen',
+      targetKey: 'editingClient',
+      payload: mockClientes[0],
+    },
+    {
+      modal: 'exclusão',
+      openFn: 'handleOpenDelete',
+      closeFn: 'handleCloseDelete',
+      stateKey: 'isDeleteOpen',
+      targetKey: 'deletingClient',
+      payload: mockClientes[0],
+    },
+  ])(
+    'controla a abertura e o fechamento do modal de $modal',
+    ({ openFn, closeFn, stateKey, targetKey, payload }) => {
+      const { result } = renderHook(() =>
+        useClientes({
+          initialClientes: mockClientes,
+          initialFuncionarios: mockFuncionarios,
+        })
+      );
+
+      act(() => {
+        result.current[openFn](payload);
+      });
+      expect(result.current[stateKey]).toBe(true);
+      if (targetKey) {
+        expect(result.current[targetKey]).toEqual(payload);
       }
-    });
 
-    expect(caughtError?.message).toBe('Erro ao excluir');
-    expect(result.current.errorMessage).toBe('Erro ao excluir');
-  });
-
-  it('controla a abertura e fechamento de todos os modais', () => {
-    const { result } = renderHook(() => useClientes());
-
-    act(() => {
-      result.current.handleOpenAdd();
-    });
-    expect(result.current.isAddOpen).toBe(true);
-    act(() => {
-      result.current.handleCloseAdd();
-    });
-    expect(result.current.isAddOpen).toBe(false);
-
-    act(() => {
-      result.current.handleOpenDetails(mockClientes[0]);
-    });
-    expect(result.current.isDetailsOpen).toBe(true);
-    expect(result.current.viewingClient).toEqual(mockClientes[0]);
-    act(() => {
-      result.current.handleCloseDetails();
-    });
-    expect(result.current.isDetailsOpen).toBe(false);
-
-    act(() => {
-      result.current.handleOpenEdit(mockClientes[0]);
-    });
-    expect(result.current.isEditOpen).toBe(true);
-    expect(result.current.editingClient).toEqual(mockClientes[0]);
-    act(() => {
-      result.current.handleCloseEdit();
-    });
-    expect(result.current.isEditOpen).toBe(false);
-
-    act(() => {
-      result.current.handleOpenDelete(mockClientes[0]);
-    });
-    expect(result.current.isDeleteOpen).toBe(true);
-    expect(result.current.deletingClient).toEqual(mockClientes[0]);
-    act(() => {
-      result.current.handleCloseDelete();
-    });
-    expect(result.current.isDeleteOpen).toBe(false);
-  });
+      act(() => {
+        result.current[closeFn]();
+      });
+      expect(result.current[stateKey]).toBe(false);
+      if (targetKey) {
+        expect(result.current[targetKey]).toBeNull();
+      }
+    }
+  );
 
   it('limpa feedbackMessage após o timeout de 4 segundos', async () => {
     vi.useFakeTimers();
@@ -381,168 +495,6 @@ describe('useClientes', () => {
     });
     expect(result.current.feedbackMessage).toBe('');
     vi.useRealTimers();
-  });
-
-  it('filtra clientes por responsável pelo nome ou objeto quando responsavel_id não confere diretamente', () => {
-    const clientesComNomes = [
-      {
-        cliente_id: 11,
-        nome: 'Cliente Um',
-        responsavel_id: null,
-        responsavel_nome: 'Alexandre Carreiro',
-      },
-      {
-        cliente_id: 12,
-        nome: 'Cliente Dois',
-        responsavel_id: null,
-        responsavel: { nome: 'Ana Paula' },
-      },
-      {
-        cliente_id: 13,
-        nome: 'Cliente Três',
-        responsavel_id: null,
-        responsavel: 'Alexandre Carreiro',
-      },
-      {
-        cliente_id: 14,
-        nome: 'Cliente Quatro',
-        responsavel_id: null,
-        responsavel: null,
-      },
-    ];
-
-    const { result } = renderHook(() =>
-      useClientes({
-        initialClientes: clientesComNomes,
-        initialFuncionarios: mockFuncionarios,
-      })
-    );
-
-    act(() => {
-      result.current.setResponsavelFilter('1'); // funcionario 1: Alexandre
-    });
-
-    expect(result.current.filteredClientes.map((c) => c.cliente_id)).toEqual([
-      11, 13,
-    ]);
-  });
-
-  it('utiliza mensagens de erro padrão quando o erro não possuir message', async () => {
-    criarCliente.mockRejectedValueOnce({});
-    atualizarCliente.mockRejectedValueOnce({});
-    excluirCliente.mockRejectedValueOnce({});
-
-    const { result } = renderHook(() =>
-      useClientes({ initialClientes: mockClientes })
-    );
-
-    await act(async () => {
-      try {
-        await result.current.handleCreateClient({});
-      } catch {}
-    });
-    expect(result.current.errorMessage).toBe('Erro ao cadastrar cliente.');
-
-    await act(async () => {
-      try {
-        await result.current.handleUpdateClient(1, {});
-      } catch {}
-    });
-    expect(result.current.errorMessage).toBe('Erro ao atualizar cliente.');
-
-    await act(async () => {
-      try {
-        await result.current.handleDeleteClient(1);
-      } catch {}
-    });
-    expect(result.current.errorMessage).toBe('Erro ao excluir cliente.');
-  });
-
-  it('suporta atualizar e excluir cliente usando .id, e filtra por status_id e responsavel_id divergente', async () => {
-    const clientesComId = [
-      { id: 100, nome: 'Cliente ID 100', status_id: 2, responsavel_id: 99 },
-      { id: 200, nome: 'Cliente ID 200', status_id: 3, responsavel_id: 1 },
-    ];
-    atualizarCliente.mockResolvedValueOnce({ nome: 'Nome 100 Atualizado' });
-    excluirCliente.mockResolvedValueOnce(true);
-
-    const { result } = renderHook(() =>
-      useClientes({
-        initialClientes: clientesComId,
-        initialFuncionarios: mockFuncionarios,
-      })
-    );
-
-    act(() => {
-      result.current.setStatusFilter('2');
-    });
-    expect(result.current.filteredClientes).toHaveLength(1);
-    expect(result.current.filteredClientes[0].id).toBe(100);
-
-    // Testar responsavel filter não coincidente com ID numérico
-    act(() => {
-      result.current.setStatusFilter('');
-      result.current.setResponsavelFilter('1');
-    });
-    expect(result.current.filteredClientes).toHaveLength(1);
-    expect(result.current.filteredClientes[0].id).toBe(200);
-
-    // Update
-    await act(async () => {
-      await result.current.handleUpdateClient(100, {
-        nome: 'Nome 100 Atualizado',
-      });
-    });
-    expect(result.current.clientes.find((c) => c.id === 100)?.nome).toBe(
-      'Nome 100 Atualizado'
-    );
-
-    // Delete
-    await act(async () => {
-      await result.current.handleDeleteClient(100);
-    });
-    expect(result.current.clientes.find((c) => c.id === 100)).toBeUndefined();
-  });
-
-  it('filtra clientes por cnpj e documento, e lida com funcionario inexistente ou usando .id', () => {
-    const clientesDiversos = [
-      { id: 1, nome: 'Doc CNPJ', cnpj: '11222333000144' },
-      { id: 2, nome: 'Doc Generico', documento: 'DOC-998877' },
-      { id: 3, nome: 'Outro', responsavel_id: 15 },
-    ];
-    const { result } = renderHook(() =>
-      useClientes({
-        initialClientes: clientesDiversos,
-        initialFuncionarios: [{ id: 99, nome: 'Dr. Sem Func ID' }],
-      })
-    );
-
-    // Busca por cnpj
-    act(() => {
-      result.current.setSearchTerm('11222333000144');
-    });
-    expect(result.current.filteredClientes).toHaveLength(1);
-    expect(result.current.filteredClientes[0].nome).toBe('Doc CNPJ');
-
-    // Busca por documento
-    act(() => {
-      result.current.setSearchTerm('DOC-998877');
-    });
-    expect(result.current.filteredClientes).toHaveLength(1);
-    expect(result.current.filteredClientes[0].nome).toBe('Doc Generico');
-
-    // Filtro por responsável com ID que não existe na lista de funcionários
-    act(() => {
-      result.current.setSearchTerm('');
-      result.current.setResponsavelFilter('999');
-    });
-    expect(result.current.filteredClientes).toHaveLength(0);
-
-    // Filtro por responsável usando f.id
-    act(() => {
-      result.current.setResponsavelFilter('99');
-    });
-    expect(result.current.filteredClientes).toHaveLength(0);
   });
 
   it('busca clientes e funcionários automaticamente ao montar quando as listas iniciais são vazias', async () => {

@@ -42,15 +42,13 @@ const renderTable = (overrides = {}) => {
 };
 
 describe('ProcessTable', () => {
-  it('renderiza colunas, dados e os quatro status', () => {
+  it('renderiza colunas, dados básicos e destaca prazos vencidos', () => {
     renderTable();
 
     expect(screen.getByRole('table', { name: '' })).toBeInTheDocument();
     expect(screen.getByText(processes[0].cnj)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Caso 1' })).toBeInTheDocument();
-    ['Ativo', 'Em Análise', 'Concluído', 'Arquivado'].forEach((status) => {
-      expect(screen.getByText(status)).toBeInTheDocument();
-    });
+
     const futureDeadlines = screen.getAllByText('05/10/2099');
     expect(futureDeadlines).toHaveLength(3);
     futureDeadlines.forEach((deadline) =>
@@ -59,45 +57,73 @@ describe('ProcessTable', () => {
     expect(screen.getByText('01/01/2000')).toHaveClass(styles.criticalDeadline);
   });
 
-  it('expõe as três ações com nomes acessíveis', () => {
-    const props = renderTable({ processes: [processes[0]], totalItems: 1 });
+  it.each([
+    { status: 'Ativo', expectedClass: styles.statusActive },
+    { status: 'Em Análise', expectedClass: styles.statusPending },
+    { status: 'Concluído', expectedClass: styles.statusCompleted },
+    { status: 'Arquivado', expectedClass: styles.statusArchived },
+  ])(
+    'renderiza o badge de status "$status" com a classe de estilo adequada',
+    ({ status, expectedClass }) => {
+      renderTable();
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: `Visualizar processo ${processes[0].cnj}`,
-      })
-    );
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: `Editar processo ${processes[0].cnj}`,
-      })
-    );
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: `Excluir processo ${processes[0].cnj}`,
-      })
-    );
+      const badge = screen.getByText(status);
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveClass(expectedClass);
+    }
+  );
 
-    expect(props.onView).toHaveBeenCalledWith(processes[0]);
-    expect(props.onEdit).toHaveBeenCalledWith(processes[0]);
-    expect(props.onDelete).toHaveBeenCalledWith(processes[0]);
-  });
+  it.each([
+    { actionPrefix: 'Visualizar processo', callbackKey: 'onView' },
+    { actionPrefix: 'Editar processo', callbackKey: 'onEdit' },
+    { actionPrefix: 'Excluir processo', callbackKey: 'onDelete' },
+  ])(
+    'aciona $callbackKey ao clicar em "$actionPrefix"',
+    ({ actionPrefix, callbackKey }) => {
+      const props = renderTable({ processes: [processes[0]], totalItems: 1 });
 
-  it('oculta edição e exclusão sem as permissões correspondentes', () => {
-    renderTable({
-      processes: [processes[0]],
-      totalItems: 1,
-      canEdit: false,
-      canDelete: false,
-    });
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: `${actionPrefix} ${processes[0].cnj}`,
+        })
+      );
 
-    expect(
-      screen.queryByRole('button', { name: /Editar processo/ })
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /Excluir processo/ })
-    ).not.toBeInTheDocument();
-  });
+      expect(props[callbackKey]).toHaveBeenCalledWith(processes[0]);
+    }
+  );
+
+  it.each([
+    { canEdit: false, canDelete: false },
+    { canEdit: true, canDelete: false },
+    { canEdit: false, canDelete: true },
+  ])(
+    'controla visibilidade dos botões de ação conforme permissões (canEdit=$canEdit, canDelete=$canDelete)',
+    ({ canEdit, canDelete }) => {
+      renderTable({
+        processes: [processes[0]],
+        totalItems: 1,
+        canEdit,
+        canDelete,
+      });
+
+      const editBtn = screen.queryByRole('button', { name: /Editar processo/ });
+      const deleteBtn = screen.queryByRole('button', {
+        name: /Excluir processo/,
+      });
+
+      if (canEdit) {
+        expect(editBtn).toBeInTheDocument();
+      } else {
+        expect(editBtn).not.toBeInTheDocument();
+      }
+
+      if (canDelete) {
+        expect(deleteBtn).toBeInTheDocument();
+      } else {
+        expect(deleteBtn).not.toBeInTheDocument();
+      }
+    }
+  );
 
   it('também abre o detalhe pelo título do caso', () => {
     const props = renderTable({ processes: [processes[0]], totalItems: 1 });
@@ -107,12 +133,28 @@ describe('ProcessTable', () => {
     expect(props.onView).toHaveBeenCalledWith(processes[0]);
   });
 
-  it('renderiza estado vazio sem paginação', () => {
-    renderTable({ processes: [], totalItems: 0 });
+  it.each([
+    {
+      hasActiveFilters: false,
+      expectedTitle: 'Nenhum processo cadastrado',
+      expectedDescription:
+        'Cadastre o primeiro processo para começar a gerenciá-lo.',
+    },
+    {
+      hasActiveFilters: true,
+      expectedTitle: 'Nenhum processo encontrado',
+      expectedDescription: 'Ajuste os filtros para ver outros resultados.',
+    },
+  ])(
+    'renderiza estado vazio (hasActiveFilters=$hasActiveFilters) sem paginação',
+    ({ hasActiveFilters, expectedTitle, expectedDescription }) => {
+      renderTable({ processes: [], totalItems: 0, hasActiveFilters });
 
-    expect(screen.getByText('Nenhum processo cadastrado')).toBeInTheDocument();
-    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
-  });
+      expect(screen.getByText(expectedTitle)).toBeInTheDocument();
+      expect(screen.getByText(expectedDescription)).toBeInTheDocument();
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    }
+  );
 
   it('navega entre páginas e bloqueia os limites', () => {
     const props = renderTable({

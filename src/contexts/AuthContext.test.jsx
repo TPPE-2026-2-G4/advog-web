@@ -34,44 +34,89 @@ describe('AuthProvider', () => {
   afterEach(() => {
     loginServiceMock.mockReset();
     localStorage.clear();
+    sessionStorage.clear();
   });
 
-  it('inicia sem usuário autenticado', () => {
+  it.each([
+    {
+      cenario: 'sem usuário no storage',
+      setupStorage: () => {},
+      textoEsperado: 'Nenhum usuário',
+    },
+    {
+      cenario: 'com usuário salvo previamente no sessionStorage',
+      setupStorage: () =>
+        sessionStorage.setItem(
+          'current_user',
+          JSON.stringify({ email: 'restaurado@exemplo.com' })
+        ),
+      textoEsperado: 'restaurado@exemplo.com',
+    },
+  ])('inicializa corretamente $cenario', ({ setupStorage, textoEsperado }) => {
+    setupStorage();
+
     render(
       <AuthProvider>
         <AuthConsumer />
       </AuthProvider>
     );
 
-    expect(screen.getByTestId('user')).toHaveTextContent('Nenhum usuário');
+    expect(screen.getByTestId('user')).toHaveTextContent(textoEsperado);
   });
 
-  it('autentica o usuário, salva o token e repassa os dados do serviço', async () => {
-    const authData = {
-      funcionario: { id: 1, email: 'ana@exemplo.com' },
-      access_token: 'token-de-teste',
-    };
-    loginServiceMock.mockResolvedValue(authData);
+  it.each([
+    {
+      cenario: 'payload padrão (access_token + funcionario)',
+      authData: {
+        funcionario: { id: 1, email: 'ana@exemplo.com' },
+        access_token: 'token-de-teste',
+      },
+      emailEsperado: 'ana@exemplo.com',
+      tokenEsperado: 'token-de-teste',
+    },
+    {
+      cenario: 'payload backend persistindo em localStorage e sessionStorage',
+      authData: {
+        access_token: 'jwt-backend',
+        funcionario: { id: 2, email: 'backend@exemplo.com' },
+      },
+      emailEsperado: 'backend@exemplo.com',
+      tokenEsperado: 'jwt-backend',
+    },
+    {
+      cenario: 'payload vazio sem token ou usuário',
+      authData: {},
+      emailEsperado: 'Nenhum usuário',
+      tokenEsperado: null,
+    },
+  ])(
+    'processa login com $cenario',
+    async ({ authData, emailEsperado, tokenEsperado }) => {
+      loginServiceMock.mockResolvedValue(authData);
 
-    render(
-      <AuthProvider>
-        <AuthConsumer />
-      </AuthProvider>
-    );
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
 
-    await waitFor(() => {
-      expect(screen.getByTestId('user')).toHaveTextContent('ana@exemplo.com');
-    });
-    expect(loginServiceMock).toHaveBeenCalledWith(
-      'ana@exemplo.com',
-      'senha-segura'
-    );
-    expect(localStorage.getItem('token')).toBe('token-de-teste');
-  });
+      await waitFor(() => {
+        expect(screen.getByTestId('user')).toHaveTextContent(emailEsperado);
+      });
 
-  it('remove o usuário ao fazer logout', async () => {
+      expect(loginServiceMock).toHaveBeenCalledWith(
+        'ana@exemplo.com',
+        'senha-segura'
+      );
+      expect(localStorage.getItem('token')).toBe(tokenEsperado);
+      expect(localStorage.getItem('access_token')).toBe(tokenEsperado);
+      expect(sessionStorage.getItem('access_token')).toBe(tokenEsperado);
+    }
+  );
+
+  it('remove o usuário e limpa storages ao fazer logout', async () => {
     loginServiceMock.mockResolvedValue({
       funcionario: { email: 'ana@exemplo.com' },
       access_token: 'token-de-teste',
@@ -93,65 +138,5 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('Nenhum usuário');
     expect(localStorage.getItem('token')).toBeNull();
     expect(sessionStorage.getItem('access_token')).toBeNull();
-  });
-
-  it('inicia com usuário salvo no storage quando disponível', () => {
-    sessionStorage.setItem(
-      'current_user',
-      JSON.stringify({ email: 'restaurado@exemplo.com' })
-    );
-
-    render(
-      <AuthProvider>
-        <AuthConsumer />
-      </AuthProvider>
-    );
-
-    expect(screen.getByTestId('user')).toHaveTextContent(
-      'restaurado@exemplo.com'
-    );
-  });
-
-  it('autentica com formato backend (access_token e funcionario) e persiste em ambos storages', async () => {
-    loginServiceMock.mockResolvedValue({
-      access_token: 'jwt-backend',
-      funcionario: { id: 2, email: 'backend@exemplo.com' },
-    });
-
-    render(
-      <AuthProvider>
-        <AuthConsumer />
-      </AuthProvider>
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('user')).toHaveTextContent(
-        'backend@exemplo.com'
-      );
-    });
-
-    expect(localStorage.getItem('access_token')).toBe('jwt-backend');
-    expect(sessionStorage.getItem('access_token')).toBe('jwt-backend');
-    expect(sessionStorage.getItem('current_user')).toContain(
-      'backend@exemplo.com'
-    );
-  });
-
-  it('permite login quando o payload não possui token ou usuário', async () => {
-    loginServiceMock.mockResolvedValue({});
-
-    render(
-      <AuthProvider>
-        <AuthConsumer />
-      </AuthProvider>
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('user')).toHaveTextContent('Nenhum usuário');
-    });
   });
 });

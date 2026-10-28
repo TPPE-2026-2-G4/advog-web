@@ -33,61 +33,161 @@ const formData = {
 
 describe('utilitários de processo', () => {
   it.each([
-    ['2026-10-05', '2026-10-05'],
-    ['2026-10-05T12:30:00', '2026-10-05'],
-    ['05/10/2026', '2026-10-05'],
-    [' 05/10/2026 ', '2026-10-05'],
-  ])('normaliza a data %s para ISO', (value, expected) => {
-    expect(normalizeProcessDate(value)).toBe(expected);
-  });
-
-  it.each(['', null, '31/02/2026', '2026-13-01', 'data inválida'])(
-    'rejeita a data inválida %s',
-    (value) => {
-      expect(normalizeProcessDate(value)).toBe('');
+    {
+      cenario: 'data ISO simples',
+      value: '2026-10-05',
+      expected: '2026-10-05',
+    },
+    {
+      cenario: 'data ISO com horário',
+      value: '2026-10-05T12:30:00',
+      expected: '2026-10-05',
+    },
+    {
+      cenario: 'data no formato brasileiro',
+      value: '05/10/2026',
+      expected: '2026-10-05',
+    },
+    {
+      cenario: 'data no formato brasileiro com espaços',
+      value: ' 05/10/2026 ',
+      expected: '2026-10-05',
+    },
+    { cenario: 'string vazia', value: '', expected: '' },
+    { cenario: 'valor null', value: null, expected: '' },
+    {
+      cenario: 'dia inexistente em fevereiro',
+      value: '31/02/2026',
+      expected: '',
+    },
+    { cenario: 'mês inválido em ISO', value: '2026-13-01', expected: '' },
+    {
+      cenario: 'texto arbitrário inválido',
+      value: 'data inválida',
+      expected: '',
+    },
+  ])(
+    'normalizeProcessDate trata $cenario ($value -> "$expected")',
+    ({ value, expected }) => {
+      expect(normalizeProcessDate(value)).toBe(expected);
     }
   );
 
-  it('formata datas válidas para pt-BR e preserva valores desconhecidos', () => {
-    expect(formatProcessDate('2026-10-05')).toBe('05/10/2026');
-    expect(formatProcessDate('05/10/2026')).toBe('05/10/2026');
-    expect(formatProcessDate('sem prazo')).toBe('sem prazo');
-    expect(formatProcessDate('')).toBe('Não informado');
-  });
+  it.each([
+    {
+      cenario: 'data ISO válida',
+      value: '2026-10-05',
+      expected: '05/10/2026',
+    },
+    {
+      cenario: 'data já em formato pt-BR',
+      value: '05/10/2026',
+      expected: '05/10/2026',
+    },
+    {
+      cenario: 'texto descritivo não reconhecido como data',
+      value: 'sem prazo',
+      expected: 'sem prazo',
+    },
+    {
+      cenario: 'valor vazio retornando fallback',
+      value: '',
+      expected: 'Não informado',
+    },
+  ])(
+    'formatProcessDate formata $cenario ($value -> "$expected")',
+    ({ value, expected }) => {
+      expect(formatProcessDate(value)).toBe(expected);
+    }
+  );
 
-  it('calcula dias restantes por dias de calendário em UTC', () => {
-    const now = new Date('2026-10-01T23:59:00.000Z');
+  it.each([
+    { cenario: 'prazo futuro em ISO', value: '2026-10-05', expected: 4 },
+    { cenario: 'prazo passado em pt-BR', value: '30/09/2026', expected: -1 },
+    { cenario: 'prazo no mesmo dia', value: '2026-10-01', expected: 0 },
+    { cenario: 'data inválida', value: 'inválida', expected: null },
+  ])(
+    'calculateRemainingDays calcula dias restantes para $cenario',
+    ({ value, expected }) => {
+      const now = new Date('2026-10-01T23:59:00.000Z');
+      expect(calculateRemainingDays(value, now)).toBe(expected);
+    }
+  );
 
-    expect(calculateRemainingDays('2026-10-05', now)).toBe(4);
-    expect(calculateRemainingDays('30/09/2026', now)).toBe(-1);
-    expect(calculateRemainingDays('inválida', now)).toBeNull();
-  });
+  it.each([
+    {
+      cenario: 'prazo anterior à data atual',
+      value: '2026-09-30',
+      expected: true,
+    },
+    {
+      cenario: 'prazo igual à data atual',
+      value: '2026-10-01',
+      expected: false,
+    },
+    {
+      cenario: 'prazo posterior à data atual',
+      value: '2026-10-02',
+      expected: false,
+    },
+    { cenario: 'data inválida', value: 'inválida', expected: false },
+  ])(
+    'isOverdueDeadline retorna $expected para $cenario ($value)',
+    ({ value, expected }) => {
+      const now = new Date('2026-10-01T10:00:00.000Z');
+      expect(isOverdueDeadline(value, now)).toBe(expected);
+    }
+  );
 
-  it('considera vencido somente o prazo anterior à data atual', () => {
-    const now = new Date('2026-10-01T10:00:00.000Z');
-
-    expect(isOverdueDeadline('2026-09-30', now)).toBe(true);
-    expect(isOverdueDeadline('2026-10-01', now)).toBe(false);
-    expect(isOverdueDeadline('2026-10-02', now)).toBe(false);
-    expect(isOverdueDeadline('inválida', now)).toBe(false);
-  });
-
-  it('reconhece apenas números CNJ no formato contratado', () => {
-    expect(CNJ_REGEX.test('0061234-56.2026.8.26.0100')).toBe(true);
-    expect(CNJ_REGEX.test('00612345620268260100')).toBe(false);
+  it.each([
+    {
+      cenario: 'CNJ formatado segundo o padrão oficial',
+      value: '0061234-56.2026.8.26.0100',
+      expected: true,
+    },
+    {
+      cenario: 'CNJ apenas com dígitos sem pontuação',
+      value: '00612345620268260100',
+      expected: false,
+    },
+  ])('CNJ_REGEX avalia $cenario como $expected', ({ value, expected }) => {
+    expect(CNJ_REGEX.test(value)).toBe(expected);
   });
 
   it.each([
-    ['0061234', '0061234'],
-    ['006123456', '0061234-56'],
-    ['0061234562026', '0061234-56.2026'],
-    ['00612345620268260100', '0061234-56.2026.8.26.0100'],
-    ['0061234abc562026x8y260100', '0061234-56.2026.8.26.0100'],
-    ['006123456202682601009999', '0061234-56.2026.8.26.0100'],
-    [null, ''],
-  ])('formata progressivamente o CNJ informado como %s', (input, expected) => {
-    expect(formatCnjInput(input)).toBe(expected);
-  });
+    { cenario: '7 dígitos iniciais', input: '0061234', expected: '0061234' },
+    {
+      cenario: '9 dígitos com hífen',
+      input: '006123456',
+      expected: '0061234-56',
+    },
+    {
+      cenario: '13 dígitos com ano',
+      input: '0061234562026',
+      expected: '0061234-56.2026',
+    },
+    {
+      cenario: '20 dígitos completos',
+      input: '00612345620268260100',
+      expected: '0061234-56.2026.8.26.0100',
+    },
+    {
+      cenario: 'entrada com caracteres alfabéticos misturados',
+      input: '0061234abc562026x8y260100',
+      expected: '0061234-56.2026.8.26.0100',
+    },
+    {
+      cenario: 'entrada excedendo o limite de 20 dígitos',
+      input: '006123456202682601009999',
+      expected: '0061234-56.2026.8.26.0100',
+    },
+    { cenario: 'entrada nula', input: null, expected: '' },
+  ])(
+    'formatCnjInput formata progressivamente $cenario ($input -> "$expected")',
+    ({ input, expected }) => {
+      expect(formatCnjInput(input)).toBe(expected);
+    }
+  );
 
   it('monta o payload de criação normalizado', () => {
     expect(toProcessPayload(formData)).toEqual({
@@ -105,13 +205,10 @@ describe('utilitários de processo', () => {
     });
   });
 
-  it('envia funcionario_id nulo quando não há responsável', () => {
+  it('envia funcionario_id nulo quando não há responsável e omite CNJ quando solicitado', () => {
     expect(
       toProcessPayload({ ...formData, funcionario_id: '' }).funcionario_id
     ).toBeNull();
-  });
-
-  it('omite o CNJ no payload de edição', () => {
     expect(
       toProcessPayload(formData, { includeCnj: false })
     ).not.toHaveProperty('cnj');
@@ -140,9 +237,10 @@ describe('utilitários de processo', () => {
     ).toEqual({ status: 'Concluído' });
   });
 
-  it('converte uma resposta da API em dados de formulário', () => {
-    expect(
-      toProcessFormData({
+  it.each([
+    {
+      cenario: 'resposta preenchida da API',
+      input: {
         cnj: '0061234-56.2026.8.26.0100',
         titulo: 'Caso',
         descricao: null,
@@ -154,43 +252,51 @@ describe('utilitários de processo', () => {
         data_prazo: '05/10/2026',
         cliente_id: 4,
         funcionario_id: null,
-      })
-    ).toEqual({
-      cnj: '0061234-56.2026.8.26.0100',
-      titulo: 'Caso',
-      descricao: '',
-      status: 'Ativo',
-      tribunal: 'TJDFT',
-      area: 'Civil',
-      data_inicio: '2026-09-01',
-      data_realizado: '',
-      data_prazo: '2026-10-05',
-      cliente_id: '4',
-      funcionario_id: '',
-    });
-  });
-
-  it('fornece valores padrão para um novo processo', () => {
-    expect(toProcessFormData()).toEqual({
-      cnj: '',
-      titulo: '',
-      descricao: '',
-      status: 'Em Análise',
-      tribunal: '',
-      area: '',
-      data_inicio: '',
-      data_realizado: '',
-      data_prazo: '',
-      cliente_id: '',
-      funcionario_id: '',
-    });
-  });
+      },
+      expected: {
+        cnj: '0061234-56.2026.8.26.0100',
+        titulo: 'Caso',
+        descricao: '',
+        status: 'Ativo',
+        tribunal: 'TJDFT',
+        area: 'Civil',
+        data_inicio: '2026-09-01',
+        data_realizado: '',
+        data_prazo: '2026-10-05',
+        cliente_id: '4',
+        funcionario_id: '',
+      },
+    },
+    {
+      cenario: 'processo indefinido (valores padrão)',
+      input: undefined,
+      expected: {
+        cnj: '',
+        titulo: '',
+        descricao: '',
+        status: 'Em Análise',
+        tribunal: '',
+        area: '',
+        data_inicio: '',
+        data_realizado: '',
+        data_prazo: '',
+        cliente_id: '',
+        funcionario_id: '',
+      },
+    },
+  ])(
+    'toProcessFormData converte corretamente $cenario',
+    ({ input, expected }) => {
+      expect(toProcessFormData(input)).toEqual(expected);
+    }
+  );
 });
 
 describe('filtros e listagem de processos', () => {
-  it('monta a query somente com filtros preenchidos', () => {
-    expect(
-      buildProcessQuery({
+  it.each([
+    {
+      cenario: 'múltiplos filtros válidos preenchidos',
+      filters: {
         busca: '  0061234  ',
         status: 'Ativo',
         responsavelId: '7',
@@ -198,119 +304,151 @@ describe('filtros e listagem de processos', () => {
         prazoFim: '',
         page: 2,
         pageSize: 5,
-      })
-    ).toBe(
-      'busca=0061234&status=Ativo&responsavel_id=7&prazo_inicio=2026-09-01&page=2&page_size=5'
-    );
+      },
+      expected:
+        'busca=0061234&status=Ativo&responsavel_id=7&prazo_inicio=2026-09-01&page=2&page_size=5',
+    },
+    {
+      cenario: 'data em formato brasileiro e busca em branco',
+      filters: { busca: '   ', prazoInicio: '31/12/2026', page: 1 },
+      expected: 'prazo_inicio=2026-12-31&page=1',
+    },
+    {
+      cenario: 'data inválida descartada automaticamente',
+      filters: { prazoInicio: '31/02/2026', page: 1 },
+      expected: 'page=1',
+    },
+  ])(
+    'buildProcessQuery monta a query para $cenario',
+    ({ filters, expected }) => {
+      expect(buildProcessQuery(filters)).toBe(expected);
+    }
+  );
+
+  it.each([
+    {
+      cenario: 'início posterior ao fim',
+      start: '2026-09-10',
+      end: '2026-09-01',
+      expected: true,
+    },
+    {
+      cenario: 'início igual ao fim',
+      start: '2026-09-01',
+      end: '2026-09-01',
+      expected: false,
+    },
+    {
+      cenario: 'início vazio',
+      start: '',
+      end: '2026-09-01',
+      expected: false,
+    },
+  ])(
+    'hasInvalidDateRange retorna $expected quando $cenario',
+    ({ start, end, expected }) => {
+      expect(hasInvalidDateRange(start, end)).toBe(expected);
+    }
+  );
+
+  it('converte opções de responsável e indexa nomes pelo identificador textual', () => {
+    const options = toResponsavelOptions([
+      { funcionario_id: 3, nome: 'Ana Paula Ribeiro' },
+    ]);
+    expect(options).toEqual([{ value: '3', label: 'Ana Paula Ribeiro' }]);
+
+    const names = toResponsavelNames(options);
+    expect(names.get('3')).toBe('Ana Paula Ribeiro');
+    expect(names.get('9')).toBeUndefined();
   });
 
-  it('normaliza datas em formato brasileiro e descarta datas inválidas', () => {
-    expect(
-      buildProcessQuery({ busca: '   ', prazoInicio: '31/12/2026', page: 1 })
-    ).toBe('prazo_inicio=2026-12-31&page=1');
-
-    expect(buildProcessQuery({ prazoInicio: '31/02/2026', page: 1 })).toBe(
-      'page=1'
-    );
-  });
-
-  it('identifica intervalo de prazo com início posterior ao fim', () => {
-    expect(hasInvalidDateRange('2026-09-10', '2026-09-01')).toBe(true);
-    expect(hasInvalidDateRange('2026-09-01', '2026-09-01')).toBe(false);
-    expect(hasInvalidDateRange('', '2026-09-01')).toBe(false);
-  });
-
-  it('converte opções de responsável a partir dos funcionários', () => {
-    expect(
-      toResponsavelOptions([{ funcionario_id: 3, nome: 'Ana Paula Ribeiro' }])
-    ).toEqual([{ value: '3', label: 'Ana Paula Ribeiro' }]);
-  });
-
-  it('adapta o processo da API para o formato da listagem', () => {
-    const responsaveis = new Map([['3', 'Ana Paula Ribeiro']]);
-
-    expect(
-      toProcessView(
-        {
-          processo_id: 1,
-          cnj: '0061234-56.2026.8.26.0100',
-          titulo_proc: 'Ação Trabalhista',
-          status: 'Ativo',
-          tribunal: 'TRT2',
-          area: 'Trabalhista',
-          data_prazo: '2026-09-05T00:00:00',
-          cliente_id: 4,
-          responsavel_id: 3,
-        },
-        responsaveis
-      )
-    ).toEqual({
-      id: '0061234-56.2026.8.26.0100',
-      titulo: 'Ação Trabalhista',
-      cliente: 'Cliente nº 4',
-      status: 'Ativo',
-      tribunal: 'TRT2',
-      area: 'Trabalhista',
-      responsavel: 'Ana Paula Ribeiro',
-      prazo: '2026-09-05',
-    });
-  });
-
-  it('usa valores de fallback quando cliente e responsável não existem', () => {
-    expect(
-      toProcessView({
+  it.each([
+    {
+      cenario: 'processo completo com responsável mapeado',
+      processo: {
+        processo_id: 1,
+        cnj: '0061234-56.2026.8.26.0100',
+        titulo_proc: 'Ação Trabalhista',
+        status: 'Ativo',
+        tribunal: 'TRT2',
+        area: 'Trabalhista',
+        data_prazo: '2026-09-05T00:00:00',
+        cliente_id: 4,
+        responsavel_id: 3,
+      },
+      responsaveis: new Map([['3', 'Ana Paula Ribeiro']]),
+      expected: {
+        id: '0061234-56.2026.8.26.0100',
+        titulo: 'Ação Trabalhista',
+        cliente: 'Cliente nº 4',
+        status: 'Ativo',
+        tribunal: 'TRT2',
+        area: 'Trabalhista',
+        responsavel: 'Ana Paula Ribeiro',
+        prazo: '2026-09-05',
+      },
+    },
+    {
+      cenario: 'processo sem cliente, responsável ou prazo (fallbacks)',
+      processo: {
         cnj: null,
         titulo_proc: 'Caso',
         status: 'Pendente',
+        tribunal: undefined,
+        area: undefined,
         cliente_id: null,
         responsavel_id: null,
         data_prazo: null,
-      })
-    ).toMatchObject({
-      id: '',
-      cliente: 'Não informado',
-      responsavel: 'Não informado',
-      prazo: '',
-    });
-  });
+      },
+      responsaveis: undefined,
+      expected: {
+        id: '',
+        titulo: 'Caso',
+        cliente: 'Não informado',
+        status: 'Pendente',
+        tribunal: undefined,
+        area: undefined,
+        responsavel: 'Não informado',
+        prazo: '',
+      },
+    },
+  ])(
+    'toProcessView adapta corretamente $cenario',
+    ({ processo, responsaveis, expected }) => {
+      expect(toProcessView(processo, responsaveis)).toEqual(expected);
+    }
+  );
 
-  it('converte a página da API mantendo os metadados de paginação', () => {
-    const page = toProcessPage({
-      itens: [{ cnj: '1', titulo_proc: 'A', status: 'Ativo' }],
-      total: 6,
-      page: 2,
-      page_size: 5,
-      total_pages: 2,
-    });
-
-    expect(page).toMatchObject({
-      total: 6,
-      page: 2,
-      pageSize: 5,
-      totalPages: 2,
-    });
-    expect(page.itens).toHaveLength(1);
-    expect(page.itens[0].titulo_proc).toBe('A');
-  });
-});
-
-describe('nomes de responsáveis', () => {
-  it('indexa o nome pelo identificador textual do responsável', () => {
-    const names = toResponsavelNames([{ value: '3', label: 'Ana Paula' }]);
-
-    expect(names.get('3')).toBe('Ana Paula');
-    expect(names.get('9')).toBeUndefined();
-  });
-});
-
-describe('página de processos com dados incompletos', () => {
-  it('usa valores padrão quando a página da API vem incompleta', () => {
-    expect(toProcessPage({})).toEqual({
-      itens: [],
-      total: 0,
-      page: 1,
-      pageSize: 0,
-      totalPages: 1,
-    });
+  it.each([
+    {
+      cenario: 'página completa da API',
+      input: {
+        itens: [{ cnj: '1', titulo_proc: 'A', status: 'Ativo' }],
+        total: 6,
+        page: 2,
+        page_size: 5,
+        total_pages: 2,
+      },
+      expected: {
+        itens: [{ cnj: '1', titulo_proc: 'A', status: 'Ativo' }],
+        total: 6,
+        page: 2,
+        pageSize: 5,
+        totalPages: 2,
+      },
+    },
+    {
+      cenario: 'página vazia/incompleta com valores padrão',
+      input: {},
+      expected: {
+        itens: [],
+        total: 0,
+        page: 1,
+        pageSize: 0,
+        totalPages: 1,
+      },
+    },
+  ])('toProcessPage converte $cenario', ({ input, expected }) => {
+    expect(toProcessPage(input)).toEqual(expected);
   });
 });

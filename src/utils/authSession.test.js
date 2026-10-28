@@ -17,47 +17,73 @@ describe('authSession', () => {
   });
 
   describe('getAccessToken', () => {
-    it('retorna o token do sessionStorage quando presente', () => {
-      sessionStorage.setItem('access_token', 'token-session');
-      expect(getAccessToken()).toBe('token-session');
-    });
-
-    it('retorna o access_token do localStorage quando ausente no sessionStorage', () => {
-      localStorage.setItem('access_token', 'token-local-access');
-      expect(getAccessToken()).toBe('token-local-access');
-    });
-
-    it('retorna o token do localStorage quando ausente nas demais chaves', () => {
-      localStorage.setItem('token', 'token-legacy');
-      expect(getAccessToken()).toBe('token-legacy');
-    });
-
-    it('retorna null quando nenhum token está armazenado', () => {
-      expect(getAccessToken()).toBeNull();
+    it.each([
+      {
+        cenario: 'sessionStorage possui access_token',
+        setup: () => sessionStorage.setItem('access_token', 'token-session'),
+        esperado: 'token-session',
+      },
+      {
+        cenario:
+          'localStorage possui access_token quando sessionStorage está vazio',
+        setup: () => localStorage.setItem('access_token', 'token-local-access'),
+        esperado: 'token-local-access',
+      },
+      {
+        cenario:
+          'localStorage possui chave legada token quando demais estão vazias',
+        setup: () => localStorage.setItem('token', 'token-legacy'),
+        esperado: 'token-legacy',
+      },
+      {
+        cenario: 'nenhum token está armazenado',
+        setup: () => {},
+        esperado: null,
+      },
+    ])('retorna $esperado quando $cenario', ({ setup, esperado }) => {
+      setup();
+      expect(getAccessToken()).toBe(esperado);
     });
   });
 
   describe('getCurrentUser', () => {
-    it('retorna o usuário do sessionStorage quando presente', () => {
-      const user = { id: 1, nome: 'Dr. Teste' };
-      sessionStorage.setItem('current_user', JSON.stringify(user));
-      expect(getCurrentUser()).toEqual(user);
-    });
-
-    it('retorna o usuário do localStorage quando ausente no sessionStorage', () => {
-      const user = { id: 2, nome: 'Dra. Teste' };
-      localStorage.setItem('current_user', JSON.stringify(user));
-      expect(getCurrentUser()).toEqual(user);
-    });
-
-    it('retorna null quando nenhum usuário está armazenado', () => {
-      expect(getCurrentUser()).toBeNull();
-    });
-
-    it('retorna null quando o JSON armazenado é inválido', () => {
-      sessionStorage.setItem('current_user', '{invalid_json}');
-      expect(getCurrentUser()).toBeNull();
-    });
+    it.each([
+      {
+        cenario: 'usuário presente no sessionStorage',
+        setup: () =>
+          sessionStorage.setItem(
+            'current_user',
+            JSON.stringify({ id: 1, nome: 'Dr. Teste' })
+          ),
+        esperado: { id: 1, nome: 'Dr. Teste' },
+      },
+      {
+        cenario:
+          'usuário presente no localStorage quando ausente no sessionStorage',
+        setup: () =>
+          localStorage.setItem(
+            'current_user',
+            JSON.stringify({ id: 2, nome: 'Dra. Teste' })
+          ),
+        esperado: { id: 2, nome: 'Dra. Teste' },
+      },
+      {
+        cenario: 'nenhum usuário armazenado',
+        setup: () => {},
+        esperado: null,
+      },
+      {
+        cenario: 'JSON armazenado em current_user é inválido',
+        setup: () => sessionStorage.setItem('current_user', '{invalid_json}'),
+        esperado: null,
+      },
+    ])(
+      'retorna o resultado esperado quando $cenario',
+      ({ setup, esperado }) => {
+        setup();
+        expect(getCurrentUser()).toEqual(esperado);
+      }
+    );
 
     it('retorna null para token e usuário em ambiente servidor sem window', () => {
       const originalWindow = globalThis.window;
@@ -70,9 +96,6 @@ describe('authSession', () => {
     });
 
     it('descarta o usuário armazenado se o token pertencer a outro email', () => {
-      const payloadAdmin = btoa(
-        JSON.stringify({ sub: '1', email: 'advog@advog.com' })
-      );
       const tokenDavi = `header.${btoa(JSON.stringify({ sub: '5', email: 'davi@davi.com' }))}.signature`;
 
       sessionStorage.setItem('access_token', tokenDavi);
@@ -104,10 +127,19 @@ describe('authSession', () => {
     });
 
     it.each([
-      ['token malformado', 'token-invalido-sem-pontos'],
-      ['token com base64 inválido', 'header.%%%invalidbase64%%%.signature'],
-      ['token com json inválido', `header.${btoa('not-json')}.signature`],
-    ])('retorna null e trata graciosamente %s', (_caso, tokenInvalido) => {
+      {
+        cenario: 'token malformado sem pontos',
+        tokenInvalido: 'token-invalido-sem-pontos',
+      },
+      {
+        cenario: 'token com base64 inválido',
+        tokenInvalido: 'header.%%%invalidbase64%%%.signature',
+      },
+      {
+        cenario: 'token com json inválido',
+        tokenInvalido: `header.${btoa('not-json')}.signature`,
+      },
+    ])('retorna null e trata graciosamente $cenario', ({ tokenInvalido }) => {
       sessionStorage.setItem('access_token', tokenInvalido);
       expect(getCurrentUser()).toBeNull();
     });

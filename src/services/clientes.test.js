@@ -26,68 +26,64 @@ describe('serviço de clientes', () => {
   });
 
   describe('listarClientes', () => {
-    it('chama API com filtros e retorna lista com token de autenticação', async () => {
-      const mockClientes = [{ cliente_id: 1, nome: 'João Santos' }];
-      fetch.mockResolvedValue(mockFetchResponse(mockClientes));
+    it.each([
+      {
+        cenario: 'com filtros de busca, responsável e etapa',
+        filtros: { busca: 'João', responsavel_id: 2, etapa_id: 4 },
+        urlEsperada:
+          'http://localhost:8000/clientes/?busca=Jo%C3%A3o&responsavel_id=2&etapa_id=4',
+        mockClientes: [{ cliente_id: 1, nome: 'João Santos' }],
+      },
+      {
+        cenario: 'sem filtros adicionais',
+        filtros: undefined,
+        urlEsperada: 'http://localhost:8000/clientes/',
+        mockClientes: [],
+      },
+    ])(
+      'chama API $cenario e retorna lista com token de autenticação',
+      async ({ filtros, urlEsperada, mockClientes }) => {
+        fetch.mockResolvedValue(mockFetchResponse(mockClientes));
 
-      const res = await listarClientes({
-        busca: 'João',
-        responsavel_id: 2,
-        etapa_id: 4,
-      });
-      expect(res).toEqual(mockClientes);
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/clientes/?busca=Jo%C3%A3o&responsavel_id=2&etapa_id=4',
-        expect.objectContaining({
-          method: 'GET',
-          headers: expect.objectContaining({
-            Authorization: 'Bearer test-token-123',
-          }),
-        })
-      );
-    });
+        const res = await listarClientes(filtros);
+        expect(res).toEqual(mockClientes);
+        expect(fetch).toHaveBeenCalledWith(
+          urlEsperada,
+          expect.objectContaining({
+            method: 'GET',
+            headers: expect.objectContaining({
+              Authorization: 'Bearer test-token-123',
+            }),
+          })
+        );
+      }
+    );
 
-    it('faz requisição sem filtros adicionais quando nenhum filtro é passado', async () => {
-      fetch.mockResolvedValue(mockFetchResponse([]));
-      await listarClientes();
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/clientes/',
-        expect.anything()
-      );
-    });
-
-    it('lança erro caso resposta retorne falha com detail string', async () => {
-      fetch.mockResolvedValue(
-        mockFetchResponse({ detail: 'Erro de permissão' }, 403)
-      );
-
-      await expect(listarClientes()).rejects.toThrow('Erro de permissão');
-    });
-
-    it('lança erro com detalhes de array de validação do Pydantic', async () => {
-      fetch.mockResolvedValue(
-        mockFetchResponse(
+    it.each([
+      {
+        cenario: 'detail como string direta (403)',
+        respostaMock: mockFetchResponse({ detail: 'Erro de permissão' }, 403),
+        mensagemEsperada: 'Erro de permissão',
+      },
+      {
+        cenario: 'array de validação do Pydantic com campo msg (422)',
+        respostaMock: mockFetchResponse(
           { detail: [{ msg: 'Campo inválido' }, { msg: 'Valor incorreto' }] },
           422
-        )
-      );
-
-      await expect(listarClientes()).rejects.toThrow(
-        'Campo inválido Valor incorreto'
-      );
-    });
-
-    it('lança erro com detalhes de validação usando campo message', async () => {
-      fetch.mockResolvedValue(
-        mockFetchResponse({ detail: [{ message: 'Campo obrigatório' }] }, 422)
-      );
-
-      await expect(listarClientes()).rejects.toThrow('Campo obrigatório');
-    });
-
-    it('traduz erro de email do Pydantic para mensagem amigável em português', async () => {
-      fetch.mockResolvedValue(
-        mockFetchResponse(
+        ),
+        mensagemEsperada: 'Campo inválido Valor incorreto',
+      },
+      {
+        cenario: 'array de validação usando campo message (422)',
+        respostaMock: mockFetchResponse(
+          { detail: [{ message: 'Campo obrigatório' }] },
+          422
+        ),
+        mensagemEsperada: 'Campo obrigatório',
+      },
+      {
+        cenario: 'erro de email do Pydantic traduzido para português (422)',
+        respostaMock: mockFetchResponse(
           {
             detail: [
               {
@@ -96,54 +92,47 @@ describe('serviço de clientes', () => {
             ],
           },
           422
-        )
-      );
-
-      await expect(listarClientes()).rejects.toThrow(
-        'Informe um e-mail válido.'
-      );
-    });
-
-    it('traduz erro de campo obrigatório para mensagem amigável em português', async () => {
-      fetch.mockResolvedValue(
-        mockFetchResponse({ detail: 'Field required' }, 422)
-      );
-
-      await expect(listarClientes()).rejects.toThrow(
-        'Preencha todos os campos obrigatórios.'
-      );
-    });
-
-    it('lança erro padrão caso o body da resposta não possa ser lido', async () => {
-      fetch.mockResolvedValue({
-        ok: false,
-        json: vi.fn().mockRejectedValue(new Error('fail')),
-      });
-
-      await expect(listarClientes()).rejects.toThrow(
-        'Não foi possível carregar a lista de clientes.'
-      );
-    });
-
-    it('retorna array vazio no SSR se a resposta não for ok', async () => {
-      const originalWindow = globalThis.window;
-      delete globalThis.window;
-      try {
-        fetch.mockResolvedValue(
-          mockFetchResponse({ detail: 'Não autenticado' }, 401)
-        );
-        const res = await listarClientes();
-        expect(res).toEqual([]);
-      } finally {
-        globalThis.window = originalWindow;
+        ),
+        mensagemEsperada: 'Informe um e-mail válido.',
+      },
+      {
+        cenario: 'erro de campo obrigatório traduzido para português (422)',
+        respostaMock: mockFetchResponse({ detail: 'Field required' }, 422),
+        mensagemEsperada: 'Preencha todos os campos obrigatórios.',
+      },
+      {
+        cenario: 'body da resposta ilegível retornando mensagem padrão',
+        respostaMock: {
+          ok: false,
+          json: vi.fn().mockRejectedValue(new Error('fail')),
+        },
+        mensagemEsperada: 'Não foi possível carregar a lista de clientes.',
+      },
+    ])(
+      'lança erro apropriado quando $cenario',
+      async ({ respostaMock, mensagemEsperada }) => {
+        fetch.mockResolvedValue(respostaMock);
+        await expect(listarClientes()).rejects.toThrow(mensagemEsperada);
       }
-    });
+    );
 
-    it('retorna array vazio no SSR se fetch falhar com erro de rede', async () => {
+    it.each([
+      {
+        cenario: 'resposta da API não for ok (401)',
+        setupFetch: () =>
+          fetch.mockResolvedValue(
+            mockFetchResponse({ detail: 'Não autenticado' }, 401)
+          ),
+      },
+      {
+        cenario: 'fetch falhar com erro de rede',
+        setupFetch: () => fetch.mockRejectedValue(new Error('ECONNREFUSED')),
+      },
+    ])('retorna array vazio no SSR quando $cenario', async ({ setupFetch }) => {
       const originalWindow = globalThis.window;
       delete globalThis.window;
       try {
-        fetch.mockRejectedValue(new Error('ECONNREFUSED'));
+        setupFetch();
         const res = await listarClientes();
         expect(res).toEqual([]);
       } finally {
@@ -152,8 +141,8 @@ describe('serviço de clientes', () => {
     });
   });
 
-  describe('obterCliente', () => {
-    it('retorna dados do cliente por id', async () => {
+  describe('operações de leitura e escrita por cliente (obter, criar, atualizar, excluir)', () => {
+    it('obterCliente retorna dados do cliente por id', async () => {
       const mockCliente = { cliente_id: 1, nome: 'Maria Oliveira' };
       fetch.mockResolvedValue(mockFetchResponse(mockCliente));
 
@@ -165,17 +154,7 @@ describe('serviço de clientes', () => {
       );
     });
 
-    it('lança erro ao buscar cliente inexistente', async () => {
-      fetch.mockResolvedValue(
-        mockFetchResponse({ detail: 'Cliente não encontrado' }, 404)
-      );
-
-      await expect(obterCliente(999)).rejects.toThrow('Cliente não encontrado');
-    });
-  });
-
-  describe('criarCliente', () => {
-    it('envia dados via POST e retorna cliente criado', async () => {
+    it('criarCliente envia dados via POST e retorna cliente criado', async () => {
       const novo = { nome: 'Novo Cliente', email: 'novo@teste.com' };
       fetch.mockResolvedValue(
         mockFetchResponse({ cliente_id: 10, ...novo }, 201)
@@ -192,17 +171,7 @@ describe('serviço de clientes', () => {
       );
     });
 
-    it('lança erro caso criação falhe', async () => {
-      fetch.mockResolvedValue(
-        mockFetchResponse({ detail: 'Email já cadastrado' }, 400)
-      );
-
-      await expect(criarCliente({})).rejects.toThrow('Email já cadastrado');
-    });
-  });
-
-  describe('atualizarCliente', () => {
-    it('envia dados via PUT e retorna cliente atualizado', async () => {
+    it('atualizarCliente envia dados via PUT e retorna cliente atualizado', async () => {
       const editado = { nome: 'Nome Editado' };
       fetch.mockResolvedValue(mockFetchResponse({ cliente_id: 5, ...editado }));
 
@@ -217,17 +186,7 @@ describe('serviço de clientes', () => {
       );
     });
 
-    it('lança erro caso atualização falhe', async () => {
-      fetch.mockResolvedValue(mockFetchResponse({}, 500));
-
-      await expect(atualizarCliente(5, {})).rejects.toThrow(
-        'Não foi possível atualizar o cliente.'
-      );
-    });
-  });
-
-  describe('excluirCliente', () => {
-    it('envia requisição DELETE e retorna true com sucesso', async () => {
+    it('excluirCliente envia requisição DELETE e retorna true com sucesso', async () => {
       fetch.mockResolvedValue(mockFetchResponse(null, 204));
 
       const res = await excluirCliente(3);
@@ -240,12 +199,37 @@ describe('serviço de clientes', () => {
       );
     });
 
-    it('lança erro caso exclusão falhe', async () => {
-      fetch.mockResolvedValue(
-        mockFetchResponse({ detail: 'Falha ao deletar' }, 400)
-      );
-
-      await expect(excluirCliente(3)).rejects.toThrow('Falha ao deletar');
-    });
+    it.each([
+      {
+        operacao: 'obterCliente inexistente (404)',
+        executar: () => obterCliente(999),
+        resposta: mockFetchResponse({ detail: 'Cliente não encontrado' }, 404),
+        erroEsperado: 'Cliente não encontrado',
+      },
+      {
+        operacao: 'criarCliente com email duplicado (400)',
+        executar: () => criarCliente({}),
+        resposta: mockFetchResponse({ detail: 'Email já cadastrado' }, 400),
+        erroEsperado: 'Email já cadastrado',
+      },
+      {
+        operacao: 'atualizarCliente sem detail no erro (500)',
+        executar: () => atualizarCliente(5, {}),
+        resposta: mockFetchResponse({}, 500),
+        erroEsperado: 'Não foi possível atualizar o cliente.',
+      },
+      {
+        operacao: 'excluirCliente com falha (400)',
+        executar: () => excluirCliente(3),
+        resposta: mockFetchResponse({ detail: 'Falha ao deletar' }, 400),
+        erroEsperado: 'Falha ao deletar',
+      },
+    ])(
+      'lança erro em $operacao',
+      async ({ executar, resposta, erroEsperado }) => {
+        fetch.mockResolvedValue(resposta);
+        await expect(executar()).rejects.toThrow(erroEsperado);
+      }
+    );
   });
 });

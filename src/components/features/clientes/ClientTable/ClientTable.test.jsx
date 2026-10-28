@@ -63,87 +63,77 @@ describe('ClientTable', () => {
     expect(screen.getByText('Não atribuído')).toBeInTheDocument();
   });
 
-  it('aciona onView ao clicar no botão de visualizar', () => {
-    const handleView = vi.fn();
-    render(
-      <ClientTable
-        clientes={mockClientes}
-        funcionarios={mockFuncionarios}
-        onView={handleView}
-      />
-    );
+  it.each([
+    {
+      propName: 'onView',
+      ariaLabel: 'Visualizar detalhes de João Santos',
+    },
+    {
+      propName: 'onEdit',
+      ariaLabel: 'Editar cliente João Santos',
+    },
+    {
+      propName: 'onDelete',
+      ariaLabel: 'Excluir cliente João Santos',
+    },
+  ])(
+    'aciona $propName com os dados do cliente ao clicar em "$ariaLabel"',
+    ({ propName, ariaLabel }) => {
+      const handler = vi.fn();
+      render(
+        <ClientTable
+          clientes={mockClientes}
+          funcionarios={mockFuncionarios}
+          {...{ [propName]: handler }}
+        />
+      );
 
-    const btn = screen.getByLabelText('Visualizar detalhes de João Santos');
-    fireEvent.click(btn);
-    expect(handleView).toHaveBeenCalledWith(mockClientes[0]);
-  });
+      fireEvent.click(screen.getByLabelText(ariaLabel));
+      expect(handler).toHaveBeenCalledWith(mockClientes[0]);
+    }
+  );
 
-  it('aciona onEdit ao clicar no botão de editar', () => {
-    const handleEdit = vi.fn();
-    render(
-      <ClientTable
-        clientes={mockClientes}
-        funcionarios={mockFuncionarios}
-        onEdit={handleEdit}
-      />
-    );
-
-    const btn = screen.getByLabelText('Editar cliente João Santos');
-    fireEvent.click(btn);
-    expect(handleEdit).toHaveBeenCalledWith(mockClientes[0]);
-  });
-
-  it('aciona onDelete ao clicar no botão de excluir', () => {
-    const handleDelete = vi.fn();
-    render(
-      <ClientTable
-        clientes={mockClientes}
-        funcionarios={mockFuncionarios}
-        onDelete={handleDelete}
-      />
-    );
-
-    const btn = screen.getByLabelText('Excluir cliente João Santos');
-    fireEvent.click(btn);
-    expect(handleDelete).toHaveBeenCalledWith(mockClientes[0]);
-  });
-
-  it('renderiza responsável quando for objeto { nome } ou responsavel_nome', () => {
-    const clientesExtras = [
-      {
+  it.each([
+    {
+      cenario: 'responsavel como objeto { nome }',
+      cliente: {
         cliente_id: 10,
         nome: 'Cliente Objeto',
         responsavel: { nome: 'Doutor Objeto' },
         etapa_id: 1,
       },
-      {
+      funcionarios: [],
+      responsavelEsperado: 'Doutor Objeto',
+    },
+    {
+      cenario: 'responsavel_nome direto no cliente',
+      cliente: {
         cliente_id: 11,
         nome: 'Cliente Direto',
         responsavel_nome: 'Nome Direto',
         etapa_id: 2,
       },
-    ];
-    render(<ClientTable clientes={clientesExtras} funcionarios={[]} />);
-    expect(screen.getByText('Doutor Objeto')).toBeInTheDocument();
-    expect(screen.getByText('Nome Direto')).toBeInTheDocument();
-  });
-
-  it('renderiza cliente usando id, status_id e encontra funcionario por f.id', () => {
-    const clientesAlternativos = [
-      {
+      funcionarios: [],
+      responsavelEsperado: 'Nome Direto',
+    },
+    {
+      cenario: 'cliente com id/status_id e funcionário com id',
+      cliente: {
         id: 55,
         nome: 'Cliente ID Alternativo',
         responsavel_id: 88,
         status_id: 2,
       },
-    ];
-    render(
-      <ClientTable
-        clientes={clientesAlternativos}
-        funcionarios={[{ id: 88, nome: 'Dr. ID 88' }]}
-      />
-    );
-    expect(screen.getByText('Cliente ID Alternativo')).toBeInTheDocument();
-    expect(screen.getByText('Dr. ID 88')).toBeInTheDocument();
-  });
+      funcionarios: [{ id: 88, nome: 'Dr. ID 88' }],
+      responsavelEsperado: 'Dr. ID 88',
+    },
+  ])(
+    'renderiza corretamente quando há $cenario',
+    ({ cliente, funcionarios, responsavelEsperado }) => {
+      render(<ClientTable clientes={[cliente]} funcionarios={funcionarios} />);
+
+      expect(screen.getByText(cliente.nome)).toBeInTheDocument();
+      expect(screen.getByText(responsavelEsperado)).toBeInTheDocument();
+    }
+  );
 });

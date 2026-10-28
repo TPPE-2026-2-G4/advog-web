@@ -12,27 +12,42 @@ describe('configuração da API (API_URL)', () => {
     process.env = envOriginal;
   });
 
-  it('utiliza NEXT_PUBLIC_API_URL quando definida', async () => {
-    process.env.NEXT_PUBLIC_API_URL = 'https://api.exemplo.com';
-    delete process.env.API_URL;
+  it.each([
+    {
+      cenario: 'NEXT_PUBLIC_API_URL está definida (prioridade máxima)',
+      nextPublicApiUrl: 'https://api.exemplo.com',
+      apiUrl: 'https://api-ignorada.exemplo.com',
+      esperado: 'https://api.exemplo.com',
+    },
+    {
+      cenario: 'apenas API_URL está definida (fallback secundário)',
+      nextPublicApiUrl: undefined,
+      apiUrl: 'https://api-servidor.exemplo.com',
+      esperado: 'https://api-servidor.exemplo.com',
+    },
+    {
+      cenario: 'nenhuma variável de ambiente está definida (fallback local)',
+      nextPublicApiUrl: undefined,
+      apiUrl: undefined,
+      esperado: 'http://localhost:8000',
+    },
+  ])(
+    'resolve API_URL como "$esperado" quando $cenario',
+    async ({ nextPublicApiUrl, apiUrl, esperado }) => {
+      if (nextPublicApiUrl !== undefined) {
+        process.env.NEXT_PUBLIC_API_URL = nextPublicApiUrl;
+      } else {
+        delete process.env.NEXT_PUBLIC_API_URL;
+      }
 
-    const { API_URL } = await import('./api');
-    expect(API_URL).toBe('https://api.exemplo.com');
-  });
+      if (apiUrl !== undefined) {
+        process.env.API_URL = apiUrl;
+      } else {
+        delete process.env.API_URL;
+      }
 
-  it('utiliza API_URL quando NEXT_PUBLIC_API_URL não está definida', async () => {
-    delete process.env.NEXT_PUBLIC_API_URL;
-    process.env.API_URL = 'https://api-servidor.exemplo.com';
-
-    const { API_URL } = await import('./api');
-    expect(API_URL).toBe('https://api-servidor.exemplo.com');
-  });
-
-  it('utiliza o fallback http://localhost:8000 quando nenhuma variável está definida', async () => {
-    delete process.env.NEXT_PUBLIC_API_URL;
-    delete process.env.API_URL;
-
-    const { API_URL } = await import('./api');
-    expect(API_URL).toBe('http://localhost:8000');
-  });
+      const { API_URL } = await import('./api');
+      expect(API_URL).toBe(esperado);
+    }
+  );
 });
