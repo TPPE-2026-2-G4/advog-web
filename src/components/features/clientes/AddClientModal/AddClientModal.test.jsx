@@ -7,8 +7,31 @@ const mockFuncionarios = [
   { funcionario_id: 2, nome: 'Dra. Ana Paula' },
 ];
 
+const validBaseFields = {
+  'Nome do cliente': 'Cliente Teste',
+  '000.000.000-00': '',
+  '(00) 00000-0000': '61988887777',
+  'email@exemplo.com': 'teste@email.com',
+};
+
+function fillFormFields(overrides = {}) {
+  const data = { ...validBaseFields, ...overrides };
+  for (const [placeholder, value] of Object.entries(data)) {
+    fireEvent.change(screen.getByPlaceholderText(placeholder), {
+      target: { value },
+    });
+  }
+}
+
 describe('AddClientModal', () => {
-  it('renderiza os campos obrigatórios quando o modal está aberto', () => {
+  it.each([
+    'Nome do cliente',
+    '000.000.000-00',
+    '(00) 00000-0000',
+    'email@exemplo.com',
+    'Ex: Cível, Trabalhista...',
+    'Descreva a demanda ou necessidade do cliente...',
+  ])('renderiza o campo com placeholder "%s" quando aberto', (placeholder) => {
     render(
       <AddClientModal
         isOpen={true}
@@ -19,79 +42,61 @@ describe('AddClientModal', () => {
     );
 
     expect(screen.getByText('Cadastrar Novo Cliente')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Nome do cliente')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('000.000.000-00')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('(00) 00000-0000')).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText('email@exemplo.com')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText('Ex: Cível, Trabalhista...')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText(
-        'Descreva a demanda ou necessidade do cliente...'
-      )
-    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(placeholder)).toBeInTheDocument();
     expect(screen.getByText('Salvar Cadastro')).toBeInTheDocument();
   });
 
-  it('valida campos obrigatórios ao submeter formulário em branco', () => {
-    const handleSubmit = vi.fn();
-    render(
-      <AddClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSubmit={handleSubmit}
-        funcionarios={mockFuncionarios}
-      />
-    );
+  it.each([
+    {
+      cenario: 'nome em branco',
+      overrides: { 'Nome do cliente': '' },
+      erroEsperado: 'O nome ou razão social é obrigatório.',
+    },
+    {
+      cenario: 'telefone em branco',
+      overrides: { '(00) 00000-0000': '' },
+      erroEsperado: 'O telefone é obrigatório.',
+    },
+    {
+      cenario: 'telefone com menos de 10 dígitos',
+      overrides: { '(00) 00000-0000': '1' },
+      erroEsperado: 'Informe um telefone válido com DDD (10 ou 11 dígitos).',
+    },
+    {
+      cenario: 'CPF/CNPJ com quantidade inválida de dígitos',
+      overrides: { '000.000.000-00': '1' },
+      erroEsperado: 'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.',
+    },
+    {
+      cenario: 'e-mail em branco',
+      overrides: { 'email@exemplo.com': '' },
+      erroEsperado: 'O e-mail é obrigatório.',
+    },
+    {
+      cenario: 'e-mail sem formato válido',
+      overrides: { 'email@exemplo.com': 'email_sem_arroba' },
+      erroEsperado: 'Informe um e-mail válido.',
+    },
+  ])(
+    'bloqueia o envio e exibe erro quando há $cenario',
+    ({ overrides, erroEsperado }) => {
+      const handleSubmit = vi.fn();
+      render(
+        <AddClientModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSubmit={handleSubmit}
+          funcionarios={mockFuncionarios}
+        />
+      );
 
-    fireEvent.click(screen.getByText('Salvar Cadastro'));
-    expect(
-      screen.getByText('O nome ou razão social é obrigatório.')
-    ).toBeInTheDocument();
-    expect(handleSubmit).not.toHaveBeenCalled();
+      fillFormFields(overrides);
+      fireEvent.click(screen.getByText('Salvar Cadastro'));
 
-    fireEvent.change(screen.getByPlaceholderText('Nome do cliente'), {
-      target: { value: 'Cliente Teste' },
-    });
-    fireEvent.click(screen.getByText('Salvar Cadastro'));
-    expect(screen.getByText('O telefone é obrigatório.')).toBeInTheDocument();
-
-    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
-      target: { value: '1' },
-    });
-    fireEvent.click(screen.getByText('Salvar Cadastro'));
-    expect(
-      screen.getByText('Informe um telefone válido com DDD (10 ou 11 dígitos).')
-    ).toBeInTheDocument();
-
-    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
-      target: { value: '61988887777' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), {
-      target: { value: '1' },
-    });
-    fireEvent.click(screen.getByText('Salvar Cadastro'));
-    expect(
-      screen.getByText(
-        'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.'
-      )
-    ).toBeInTheDocument();
-
-    fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), {
-      target: { value: '' },
-    });
-    fireEvent.click(screen.getByText('Salvar Cadastro'));
-    expect(screen.getByText('O e-mail é obrigatório.')).toBeInTheDocument();
-
-    fireEvent.change(screen.getByPlaceholderText('email@exemplo.com'), {
-      target: { value: 'email_sem_arroba' },
-    });
-    fireEvent.click(screen.getByText('Salvar Cadastro'));
-    expect(screen.getByText('Informe um e-mail válido.')).toBeInTheDocument();
-  });
+      expect(screen.getByText(erroEsperado)).toBeInTheDocument();
+      expect(handleSubmit).not.toHaveBeenCalled();
+    }
+  );
 
   it('submete dados formatados com sucesso', async () => {
     const handleSubmit = vi.fn().mockResolvedValue({});
@@ -154,92 +159,44 @@ describe('AddClientModal', () => {
     );
   });
 
-  it('trata erro retornado por onSubmit com mensagem customizada', async () => {
-    const handleSubmit = vi
-      .fn()
-      .mockRejectedValue(new Error('Email duplicado'));
-    render(
-      <AddClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSubmit={handleSubmit}
-        funcionarios={mockFuncionarios}
-      />
-    );
-
-    fireEvent.change(screen.getByPlaceholderText('Nome do cliente'), {
-      target: { value: 'Cliente Teste' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
-      target: { value: '61988887777' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('email@exemplo.com'), {
-      target: { value: 'teste@email.com' },
-    });
-
-    fireEvent.click(screen.getByText('Salvar Cadastro'));
-    expect(await screen.findByText('Email duplicado')).toBeInTheDocument();
-  });
-
-  it('trata erro retornado por onSubmit usando mensagem de fallback quando o erro não tem message', async () => {
-    const handleSubmitSemMsg = vi.fn().mockRejectedValue({});
-    render(
-      <AddClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSubmit={handleSubmitSemMsg}
-        funcionarios={mockFuncionarios}
-      />
-    );
-
-    fireEvent.change(screen.getByPlaceholderText('Nome do cliente'), {
-      target: { value: 'Cliente Teste' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
-      target: { value: '61988887777' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('email@exemplo.com'), {
-      target: { value: 'teste@email.com' },
-    });
-
-    fireEvent.click(screen.getByText('Salvar Cadastro'));
-    expect(
-      await screen.findByText('Erro ao salvar cliente.')
-    ).toBeInTheDocument();
-  });
-
-  it('trata erro de rede exibindo mensagem em português', async () => {
-    const handleSubmitNetwork = vi
-      .fn()
-      .mockRejectedValue(
-        new Error('NetworkError when attempting to fetch resource.')
+  it.each([
+    {
+      cenario: 'erro com mensagem customizada da API',
+      erroRejeitado: new Error('Email duplicado'),
+      mensagemEsperada: 'Email duplicado',
+    },
+    {
+      cenario: 'erro sem propriedade message (fallback)',
+      erroRejeitado: {},
+      mensagemEsperada: 'Erro ao salvar cliente.',
+    },
+    {
+      cenario: 'erro de falha de rede',
+      erroRejeitado: new Error(
+        'NetworkError when attempting to fetch resource.'
+      ),
+      mensagemEsperada:
+        'Erro de conexão com o servidor. Tente novamente em instantes.',
+    },
+  ])(
+    'trata $cenario ao submeter o formulário',
+    async ({ erroRejeitado, mensagemEsperada }) => {
+      const handleSubmit = vi.fn().mockRejectedValue(erroRejeitado);
+      render(
+        <AddClientModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSubmit={handleSubmit}
+          funcionarios={mockFuncionarios}
+        />
       );
-    render(
-      <AddClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSubmit={handleSubmitNetwork}
-        funcionarios={mockFuncionarios}
-      />
-    );
 
-    fireEvent.change(screen.getByPlaceholderText('Nome do cliente'), {
-      target: { value: 'Cliente Rede' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
-      target: { value: '61988887777' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('email@exemplo.com'), {
-      target: { value: 'rede@email.com' },
-    });
+      fillFormFields();
+      fireEvent.click(screen.getByText('Salvar Cadastro'));
 
-    fireEvent.click(screen.getByText('Salvar Cadastro'));
-    expect(
-      await screen.findByText(
-        'Erro de conexão com o servidor. Tente novamente em instantes.'
-      )
-    ).toBeInTheDocument();
-  });
+      expect(await screen.findByText(mensagemEsperada)).toBeInTheDocument();
+    }
+  );
 
   it('fecha o modal ao clicar em Cancelar e respeita isSaving', () => {
     const handleClose = vi.fn();
@@ -280,14 +237,9 @@ describe('AddClientModal', () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText('Nome do cliente'), {
-      target: { value: 'Cliente Sem Responsável' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), {
-      target: { value: '61988887777' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('email@exemplo.com'), {
-      target: { value: 'semresp@email.com' },
+    fillFormFields({
+      'Nome do cliente': 'Cliente Sem Responsável',
+      'email@exemplo.com': 'semresp@email.com',
     });
 
     fireEvent.click(screen.getByText('Salvar Cadastro'));

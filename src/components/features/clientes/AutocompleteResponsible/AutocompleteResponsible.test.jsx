@@ -28,15 +28,22 @@ describe('AutocompleteResponsible', () => {
     ).toBeInTheDocument();
   });
 
-  it('exibe o nome do responsável quando responsavelId é passado', () => {
-    render(
-      <AutocompleteResponsible
-        responsavelId={1}
-        funcionarios={mockFuncionarios}
-      />
-    );
-    expect(screen.getByRole('combobox')).toHaveValue('Alexandre Carreiro');
-  });
+  it.each([
+    { responsavelId: 1, nomeEsperado: 'Alexandre Carreiro' },
+    { responsavelId: 2, nomeEsperado: 'Ana Paula Ribeiro' },
+    { responsavelId: null, nomeEsperado: '' },
+  ])(
+    'exibe "$nomeEsperado" quando responsavelId=$responsavelId',
+    ({ responsavelId, nomeEsperado }) => {
+      render(
+        <AutocompleteResponsible
+          responsavelId={responsavelId}
+          funcionarios={mockFuncionarios}
+        />
+      );
+      expect(screen.getByRole('combobox')).toHaveValue(nomeEsperado);
+    }
+  );
 
   it('abre a lista suspensa ao focar e permite filtrar pelo termo digitado', () => {
     render(<AutocompleteResponsible funcionarios={mockFuncionarios} />);
@@ -88,24 +95,44 @@ describe('AutocompleteResponsible', () => {
     expect(screen.getByRole('combobox')).toHaveValue('');
   });
 
-  it('navega pelas opções usando as setas do teclado e seleciona com Enter', () => {
-    const handleChange = vi.fn();
-    render(
-      <AutocompleteResponsible
-        funcionarios={mockFuncionarios}
-        onChange={handleChange}
-      />
-    );
+  it.each([
+    {
+      descricao:
+        'duas vezes para baixo (ArrowDown) selecionando o segundo item',
+      teclas: ['ArrowDown', 'ArrowDown', 'Enter'],
+      idEsperado: 2,
+      funcionarioEsperado: mockFuncionarios[1],
+    },
+    {
+      descricao: 'para cima (ArrowUp) selecionando o último item da lista',
+      teclas: ['ArrowUp', 'Enter'],
+      idEsperado: 3,
+      funcionarioEsperado: mockFuncionarios[2],
+    },
+  ])(
+    'navega pelo teclado $descricao',
+    ({ teclas, idEsperado, funcionarioEsperado }) => {
+      const handleChange = vi.fn();
+      render(
+        <AutocompleteResponsible
+          funcionarios={mockFuncionarios}
+          onChange={handleChange}
+        />
+      );
 
-    const input = screen.getByRole('combobox');
-    fireEvent.focus(input);
+      const input = screen.getByRole('combobox');
+      fireEvent.focus(input);
 
-    fireEvent.keyDown(input, { key: 'ArrowDown' });
-    fireEvent.keyDown(input, { key: 'ArrowDown' });
-    fireEvent.keyDown(input, { key: 'Enter' });
+      for (const key of teclas) {
+        fireEvent.keyDown(input, { key });
+      }
 
-    expect(handleChange).toHaveBeenCalledWith(2, mockFuncionarios[1]);
-  });
+      expect(handleChange).toHaveBeenCalledWith(
+        idEsperado,
+        funcionarioEsperado
+      );
+    }
+  );
 
   it('fecha a lista com a tecla Escape', () => {
     render(<AutocompleteResponsible funcionarios={mockFuncionarios} />);
@@ -127,7 +154,32 @@ describe('AutocompleteResponsible', () => {
     ).toBeInTheDocument();
   });
 
-  it('fecha ao clicar fora do componente', () => {
+  it('fecha ao clicar fora do componente e restaura o nome do responsável selecionado', () => {
+    render(
+      <div>
+        <AutocompleteResponsible
+          funcionarios={mockFuncionarios}
+          responsavelId={1}
+        />
+        <button type="button">Fora</button>
+      </div>
+    );
+
+    const input = screen.getByRole('combobox');
+    expect(input).toHaveValue('Alexandre Carreiro');
+
+    fireEvent.focus(input);
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: 'Digitando algo' } });
+    expect(input).toHaveValue('Digitando algo');
+
+    fireEvent.mouseDown(screen.getByText('Fora'));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(input).toHaveValue('Alexandre Carreiro');
+  });
+
+  it('fecha ao clicar fora quando nenhum responsável está selecionado', () => {
     render(
       <div>
         <AutocompleteResponsible funcionarios={mockFuncionarios} />
@@ -143,47 +195,6 @@ describe('AutocompleteResponsible', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
-  it('restaura o nome do responsável selecionado ao clicar fora', () => {
-    render(
-      <div>
-        <AutocompleteResponsible
-          funcionarios={mockFuncionarios}
-          responsavelId={1}
-        />
-        <button type="button">Fora</button>
-      </div>
-    );
-
-    const input = screen.getByRole('combobox');
-    expect(input).toHaveValue('Alexandre Carreiro');
-
-    fireEvent.focus(input);
-    fireEvent.change(input, { target: { value: 'Digitando algo' } });
-    expect(input).toHaveValue('Digitando algo');
-
-    fireEvent.mouseDown(screen.getByText('Fora'));
-    expect(input).toHaveValue('Alexandre Carreiro');
-  });
-
-  it('navega para cima usando a seta para cima (ArrowUp)', () => {
-    const handleChange = vi.fn();
-    render(
-      <AutocompleteResponsible
-        funcionarios={mockFuncionarios}
-        onChange={handleChange}
-      />
-    );
-
-    const input = screen.getByRole('combobox');
-    fireEvent.focus(input);
-
-    // Começa do final ao apertar ArrowUp
-    fireEvent.keyDown(input, { key: 'ArrowUp' });
-    fireEvent.keyDown(input, { key: 'Enter' });
-
-    expect(handleChange).toHaveBeenCalledWith(3, mockFuncionarios[2]);
-  });
-
   it('ignora teclas quando disabled for verdadeiro', () => {
     render(
       <AutocompleteResponsible
@@ -197,7 +208,7 @@ describe('AutocompleteResponsible', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
-  it('destaca o item selecionado na lista suspensa e ignora Enter se nada estiver selecionado', () => {
+  it('destaca o item selecionado na lista suspensa e ignora Enter se nada estiver destacado', () => {
     render(
       <AutocompleteResponsible
         funcionarios={mockFuncionarios}

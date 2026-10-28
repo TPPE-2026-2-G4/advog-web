@@ -111,34 +111,49 @@ describe('LancamentoModal', () => {
     fireEvent.click(saidaBtn);
     expect(entradaBtn).toHaveAttribute('aria-pressed', 'false');
     expect(saidaBtn).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(entradaBtn);
+    expect(entradaBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(saidaBtn).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('valida campos obrigatórios ao submeter', async () => {
-    renderModal();
+  it.each([
+    {
+      scenario: 'título em branco',
+      titulo: '   ',
+      valor: '100',
+      expectedError: 'Por favor, informe o título do lançamento.',
+    },
+    {
+      scenario: 'valor igual a zero',
+      titulo: 'Honorários',
+      valor: '0',
+      expectedError: 'Por favor, informe um valor válido maior que zero.',
+    },
+    {
+      scenario: 'valor inválido não numérico',
+      titulo: 'Honorários',
+      valor: 'abc',
+      expectedError: 'Por favor, informe um valor válido maior que zero.',
+    },
+  ])(
+    'valida campos obrigatórios ao submeter com $scenario',
+    async ({ titulo, valor, expectedError }) => {
+      renderModal();
 
-    fireEvent.change(screen.getByLabelText('Título'), {
-      target: { value: '   ' },
-    });
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar Lançamento' }));
+      fireEvent.change(screen.getByLabelText('Título'), {
+        target: { value: titulo },
+      });
+      fireEvent.change(screen.getByLabelText('Valor'), {
+        target: { value: valor },
+      });
+      fireEvent.submit(
+        screen.getByRole('button', { name: 'Salvar Lançamento' })
+      );
 
-    expect(
-      await screen.findByText('Por favor, informe o título do lançamento.')
-    ).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText('Título'), {
-      target: { value: 'Honorários' },
-    });
-    fireEvent.change(screen.getByLabelText('Valor'), {
-      target: { value: '0' },
-    });
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar Lançamento' }));
-
-    expect(
-      await screen.findByText(
-        'Por favor, informe um valor válido maior que zero.'
-      )
-    ).toBeInTheDocument();
-  });
+      expect(await screen.findByText(expectedError)).toBeInTheDocument();
+    }
+  );
 
   it('submete novo lançamento com sucesso', async () => {
     const onSave = vi.fn().mockResolvedValue({});
@@ -224,134 +239,104 @@ describe('LancamentoModal', () => {
     });
   });
 
-  it('atualiza data de pagamento e data de vencimento ao editar lançamento existente', async () => {
-    const onSave = vi.fn().mockResolvedValue({});
-    const onClose = vi.fn();
-    const mockItem = {
-      id: 99,
-      tipo: 'entrada',
-      titulo: 'Título Original',
-      valor: 1000,
-      data: '01/09/2026',
-      dataIso: '2026-09-01',
-      data_pagamento: '2026-09-01',
-      dataVencimento: '05/09/2026',
-      dataVencimentoIso: '2026-09-05',
-      data_vencimento: '2026-09-05',
-      status: 'realizado',
-    };
+  it.each([
+    {
+      scenario: 'ambas as datas (criação e vencimento)',
+      initialData: '2026-09-01',
+      initialVencimento: '2026-09-05',
+      newData: '2026-09-10',
+      newVencimento: '2026-09-15',
+      expectedPayload: {
+        data: '10/09/2026',
+        dataIso: '2026-09-10',
+        data_pagamento: '2026-09-10',
+        dataPagamentoIso: '2026-09-10',
+        dataVencimento: '15/09/2026',
+        dataVencimentoIso: '2026-09-15',
+        data_vencimento: '2026-09-15',
+      },
+    },
+    {
+      scenario: 'apenas a data de criação preservando o vencimento',
+      initialData: '2026-10-01',
+      initialVencimento: '2026-10-20',
+      newData: '2026-10-05',
+      newVencimento: null,
+      expectedPayload: {
+        data: '05/10/2026',
+        dataIso: '2026-10-05',
+        data_pagamento: '2026-10-05',
+        dataVencimento: '20/10/2026',
+        dataVencimentoIso: '2026-10-20',
+        data_vencimento: '2026-10-20',
+      },
+    },
+    {
+      scenario: 'apenas a data de vencimento preservando a data de criação',
+      initialData: '2026-10-01',
+      initialVencimento: '2026-10-20',
+      newData: null,
+      newVencimento: '2026-10-25',
+      expectedPayload: {
+        data: '01/10/2026',
+        dataIso: '2026-10-01',
+        data_pagamento: '2026-10-01',
+        dataVencimento: '25/10/2026',
+        dataVencimentoIso: '2026-10-25',
+        data_vencimento: '2026-10-25',
+      },
+    },
+  ])(
+    'atualiza $scenario ao editar lançamento existente',
+    async ({
+      initialData,
+      initialVencimento,
+      newData,
+      newVencimento,
+      expectedPayload,
+    }) => {
+      const onSave = vi.fn().mockResolvedValue({});
+      const onClose = vi.fn();
+      const mockItem = {
+        id: 100,
+        tipo: 'entrada',
+        titulo: 'Título Original',
+        valor: 1000,
+        dataIso: initialData,
+        data_pagamento: initialData,
+        dataVencimentoIso: initialVencimento,
+        data_vencimento: initialVencimento,
+        status: 'pendente',
+      };
 
-    renderModal({ initialItem: mockItem, onSave, onClose });
+      renderModal({ initialItem: mockItem, onSave, onClose });
 
-    fireEvent.change(screen.getByLabelText('Data de Criação'), {
-      target: { value: '2026-09-10' },
-    });
-    fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
-      target: { value: '2026-09-15' },
-    });
+      if (newData) {
+        fireEvent.change(screen.getByLabelText('Data de Criação'), {
+          target: { value: newData },
+        });
+      }
+      if (newVencimento) {
+        fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
+          target: { value: newVencimento },
+        });
+      }
 
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar Alterações' }));
-
-    await waitFor(() => {
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 99,
-          data_pagamento: '2026-09-10',
-          data_vencimento: '2026-09-15',
-          dataPagamentoIso: '2026-09-10',
-          dataVencimentoIso: '2026-09-15',
-          data: '10/09/2026',
-          dataVencimento: '15/09/2026',
-        })
+      fireEvent.submit(
+        screen.getByRole('button', { name: 'Salvar Alterações' })
       );
-      expect(onClose).toHaveBeenCalledOnce();
-    });
-  });
 
-  it('preserva data de vencimento ao editar apenas a data do lançamento', async () => {
-    const onSave = vi.fn().mockResolvedValue({});
-    const onClose = vi.fn();
-    const mockItem = {
-      id: 101,
-      tipo: 'entrada',
-      titulo: 'Serviço Consultoria',
-      valor: 500,
-      data: '01/10/2026',
-      dataIso: '2026-10-01',
-      data_pagamento: '2026-10-01',
-      dataVencimento: '20/10/2026',
-      dataVencimentoIso: '2026-10-20',
-      data_vencimento: '2026-10-20',
-      status: 'pendente',
-    };
-
-    renderModal({ initialItem: mockItem, onSave, onClose });
-
-    expect(screen.getByLabelText('Data de Criação').value).toBe('2026-10-01');
-    expect(screen.getByLabelText('Data de Vencimento').value).toBe(
-      '2026-10-20'
-    );
-
-    fireEvent.change(screen.getByLabelText('Data de Criação'), {
-      target: { value: '2026-10-05' },
-    });
-
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar Alterações' }));
-
-    await waitFor(() => {
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 101,
-          data: '05/10/2026',
-          dataIso: '2026-10-05',
-          data_pagamento: '2026-10-05',
-          dataVencimento: '20/10/2026',
-          dataVencimentoIso: '2026-10-20',
-          data_vencimento: '2026-10-20',
-        })
-      );
-    });
-  });
-
-  it('preserva data do lançamento ao editar apenas a data de vencimento', async () => {
-    const onSave = vi.fn().mockResolvedValue({});
-    const onClose = vi.fn();
-    const mockItem = {
-      id: 102,
-      tipo: 'saida',
-      titulo: 'Conta de Energia',
-      valor: 350,
-      data: '01/10/2026',
-      dataIso: '2026-10-01',
-      data_pagamento: '2026-10-01',
-      dataVencimento: '20/10/2026',
-      dataVencimentoIso: '2026-10-20',
-      data_vencimento: '2026-10-20',
-      status: 'pendente',
-    };
-
-    renderModal({ initialItem: mockItem, onSave, onClose });
-
-    fireEvent.change(screen.getByLabelText('Data de Vencimento'), {
-      target: { value: '2026-10-25' },
-    });
-
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar Alterações' }));
-
-    await waitFor(() => {
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 102,
-          data: '01/10/2026',
-          dataIso: '2026-10-01',
-          data_pagamento: '2026-10-01',
-          dataVencimento: '25/10/2026',
-          dataVencimentoIso: '2026-10-25',
-          data_vencimento: '2026-10-25',
-        })
-      );
-    });
-  });
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 100,
+            ...expectedPayload,
+          })
+        );
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+    }
+  );
 
   it('chama onClose ao clicar em Cancelar', () => {
     const onClose = vi.fn();
@@ -361,29 +346,51 @@ describe('LancamentoModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('exibe erro caso a submissão falhe e clica em entrada', async () => {
-    const handleSave = vi
-      .fn()
-      .mockRejectedValue(new Error('Erro forçado de salvamento'));
-    renderModal({ onSave: handleSave });
-    fireEvent.click(screen.getByRole('button', { name: 'Entrada' }));
-    fireEvent.change(screen.getByLabelText('Título'), {
-      target: { value: 'Teste' },
-    });
-    fireEvent.change(screen.getByLabelText('Valor'), {
-      target: { value: '100' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Salvar Lançamento' }));
-    await waitFor(() => {
-      expect(
-        screen.getByText('Erro forçado de salvamento')
-      ).toBeInTheDocument();
-    });
-  });
+  it.each([
+    {
+      description: 'erro com mensagem específica',
+      rejectedValue: new Error('Erro forçado de salvamento'),
+      expectedMessage: 'Erro forçado de salvamento',
+    },
+    {
+      description: 'erro sem mensagem definida (fallback)',
+      rejectedValue: {},
+      expectedMessage: 'Erro ao salvar o lançamento financeiro.',
+    },
+  ])(
+    'exibe $description caso a submissão falhe',
+    async ({ rejectedValue, expectedMessage }) => {
+      const handleSave = vi.fn().mockRejectedValue(rejectedValue);
+      renderModal({ onSave: handleSave });
 
-  it('cobre fallbacks de formatação de data no payload (sem dataIso)', async () => {
+      fireEvent.change(screen.getByLabelText('Título'), {
+        target: { value: 'Teste' },
+      });
+      fireEvent.change(screen.getByLabelText('Valor'), {
+        target: { value: '100' },
+      });
+      fireEvent.submit(screen.getByRole('dialog'));
+
+      await waitFor(() => {
+        expect(screen.getByText(expectedMessage)).toBeInTheDocument();
+      });
+    }
+  );
+
+  it('cobre fallbacks de formatação de data no payload e valores iniciais faltantes em edição', async () => {
     const onSave = vi.fn().mockResolvedValue({});
-    renderModal({ onSave });
+    const mockItem = {
+      id: 99,
+      status: 'pendente',
+    };
+    renderModal({ initialItem: mockItem, onSave, onClose: vi.fn() });
+
+    expect(screen.getByLabelText('Título')).toHaveValue('');
+    expect(screen.getByLabelText('Valor')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Entrada' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
 
     fireEvent.change(screen.getByLabelText('Título'), {
       target: { value: 'Teste Fallback Date' },
@@ -391,7 +398,6 @@ describe('LancamentoModal', () => {
     fireEvent.change(screen.getByLabelText('Valor'), {
       target: { value: '100' },
     });
-
     fireEvent.change(screen.getByLabelText('Data de Criação'), {
       target: { value: 'T' },
     });
@@ -403,68 +409,6 @@ describe('LancamentoModal', () => {
 
     await waitFor(() => {
       expect(onSave).toHaveBeenCalled();
-    });
-  });
-
-  it('cobre fallbacks de valores iniciais faltantes em edição', () => {
-    const mockItem = {
-      id: 99,
-      status: 'pendente',
-    };
-    renderModal({ initialItem: mockItem, onSave: vi.fn(), onClose: vi.fn() });
-
-    expect(screen.getByLabelText('Título')).toHaveValue('');
-    expect(screen.getByLabelText('Valor')).toHaveValue('');
-    expect(screen.getByRole('button', { name: 'Entrada' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
-  });
-
-  it('cobre branch else if de status não-concluido e sem data', async () => {
-    const onSave = vi.fn().mockResolvedValue({});
-    const mockItem = {
-      id: 99,
-      status: 'pendente',
-    };
-    renderModal({ initialItem: mockItem, onSave, onClose: vi.fn() });
-
-    fireEvent.change(screen.getByLabelText('Título'), {
-      target: { value: 'X' },
-    });
-    fireEvent.change(screen.getByLabelText('Valor'), {
-      target: { value: '1' },
-    });
-    fireEvent.change(screen.getByLabelText('Data de Criação'), {
-      target: { value: '2026-01-01' },
-    });
-
-    fireEvent.submit(screen.getByRole('dialog'));
-    await waitFor(() => {
-      expect(onSave).toHaveBeenCalled();
-    });
-  });
-
-  it('cobre fallback message em catch block vazio', async () => {
-    const onSave = vi.fn().mockRejectedValue({});
-    const mockItem = { id: 99, status: 'pendente' };
-    renderModal({ initialItem: mockItem, onSave, onClose: vi.fn() });
-
-    fireEvent.change(screen.getByLabelText('Título'), {
-      target: { value: 'X' },
-    });
-    fireEvent.change(screen.getByLabelText('Valor'), {
-      target: { value: '1' },
-    });
-    fireEvent.change(screen.getByLabelText('Data de Criação'), {
-      target: { value: '2026-01-01' },
-    });
-
-    fireEvent.submit(screen.getByRole('dialog'));
-    await waitFor(() => {
-      expect(
-        screen.getByText('Erro ao salvar o lançamento financeiro.')
-      ).toBeInTheDocument();
     });
   });
 });

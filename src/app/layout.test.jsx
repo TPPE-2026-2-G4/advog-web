@@ -8,23 +8,20 @@ vi.mock('next/font/google', () => ({
 }));
 
 describe('RootLayout', () => {
-  it('renders its children', () => {
-    render(
-      <RootLayout>
-        <p>child content</p>
-      </RootLayout>
-    );
+  it.each([
+    { texto: 'child content', tag: 'p' },
+    { texto: 'Conteúdo principal da aplicação', tag: 'main' },
+  ])(
+    'renderiza os elementos filhos ($tag: "$texto") com idioma pt-BR',
+    ({ texto, tag: Tag }) => {
+      render(
+        <RootLayout>
+          <Tag>{texto}</Tag>
+        </RootLayout>
+      );
 
-    expect(screen.getByText('child content')).toBeInTheDocument();
-  });
-
-  it('renders the document with the Portuguese language', () => {
-    render(
-      <RootLayout>
-        <p>child content</p>
-      </RootLayout>
-    );
-
-    expect(document.documentElement).toHaveAttribute('lang', 'pt-BR');
-  });
+      expect(screen.getByText(texto)).toBeInTheDocument();
+      expect(document.documentElement).toHaveAttribute('lang', 'pt-BR');
+    }
+  );
 });

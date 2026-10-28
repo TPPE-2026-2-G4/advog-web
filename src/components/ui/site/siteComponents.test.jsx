@@ -216,68 +216,54 @@ describe('Componentes UI do Módulo Site', () => {
       expect(screen.getByLabelText('Endereço')).toHaveValue('Brasília, DF');
     });
 
-    it('chama onInputChange para cada campo quando são editados', () => {
-      const handleInputChange = vi.fn();
-      render(<ContentTab formData={{}} onInputChange={handleInputChange} />);
+    it.each([
+      {
+        label: 'Nome do escritório',
+        campo: 'nomeEscritorio',
+        valor: 'Novo Nome',
+      },
+      {
+        label: 'Slogan / subtítulo do hero',
+        campo: 'descricao',
+        valor: 'Novo Slogan',
+      },
+      {
+        label: 'Sobre o escritório',
+        campo: 'sobreEscritorio',
+        valor: 'Novo Sobre',
+      },
+      {
+        label: 'Telefone',
+        campo: 'telefone',
+        valor: '(61) 1234-5678',
+      },
+      {
+        label: 'Email',
+        campo: 'email',
+        valor: 'novo@email.com',
+      },
+      {
+        label: 'Endereço',
+        campo: 'endereco',
+        valor: 'Novo Endereço',
+      },
+      {
+        label: 'Informações adicionais (exibidas abaixo da descrição)',
+        campo: 'textoAdicionalSobre',
+        valor: 'Novas informações adicionais',
+      },
+    ])(
+      'chama onInputChange("$campo", "$valor") ao editar o campo "$label"',
+      ({ label, campo, valor }) => {
+        const handleInputChange = vi.fn();
+        render(<ContentTab formData={{}} onInputChange={handleInputChange} />);
 
-      fireEvent.change(screen.getByLabelText('Nome do escritório'), {
-        target: { value: 'Novo Nome' },
-      });
-      expect(handleInputChange).toHaveBeenCalledWith(
-        'nomeEscritorio',
-        'Novo Nome'
-      );
-
-      fireEvent.change(screen.getByLabelText('Slogan / subtítulo do hero'), {
-        target: { value: 'Novo Slogan' },
-      });
-      expect(handleInputChange).toHaveBeenCalledWith(
-        'descricao',
-        'Novo Slogan'
-      );
-
-      fireEvent.change(screen.getByLabelText('Sobre o escritório'), {
-        target: { value: 'Novo Sobre' },
-      });
-      expect(handleInputChange).toHaveBeenCalledWith(
-        'sobreEscritorio',
-        'Novo Sobre'
-      );
-
-      fireEvent.change(screen.getByLabelText('Telefone'), {
-        target: { value: '(61) 1234-5678' },
-      });
-      expect(handleInputChange).toHaveBeenCalledWith(
-        'telefone',
-        '(61) 1234-5678'
-      );
-
-      fireEvent.change(screen.getByLabelText('Email'), {
-        target: { value: 'novo@email.com' },
-      });
-      expect(handleInputChange).toHaveBeenCalledWith('email', 'novo@email.com');
-
-      fireEvent.change(screen.getByLabelText('Endereço'), {
-        target: { value: 'Novo Endereço' },
-      });
-      expect(handleInputChange).toHaveBeenCalledWith(
-        'endereco',
-        'Novo Endereço'
-      );
-
-      fireEvent.change(
-        screen.getByLabelText(
-          'Informações adicionais (exibidas abaixo da descrição)'
-        ),
-        {
-          target: { value: 'Novas informações adicionais' },
-        }
-      );
-      expect(handleInputChange).toHaveBeenCalledWith(
-        'textoAdicionalSobre',
-        'Novas informações adicionais'
-      );
-    });
+        fireEvent.change(screen.getByLabelText(label), {
+          target: { value: valor },
+        });
+        expect(handleInputChange).toHaveBeenCalledWith(campo, valor);
+      }
+    );
 
     it('renderiza upload de imagem da seção sobre e aciona onUploadImagemSobre', () => {
       const handleUpload = vi.fn();
@@ -641,47 +627,44 @@ describe('Componentes UI do Módulo Site', () => {
       expect(screen.getByText('Prévia da navbar')).toBeInTheDocument();
     });
 
-    it('chama onInputChange ao editar o código hex ou utilizar color picker', () => {
-      const handleInputChange = vi.fn();
-      render(
-        <ColorsTab
-          formData={{ corPrimaria: 'invalido', corSecundaria: 'invalido' }}
-          onInputChange={handleInputChange}
-        />
-      );
+    it.each([
+      {
+        label: 'Cor primária (fundo, navbar, rodapé)',
+        campo: 'corPrimaria',
+        valor: '#000000',
+      },
+      {
+        label: 'Cor de acento (botões, ícones, destaques)',
+        campo: 'corSecundaria',
+        valor: '#FFFFFF',
+      },
+      {
+        label: 'Selecionar cor primária',
+        campo: 'corPrimaria',
+        valor: '#112233',
+      },
+      {
+        label: 'Selecionar cor de acento',
+        campo: 'corSecundaria',
+        valor: '#445566',
+      },
+    ])(
+      'chama onInputChange("$campo", "$valor") ao alterar "$label"',
+      ({ label, campo, valor }) => {
+        const handleInputChange = vi.fn();
+        render(
+          <ColorsTab
+            formData={{ corPrimaria: 'invalido', corSecundaria: 'invalido' }}
+            onInputChange={handleInputChange}
+          />
+        );
 
-      fireEvent.change(
-        screen.getByLabelText('Cor primária (fundo, navbar, rodapé)'),
-        {
-          target: { value: '#000000' },
-        }
-      );
-      expect(handleInputChange).toHaveBeenCalledWith('corPrimaria', '#000000');
-
-      fireEvent.change(
-        screen.getByLabelText('Cor de acento (botões, ícones, destaques)'),
-        {
-          target: { value: '#FFFFFF' },
-        }
-      );
-      expect(handleInputChange).toHaveBeenCalledWith(
-        'corSecundaria',
-        '#FFFFFF'
-      );
-
-      fireEvent.change(screen.getByLabelText('Selecionar cor primária'), {
-        target: { value: '#112233' },
-      });
-      expect(handleInputChange).toHaveBeenCalledWith('corPrimaria', '#112233');
-
-      fireEvent.change(screen.getByLabelText('Selecionar cor de acento'), {
-        target: { value: '#445566' },
-      });
-      expect(handleInputChange).toHaveBeenCalledWith(
-        'corSecundaria',
-        '#445566'
-      );
-    });
+        fireEvent.change(screen.getByLabelText(label), {
+          target: { value: valor },
+        });
+        expect(handleInputChange).toHaveBeenCalledWith(campo, valor);
+      }
+    );
 
     it('utiliza cores padrão quando formData não possui cores definidas', () => {
       render(<ColorsTab formData={{}} onInputChange={vi.fn()} />);

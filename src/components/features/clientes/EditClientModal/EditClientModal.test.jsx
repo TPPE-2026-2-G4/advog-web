@@ -33,30 +33,31 @@ describe('EditClientModal', () => {
     expect(container).toBeInTheDocument();
   });
 
-  it('preenche os campos com os dados existentes do cliente', () => {
-    render(
-      <EditClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSubmit={vi.fn()}
-        cliente={mockCliente}
-        funcionarios={mockFuncionarios}
-      />
-    );
+  it.each([
+    'Tech Solutions LTDA',
+    '55.666.777/0001-88',
+    '(61) 3456-7890',
+    'contato@techsolutions.com',
+    'Trabalhista',
+    'Processo trabalhista referente a horas extras',
+  ])(
+    'preenche o formulário com o valor existente "%s" do cliente',
+    (displayValue) => {
+      render(
+        <EditClientModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSubmit={vi.fn()}
+          cliente={mockCliente}
+          funcionarios={mockFuncionarios}
+        />
+      );
 
-    expect(screen.getByText('Editar Cliente')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Tech Solutions LTDA')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('55.666.777/0001-88')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('(61) 3456-7890')).toBeInTheDocument();
-    expect(
-      screen.getByDisplayValue('contato@techsolutions.com')
-    ).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Trabalhista')).toBeInTheDocument();
-    expect(
-      screen.getByDisplayValue('Processo trabalhista referente a horas extras')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Salvar Alterações')).toBeInTheDocument();
-  });
+      expect(screen.getByText('Editar Cliente')).toBeInTheDocument();
+      expect(screen.getByDisplayValue(displayValue)).toBeInTheDocument();
+      expect(screen.getByText('Salvar Alterações')).toBeInTheDocument();
+    }
+  );
 
   it('permite alterar todos os campos do formulário incluindo responsável', () => {
     render(
@@ -127,119 +128,98 @@ describe('EditClientModal', () => {
     );
   });
 
-  it('exibe erro de validação caso nome seja apagado', () => {
-    const handleSubmit = vi.fn();
-    render(
-      <EditClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSubmit={handleSubmit}
-        cliente={mockCliente}
-        funcionarios={mockFuncionarios}
-      />
-    );
-
-    const nomeInput = screen.getByDisplayValue('Tech Solutions LTDA');
-    fireEvent.change(nomeInput, { target: { value: '' } });
-
-    fireEvent.click(screen.getByText('Salvar Alterações'));
-    expect(
-      screen.getByText('O nome ou razão social é obrigatório.')
-    ).toBeInTheDocument();
-    expect(handleSubmit).not.toHaveBeenCalled();
-  });
-
-  it('exibe erro de validação caso e-mail seja inválido', () => {
-    const handleSubmit = vi.fn();
-    render(
-      <EditClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSubmit={handleSubmit}
-        cliente={mockCliente}
-        funcionarios={mockFuncionarios}
-      />
-    );
-
-    const emailInput = screen.getByDisplayValue('contato@techsolutions.com');
-    fireEvent.change(emailInput, { target: { value: 'email_sem_arroba' } });
-
-    fireEvent.click(screen.getByText('Salvar Alterações'));
-    expect(screen.getByText('Informe um e-mail válido.')).toBeInTheDocument();
-
-    const cpfInput = screen.getByDisplayValue('55.666.777/0001-88');
-    fireEvent.change(cpfInput, { target: { value: '1' } });
-    fireEvent.click(screen.getByText('Salvar Alterações'));
-    expect(
-      screen.getByText(
-        'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.'
-      )
-    ).toBeInTheDocument();
-
-    fireEvent.change(cpfInput, { target: { value: '' } });
-    const telInput = screen.getByDisplayValue('(61) 3456-7890');
-    fireEvent.change(telInput, { target: { value: '' } });
-    fireEvent.click(screen.getByText('Salvar Alterações'));
-    expect(screen.getByText('O telefone é obrigatório.')).toBeInTheDocument();
-
-    fireEvent.change(telInput, { target: { value: '1' } });
-    fireEvent.click(screen.getByText('Salvar Alterações'));
-    expect(
-      screen.getByText('Informe um telefone válido com DDD (10 ou 11 dígitos).')
-    ).toBeInTheDocument();
-  });
-
-  it('trata erro lançado por onSubmit com mensagem customizada, de rede ou padrão', async () => {
-    const handleSubmit = vi.fn().mockRejectedValue(new Error('Falha no banco'));
-    const { rerender } = render(
-      <EditClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSubmit={handleSubmit}
-        cliente={mockCliente}
-        funcionarios={mockFuncionarios}
-      />
-    );
-
-    fireEvent.click(screen.getByText('Salvar Alterações'));
-    expect(await screen.findByText('Falha no banco')).toBeInTheDocument();
-
-    const handleSubmitSemMsg = vi.fn().mockRejectedValue({});
-    rerender(
-      <EditClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSubmit={handleSubmitSemMsg}
-        cliente={mockCliente}
-        funcionarios={mockFuncionarios}
-      />
-    );
-    fireEvent.click(screen.getByText('Salvar Alterações'));
-    expect(
-      await screen.findByText('Erro ao atualizar cliente.')
-    ).toBeInTheDocument();
-
-    const handleSubmitRede = vi
-      .fn()
-      .mockRejectedValue(
-        new Error('NetworkError when attempting to fetch resource.')
+  it.each([
+    {
+      cenario: 'nome apagado',
+      valorOriginal: 'Tech Solutions LTDA',
+      novoValor: '',
+      erroEsperado: 'O nome ou razão social é obrigatório.',
+    },
+    {
+      cenario: 'e-mail inválido',
+      valorOriginal: 'contato@techsolutions.com',
+      novoValor: 'email_sem_arroba',
+      erroEsperado: 'Informe um e-mail válido.',
+    },
+    {
+      cenario: 'CPF/CNPJ com tamanho inválido',
+      valorOriginal: '55.666.777/0001-88',
+      novoValor: '1',
+      erroEsperado: 'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.',
+    },
+    {
+      cenario: 'telefone apagado',
+      valorOriginal: '(61) 3456-7890',
+      novoValor: '',
+      erroEsperado: 'O telefone é obrigatório.',
+    },
+    {
+      cenario: 'telefone incompleto',
+      valorOriginal: '(61) 3456-7890',
+      novoValor: '1',
+      erroEsperado: 'Informe um telefone válido com DDD (10 ou 11 dígitos).',
+    },
+  ])(
+    'exibe erro de validação quando há $cenario',
+    ({ valorOriginal, novoValor, erroEsperado }) => {
+      const handleSubmit = vi.fn();
+      render(
+        <EditClientModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSubmit={handleSubmit}
+          cliente={mockCliente}
+          funcionarios={mockFuncionarios}
+        />
       );
-    rerender(
-      <EditClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSubmit={handleSubmitRede}
-        cliente={mockCliente}
-        funcionarios={mockFuncionarios}
-      />
-    );
-    fireEvent.click(screen.getByText('Salvar Alterações'));
-    expect(
-      await screen.findByText(
-        'Erro de conexão com o servidor. Tente novamente em instantes.'
-      )
-    ).toBeInTheDocument();
-  });
+
+      fireEvent.change(screen.getByDisplayValue(valorOriginal), {
+        target: { value: novoValor },
+      });
+      fireEvent.click(screen.getByText('Salvar Alterações'));
+
+      expect(screen.getByText(erroEsperado)).toBeInTheDocument();
+      expect(handleSubmit).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    {
+      cenario: 'erro com mensagem customizada',
+      erroRejeitado: new Error('Falha no banco'),
+      mensagemEsperada: 'Falha no banco',
+    },
+    {
+      cenario: 'erro sem mensagem usando texto padrão',
+      erroRejeitado: {},
+      mensagemEsperada: 'Erro ao atualizar cliente.',
+    },
+    {
+      cenario: 'erro de conexão de rede',
+      erroRejeitado: new Error(
+        'NetworkError when attempting to fetch resource.'
+      ),
+      mensagemEsperada:
+        'Erro de conexão com o servidor. Tente novamente em instantes.',
+    },
+  ])(
+    'trata $cenario lançado por onSubmit',
+    async ({ erroRejeitado, mensagemEsperada }) => {
+      const handleSubmit = vi.fn().mockRejectedValue(erroRejeitado);
+      render(
+        <EditClientModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSubmit={handleSubmit}
+          cliente={mockCliente}
+          funcionarios={mockFuncionarios}
+        />
+      );
+
+      fireEvent.click(screen.getByText('Salvar Alterações'));
+      expect(await screen.findByText(mensagemEsperada)).toBeInTheDocument();
+    }
+  );
 
   it('fecha o modal ao clicar em Cancelar e respeita isSaving', () => {
     const handleClose = vi.fn();
@@ -268,7 +248,6 @@ describe('EditClientModal', () => {
       />
     );
     fireEvent.click(screen.getByRole('dialog').parentElement);
-    // Não deve chamar novamente quando isSaving for true
     expect(handleClose).toHaveBeenCalledOnce();
   });
 

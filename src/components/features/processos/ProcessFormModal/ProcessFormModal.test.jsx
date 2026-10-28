@@ -71,13 +71,37 @@ describe('ProcessFormModal', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('marca somente os campos obrigatórios e formata o CNJ', () => {
+  it.each([
+    { label: 'Número do Processo', isRequired: true },
+    { label: 'Tribunal', isRequired: true },
+    { label: 'Título do Caso', isRequired: true },
+    { label: 'Cliente', isRequired: true },
+    { label: 'Área de Atuação', isRequired: true },
+    { label: 'Status Inicial', isRequired: true },
+    { label: 'Descrição', isRequired: false },
+    { label: 'Responsável', isRequired: false },
+    { label: 'Data de Início', isRequired: false },
+    { label: 'Data de Realização', isRequired: false },
+    { label: 'Próximo Prazo', isRequired: false },
+  ])(
+    'configura obrigatoriedade do campo "$label" como $isRequired',
+    ({ label, isRequired }) => {
+      renderForm();
+      const field = screen.getByLabelText(label);
+
+      if (isRequired) {
+        expect(field).toBeRequired();
+      } else {
+        expect(field).not.toBeRequired();
+      }
+    }
+  );
+
+  it('formata o CNJ automaticamente ao digitar', () => {
     const { container } = renderForm();
 
     expect(screen.getByText(/Campos obrigatórios/)).toBeInTheDocument();
     expect(container.querySelectorAll('[required]')).toHaveLength(6);
-    expect(screen.getByLabelText('Responsável')).not.toBeRequired();
-    expect(screen.getByLabelText('Próximo Prazo')).not.toBeRequired();
 
     const cnjInput = screen.getByLabelText('Número do Processo');
     fireEvent.change(cnjInput, {
@@ -166,35 +190,27 @@ describe('ProcessFormModal', () => {
     });
   });
 
-  it('rejeita CNJ inválido e campos obrigatórios vazios', () => {
+  it.each([
+    {
+      scenario: 'CNJ em formato inválido',
+      cnj: '123',
+      expectedError: 'Informe o número do processo no formato CNJ.',
+    },
+    {
+      scenario: 'campos obrigatórios em branco após CNJ válido',
+      cnj: processData.cnj,
+      expectedError: 'Preencha todos os campos obrigatórios.',
+    },
+  ])('rejeita submissão quando há $scenario', ({ cnj, expectedError }) => {
     const onSave = vi.fn();
-    const { rerender } = renderForm({ onSave });
+    renderForm({ onSave });
 
     fireEvent.change(screen.getByLabelText('Número do Processo'), {
-      target: { value: '123' },
+      target: { value: cnj },
     });
     fireEvent.submit(screen.getByRole('dialog'));
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Informe o número do processo no formato CNJ.'
-    );
 
-    rerender(
-      <ProcessFormModal
-        isOpen
-        process={null}
-        clientes={clientes}
-        funcionarios={funcionarios}
-        onClose={vi.fn()}
-        onSave={onSave}
-      />
-    );
-    fireEvent.change(screen.getByLabelText('Número do Processo'), {
-      target: { value: processData.cnj },
-    });
-    fireEvent.submit(screen.getByRole('dialog'));
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Preencha todos os campos obrigatórios.'
-    );
+    expect(screen.getByRole('alert')).toHaveTextContent(expectedError);
     expect(onSave).not.toHaveBeenCalled();
   });
 

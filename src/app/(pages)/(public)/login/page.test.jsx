@@ -57,14 +57,33 @@ describe('LoginPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('renderiza os campos, o link de recuperação e o botão de envio', () => {
+  it.each([
+    {
+      label: 'Email empresarial',
+      type: 'email',
+      valor: 'dr@carreiro.adv.br',
+    },
+    {
+      label: 'Senha',
+      type: 'password',
+      valor: 'senha-segura',
+    },
+  ])(
+    'renderiza o campo "$label" (type=$type) e permite seu preenchimento',
+    ({ label, type, valor }) => {
+      render(<LoginPage />);
+
+      const input = screen.getByLabelText(label);
+      expect(input).toHaveAttribute('type', type);
+
+      fireEvent.change(input, { target: { value: valor } });
+      expect(input).toHaveValue(valor);
+    }
+  );
+
+  it('renderiza o link de recuperação de senha e o botão de envio', () => {
     render(<LoginPage />);
 
-    expect(screen.getByLabelText('Email empresarial')).toHaveAttribute(
-      'type',
-      'email'
-    );
-    expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password');
     expect(
       screen.getByRole('link', {
         name: 'Esqueci minha senha',
@@ -75,23 +94,6 @@ describe('LoginPage', () => {
         name: 'Entrar',
       })
     ).toBeInTheDocument();
-  });
-
-  it('permite preencher o email e a senha', () => {
-    render(<LoginPage />);
-
-    const emailInput = screen.getByLabelText('Email empresarial');
-    const passwordInput = screen.getByLabelText('Senha');
-
-    fireEvent.change(emailInput, {
-      target: { value: 'dr@carreiro.adv.br' },
-    });
-    fireEvent.change(passwordInput, {
-      target: { value: 'senha-segura' },
-    });
-
-    expect(emailInput).toHaveValue('dr@carreiro.adv.br');
-    expect(passwordInput).toHaveValue('senha-segura');
   });
 
   it('realiza login com as credenciais preenchidas', async () => {

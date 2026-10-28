@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import ProcessDetailsModal from './ProcessDetailsModal';
+import styles from './ProcessDetailsModal.module.css';
 
 const processData = {
   processo_id: 1,
@@ -23,7 +24,7 @@ describe('ProcessDetailsModal', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('mostra o resumo completo e fecha pelo botão', () => {
+  it('mostra o cabeçalho, descrição e fecha pelo botão', () => {
     const onClose = vi.fn();
     render(<ProcessDetailsModal process={processData} onClose={onClose} />);
 
@@ -32,14 +33,47 @@ describe('ProcessDetailsModal', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(processData.cnj)).toBeInTheDocument();
     expect(screen.getByText(processData.descricao)).toBeInTheDocument();
-    expect(screen.getByText(processData.cliente)).toBeInTheDocument();
-    expect(screen.getByText(processData.tribunal)).toBeInTheDocument();
-    expect(screen.getByText(processData.responsavel)).toBeInTheDocument();
-    expect(screen.getByText('01/01/2026')).toBeInTheDocument();
-    expect(screen.getByText('Não informado')).toBeInTheDocument();
-    expect(screen.getByText('05/10/2026')).toBeInTheDocument();
+    expect(screen.getByText(processData.area)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it.each([
+    { label: 'Cliente', expectedValue: 'Maria Silva' },
+    { label: 'Tribunal', expectedValue: 'TJDFT' },
+    { label: 'Responsável', expectedValue: 'Ana Paula' },
+    { label: 'Data de Início', expectedValue: '01/01/2026' },
+    { label: 'Data de Realização', expectedValue: 'Não informado' },
+    { label: 'Próximo Prazo', expectedValue: '05/10/2026' },
+  ])(
+    'exibe o campo "$label" com valor "$expectedValue"',
+    ({ label, expectedValue }) => {
+      render(<ProcessDetailsModal process={processData} onClose={vi.fn()} />);
+
+      const term = screen.getByText(label);
+      expect(term).toBeInTheDocument();
+      expect(term.parentElement).toHaveTextContent(expectedValue);
+    }
+  );
+
+  it.each([
+    { status: 'Ativo', expectedClass: styles.statusActive },
+    { status: 'Concluído', expectedClass: styles.statusCompleted },
+    { status: 'Arquivado', expectedClass: styles.statusArchived },
+    { status: 'Em Análise', expectedClass: styles.statusPending },
+  ])(
+    'aplica o estilo correto para o badge de status "$status"',
+    ({ status, expectedClass }) => {
+      render(
+        <ProcessDetailsModal
+          process={{ ...processData, status, responsavel: '' }}
+          onClose={vi.fn()}
+        />
+      );
+
+      expect(screen.getByText(status)).toHaveClass(expectedClass);
+      expect(screen.getByText('Sem responsável')).toBeInTheDocument();
+    }
+  );
 });

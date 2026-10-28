@@ -9,7 +9,7 @@ import PermissionChecklist from './PermissionChecklist';
 const permissionEntries = Object.entries(PERMISSION_LABELS);
 
 describe('PermissionChecklist', () => {
-  it('renderiza a legenda e todas as permissões como checkboxes acessíveis', () => {
+  it('renderiza a legenda customizada e a quantidade total de checkboxes', () => {
     render(<PermissionChecklist legend="Permissões do cargo" />);
 
     expect(
@@ -18,44 +18,41 @@ describe('PermissionChecklist', () => {
     expect(screen.getAllByRole('checkbox')).toHaveLength(
       permissionEntries.length
     );
-
-    permissionEntries.forEach(([, permissionLabel]) => {
-      expect(
-        screen.getByRole('checkbox', { name: permissionLabel })
-      ).toBeInTheDocument();
-    });
   });
 
-  it('marca os campos booleanos habilitados pelo backend', () => {
-    const permission = createEmptyPermission();
-    permission[permissionEntries[0][0]] = true;
-    permission[permissionEntries.at(-1)[0]] = true;
+  it.each(permissionEntries)(
+    'renderiza a permissão "%s" como checkbox acessível com rótulo "%s"',
+    (permissionName, permissionLabel) => {
+      const permission = createEmptyPermission();
+      permission[permissionName] = true;
 
-    render(<PermissionChecklist permission={permission} />);
+      render(<PermissionChecklist permission={permission} />);
 
-    permissionEntries.forEach(([permissionName, permissionLabel]) => {
-      const checkbox = screen.getByRole('checkbox', {
-        name: permissionLabel,
-      });
+      const checkbox = screen.getByRole('checkbox', { name: permissionLabel });
+      expect(checkbox).toBeChecked();
 
-      if (permission[permissionName]) {
-        expect(checkbox).toBeChecked();
-      } else {
-        expect(checkbox).not.toBeChecked();
+      for (const [otherName, otherLabel] of permissionEntries) {
+        if (otherName !== permissionName) {
+          expect(
+            screen.getByRole('checkbox', { name: otherLabel })
+          ).not.toBeChecked();
+        }
       }
-    });
-  });
+    }
+  );
 
-  it('informa o id correto ao alternar uma permissão', () => {
-    const onToggle = vi.fn();
-    const [permissionName, permissionLabel] = permissionEntries[1];
-    render(<PermissionChecklist onToggle={onToggle} />);
+  it.each(permissionEntries)(
+    'informa o id "%s" ao alternar o checkbox "%s"',
+    (permissionName, permissionLabel) => {
+      const onToggle = vi.fn();
+      render(<PermissionChecklist onToggle={onToggle} />);
 
-    fireEvent.click(screen.getByRole('checkbox', { name: permissionLabel }));
+      fireEvent.click(screen.getByRole('checkbox', { name: permissionLabel }));
 
-    expect(onToggle).toHaveBeenCalledOnce();
-    expect(onToggle).toHaveBeenCalledWith(permissionName);
-  });
+      expect(onToggle).toHaveBeenCalledOnce();
+      expect(onToggle).toHaveBeenCalledWith(permissionName);
+    }
+  );
 
   it('apresenta chaves novas do backend com um rótulo legível', () => {
     render(<PermissionChecklist permission={{ exportar_relatorios: true }} />);
@@ -73,15 +70,20 @@ describe('PermissionChecklist', () => {
     ).toBeInTheDocument();
 
     const checkboxes = screen.getAllByRole('checkbox');
-    checkboxes.forEach((checkbox) => expect(checkbox).not.toBeChecked());
+    for (const checkbox of checkboxes) {
+      expect(checkbox).not.toBeChecked();
+    }
     expect(() => fireEvent.click(checkboxes[0])).not.toThrow();
   });
 
-  it('desabilita todas as permissões quando solicitado', () => {
-    render(<PermissionChecklist disabled />);
+  it.each(permissionEntries)(
+    'desabilita a permissão "%s" ("%s") quando disabled for verdadeiro',
+    (_permissionName, permissionLabel) => {
+      render(<PermissionChecklist disabled />);
 
-    screen
-      .getAllByRole('checkbox')
-      .forEach((checkbox) => expect(checkbox).toBeDisabled());
-  });
+      expect(
+        screen.getByRole('checkbox', { name: permissionLabel })
+      ).toBeDisabled();
+    }
+  );
 });

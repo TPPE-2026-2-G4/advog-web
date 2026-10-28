@@ -32,63 +32,63 @@ describe('DeleteClientModal', () => {
     ).toBeInTheDocument();
   });
 
-  it('aciona onConfirm ao clicar no botão Excluir usando cliente_id ou id', async () => {
-    const handleConfirm = vi.fn().mockResolvedValue();
-    const { rerender } = render(
-      <DeleteClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onConfirm={handleConfirm}
-        cliente={mockCliente}
-      />
-    );
+  it.each([
+    {
+      cenario: 'propriedade cliente_id',
+      cliente: mockCliente,
+      idEsperado: 3,
+    },
+    {
+      cenario: 'propriedade id alternativa',
+      cliente: { id: 99, nome: 'Outro Cliente' },
+      idEsperado: 99,
+    },
+  ])(
+    'aciona onConfirm ao clicar em Excluir usando $cenario',
+    async ({ cliente, idEsperado }) => {
+      const handleConfirm = vi.fn().mockResolvedValue();
+      render(
+        <DeleteClientModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={handleConfirm}
+          cliente={cliente}
+        />
+      );
 
-    fireEvent.click(screen.getByRole('button', { name: /excluir/i }));
-    expect(handleConfirm).toHaveBeenCalledWith(3);
+      fireEvent.click(screen.getByRole('button', { name: /excluir/i }));
+      expect(handleConfirm).toHaveBeenCalledWith(idEsperado);
+    }
+  );
 
-    // Testar com cliente apenas com .id
-    rerender(
-      <DeleteClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onConfirm={handleConfirm}
-        cliente={{ id: 99, nome: 'Outro Cliente' }}
-      />
-    );
-    fireEvent.click(screen.getByRole('button', { name: /excluir/i }));
-    expect(handleConfirm).toHaveBeenCalledWith(99);
-  });
+  it.each([
+    {
+      cenario: 'erro com mensagem customizada',
+      erroRejeitado: new Error('Erro no servidor'),
+      mensagemEsperada: 'Erro no servidor',
+    },
+    {
+      cenario: 'erro sem mensagem usando texto padrão',
+      erroRejeitado: {},
+      mensagemEsperada: 'Erro ao excluir cliente.',
+    },
+  ])(
+    'exibe alerta quando a exclusão falha por $cenario',
+    async ({ erroRejeitado, mensagemEsperada }) => {
+      const handleConfirm = vi.fn().mockRejectedValue(erroRejeitado);
+      render(
+        <DeleteClientModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={handleConfirm}
+          cliente={mockCliente}
+        />
+      );
 
-  it('exibe erro caso a exclusão falhe com mensagem customizada ou padrão', async () => {
-    const handleConfirm = vi
-      .fn()
-      .mockRejectedValue(new Error('Erro no servidor'));
-    const { rerender } = render(
-      <DeleteClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onConfirm={handleConfirm}
-        cliente={mockCliente}
-      />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: /excluir/i }));
-    expect(await screen.findByText('Erro no servidor')).toBeInTheDocument();
-
-    const handleConfirmSemMsg = vi.fn().mockRejectedValue({});
-    rerender(
-      <DeleteClientModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onConfirm={handleConfirmSemMsg}
-        cliente={mockCliente}
-      />
-    );
-    fireEvent.click(screen.getByRole('button', { name: /excluir/i }));
-    expect(
-      await screen.findByText('Erro ao excluir cliente.')
-    ).toBeInTheDocument();
-  });
+      fireEvent.click(screen.getByRole('button', { name: /excluir/i }));
+      expect(await screen.findByText(mensagemEsperada)).toBeInTheDocument();
+    }
+  );
 
   it('aciona onClose ao clicar em Cancelar e respeita isDeleting', () => {
     const handleClose = vi.fn();

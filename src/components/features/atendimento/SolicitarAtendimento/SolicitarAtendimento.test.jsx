@@ -21,6 +21,31 @@ const values = {
   'Descreva sua demanda': 'Preciso de orientação jurídica.',
 };
 
+const fieldSpecs = [
+  {
+    label: 'Nome completo',
+    type: 'text',
+    autocomplete: 'name',
+    minlength: '3',
+    maxlength: '100',
+  },
+  {
+    label: 'Email',
+    type: 'email',
+    autocomplete: 'email',
+  },
+  {
+    label: 'Telefone',
+    type: 'tel',
+    autocomplete: 'tel',
+  },
+  {
+    label: 'Descreva sua demanda',
+    minlength: '10',
+    maxlength: '2000',
+  },
+];
+
 function preencher() {
   for (const [label, value] of Object.entries(values)) {
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
@@ -39,48 +64,31 @@ describe('SolicitarAtendimento', () => {
     enviarSolicitacaoServico.mockResolvedValue({ cliente_id: 21, etapa_id: 1 });
   });
 
-  it('renderiza seção, campos obrigatórios e limites do backend', () => {
+  it('renderiza a seção de solicitação de atendimento com id de âncora', () => {
     render(<SolicitarAtendimento />);
 
     expect(
       screen.getByRole('region', { name: 'Solicitar Atendimento' })
     ).toHaveAttribute('id', 'contato');
-    for (const label of Object.keys(values)) {
-      expect(screen.getByLabelText(label)).toBeRequired();
-    }
-    expect(screen.getByLabelText('Email')).toHaveAttribute('type', 'email');
-    expect(screen.getByLabelText('Telefone')).toHaveAttribute('type', 'tel');
-    expect(screen.getByLabelText('Nome completo')).toHaveAttribute(
-      'autocomplete',
-      'name'
-    );
-    expect(screen.getByLabelText('Email')).toHaveAttribute(
-      'autocomplete',
-      'email'
-    );
-    expect(screen.getByLabelText('Telefone')).toHaveAttribute(
-      'autocomplete',
-      'tel'
-    );
-    expect(screen.getByLabelText('Nome completo')).toHaveAttribute(
-      'minlength',
-      '3'
-    );
-    expect(screen.getByLabelText('Nome completo')).toHaveAttribute(
-      'maxlength',
-      '100'
-    );
-    expect(screen.getByLabelText('Descreva sua demanda')).toHaveAttribute(
-      'minlength',
-      '10'
-    );
-    expect(screen.getByLabelText('Descreva sua demanda')).toHaveAttribute(
-      'maxlength',
-      '2000'
-    );
   });
 
-  it('associa os erros aos campos e foca o primeiro inválido', () => {
+  it.each(fieldSpecs)(
+    'configura obrigatoriedade e atributos do campo "$label"',
+    ({ label, type, autocomplete, minlength, maxlength }) => {
+      render(<SolicitarAtendimento />);
+      const field = screen.getByLabelText(label);
+
+      expect(field).toBeRequired();
+      if (type) expect(field).toHaveAttribute('type', type);
+      if (autocomplete) {
+        expect(field).toHaveAttribute('autocomplete', autocomplete);
+      }
+      if (minlength) expect(field).toHaveAttribute('minlength', minlength);
+      if (maxlength) expect(field).toHaveAttribute('maxlength', maxlength);
+    }
+  );
+
+  it('associa os erros aos campos e foca o primeiro inválido ao submeter vazio', () => {
     render(<SolicitarAtendimento />);
     enviar();
 
@@ -93,26 +101,44 @@ describe('SolicitarAtendimento', () => {
     expect(enviarSolicitacaoServico).not.toHaveBeenCalled();
   });
 
-  it('rejeita conteúdo em branco e permite corrigir o email', async () => {
-    render(<SolicitarAtendimento />);
-    preencher();
-    const nome = screen.getByLabelText('Nome completo');
-    const email = screen.getByLabelText('Email');
-    fireEvent.change(nome, { target: { value: '   ' } });
-    enviar();
-    expect(nome).toHaveAccessibleDescription('Preencha este campo.');
-    fireEvent.change(nome, { target: { value: values['Nome completo'] } });
-    fireEvent.change(email, { target: { value: 'email-invalido' } });
-    enviar();
-    expect(email).toHaveFocus();
-    expect(email).toHaveAccessibleDescription('Informe um email válido.');
-    fireEvent.change(email, { target: { value: values.Email } });
-    expect(email).toHaveAttribute('aria-invalid', 'false');
-    enviar();
-    expect(
-      await screen.findByRole('status', { name: 'Solicitação enviada' })
-    ).toHaveTextContent('Recebemos sua solicitação com sucesso.');
-  });
+  it.each([
+    {
+      cenario: 'campo obrigatório preenchido apenas com espaços',
+      label: 'Nome completo',
+      valorInvalido: '   ',
+      valorValido: values['Nome completo'],
+      mensagemEsperada: 'Preencha este campo.',
+    },
+    {
+      cenario: 'formato de email inválido',
+      label: 'Email',
+      valorInvalido: 'email-invalido',
+      valorValido: values.Email,
+      mensagemEsperada: 'Informe um email válido.',
+    },
+  ])(
+    'rejeita $cenario no campo "$label" e permite corrigir e enviar',
+    async ({ label, valorInvalido, valorValido, mensagemEsperada }) => {
+      render(<SolicitarAtendimento />);
+      preencher();
+
+      const campo = screen.getByLabelText(label);
+      fireEvent.change(campo, { target: { value: valorInvalido } });
+      enviar();
+
+      expect(campo).toHaveFocus();
+      expect(campo).toHaveAttribute('aria-invalid', 'true');
+      expect(campo).toHaveAccessibleDescription(mensagemEsperada);
+
+      fireEvent.change(campo, { target: { value: valorValido } });
+      expect(campo).toHaveAttribute('aria-invalid', 'false');
+
+      enviar();
+      expect(
+        await screen.findByRole('status', { name: 'Solicitação enviada' })
+      ).toHaveTextContent('Recebemos sua solicitação com sucesso.');
+    }
+  );
 
   it('envia pelo formulário, confirma o recebimento e reinicia com foco no nome', async () => {
     render(<SolicitarAtendimento />);

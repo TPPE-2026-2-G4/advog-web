@@ -8,57 +8,58 @@ const processData = {
   titulo: 'Caso Teste',
 };
 
+const renderModal = (overrides = {}) => {
+  const props = {
+    process: processData,
+    isDeleting: false,
+    error: '',
+    onClose: vi.fn(),
+    onConfirm: vi.fn(),
+    ...overrides,
+  };
+
+  render(<DeleteProcessModal {...props} />);
+  return props;
+};
+
 describe('DeleteProcessModal', () => {
   it('não renderiza sem processo', () => {
-    render(
-      <DeleteProcessModal
-        process={null}
-        isDeleting={false}
-        error=""
-        onClose={vi.fn()}
-        onConfirm={vi.fn()}
-      />
-    );
+    renderModal({ process: null });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('confirma, cancela e apresenta erros', () => {
-    const onClose = vi.fn();
-    const onConfirm = vi.fn();
-    render(
-      <DeleteProcessModal
-        process={processData}
-        isDeleting={false}
-        error="Processo não encontrado"
-        onClose={onClose}
-        onConfirm={onConfirm}
-      />
-    );
+  it('exibe dados do processo e mensagem de erro quando informada', () => {
+    renderModal({ error: 'Processo não encontrado' });
 
     expect(screen.getByText(processData.titulo)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(processData.cnj))).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Processo não encontrado'
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Excluir processo' }));
-
-    expect(onClose).toHaveBeenCalledOnce();
-    expect(onConfirm).toHaveBeenCalledOnce();
   });
 
+  it.each([
+    { buttonName: 'Fechar', callbackKey: 'onClose' },
+    { buttonName: 'Cancelar', callbackKey: 'onClose' },
+    { buttonName: 'Excluir processo', callbackKey: 'onConfirm' },
+  ])(
+    'aciona $callbackKey ao clicar no botão "$buttonName"',
+    ({ buttonName, callbackKey }) => {
+      const props = renderModal();
+
+      fireEvent.click(screen.getByRole('button', { name: buttonName }));
+      expect(props[callbackKey]).toHaveBeenCalledOnce();
+    }
+  );
+
   it('bloqueia fechamento e confirmação durante a exclusão', () => {
-    render(
-      <DeleteProcessModal
-        process={processData}
-        isDeleting
-        error=""
-        onClose={vi.fn()}
-        onConfirm={vi.fn()}
-      />
-    );
+    renderModal({ isDeleting: true });
 
     expect(screen.getByRole('button', { name: 'Fechar' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
+    expect(
+      screen.getByRole('status', { name: 'Carregando' })
+    ).toBeInTheDocument();
     expect(screen.getAllByRole('button').at(-1)).toBeDisabled();
   });
 });
