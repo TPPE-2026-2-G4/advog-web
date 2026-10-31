@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 
@@ -11,6 +11,7 @@ export default defineConfig({
   },
   maxWorkers: 1,
   test: {
+    exclude: [...configDefaults.exclude, 'e2e/**'],
     testTimeout: 30000,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.js'],

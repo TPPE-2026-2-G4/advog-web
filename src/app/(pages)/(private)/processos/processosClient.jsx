@@ -6,6 +6,7 @@ import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { getCurrentUser } from '@/utils/authSession';
 const emptySubscribe = () => () => {};
+const EMPTY_RESPONSAVEIS = [];
 import DeleteProcessModal from '@/components/features/processos/DeleteProcessModal/DeleteProcessModal';
 import ProcessDetailsModal from '@/components/features/processos/ProcessDetailsModal/ProcessDetailsModal';
 import ProcessFilters from '@/components/features/processos/ProcessFilters/ProcessFilters';
@@ -18,7 +19,7 @@ import styles from './processos.module.css';
 export default function ProcessosClient({
   initialPage,
   initialError = '',
-  responsaveis = [],
+  responsaveis = EMPTY_RESPONSAVEIS,
 }) {
   const permissionsJson = useSyncExternalStore(
     emptySubscribe,
@@ -52,6 +53,11 @@ export default function ProcessosClient({
     deletingProcess,
     isDeleting,
     deleteError,
+    detailError,
+    isSyncing,
+    syncError,
+    syncMessage,
+    syncProcesses,
     setFilter,
     setCurrentPage,
     setDetailProcess,
@@ -63,7 +69,13 @@ export default function ProcessosClient({
     openDeleteModal,
     closeDeleteModal,
     deleteSelectedProcess,
-  } = useProcessos({ initialPage, initialError, responsaveis });
+  } = useProcessos({
+    initialPage,
+    initialError,
+    responsaveis,
+    enabled: canView,
+    canSync: canEdit,
+  });
 
   useEffect(() => {
     if (!canView) return;
@@ -104,7 +116,6 @@ export default function ProcessosClient({
   const enrichProcess = (process) => {
     if (!process) return null;
 
-    // Normalize IDs and fields that might have different names in the API
     const procId = process.processo_id || process.id || process.cnj;
     const respId = process.responsavel_id || process.funcionario_id;
     const clienteId = process.cliente_id;
@@ -155,17 +166,58 @@ export default function ProcessosClient({
           </p>
         </div>
 
-        {canCreate && (
-          <button
-            type="button"
-            className={styles.addButton}
-            onClick={openCreateForm}
-          >
-            <Plus size={18} aria-hidden="true" />
-            Novo Processo
-          </button>
-        )}
+        <div className={styles.headerActions}>
+          {canEdit && (
+            <button
+              type="button"
+              className={styles.retryButton}
+              onClick={syncProcesses}
+              disabled={isSyncing}
+            >
+              <RefreshCw
+                size={18}
+                aria-hidden="true"
+                className={isSyncing ? styles.spinning : ''}
+              />
+              {isSyncing
+                ? 'Sincronizando com DataJud…'
+                : 'Sincronizar com DataJud'}
+            </button>
+          )}
+          {canCreate && (
+            <button
+              type="button"
+              className={styles.addButton}
+              onClick={openCreateForm}
+            >
+              <Plus size={18} aria-hidden="true" />
+              Novo Processo
+            </button>
+          )}
+        </div>
       </div>
+
+      {canEdit && (
+        <p className={styles.syncHint}>
+          A sincronização consulta todos os processos cadastrados,
+          independentemente dos filtros.
+        </p>
+      )}
+      {syncMessage && (
+        <p role="status" className={styles.syncSuccess}>
+          {syncMessage}
+        </p>
+      )}
+      {syncError && (
+        <p role="alert" className={styles.syncError}>
+          {syncError}
+        </p>
+      )}
+      {referenceError && (
+        <p role="alert" className={styles.syncError}>
+          {referenceError}
+        </p>
+      )}
 
       <ProcessFilters
         filters={filters}
@@ -174,7 +226,7 @@ export default function ProcessosClient({
         onFilterChange={setFilter}
       />
 
-      {loadError ? (
+      {loadError && (
         <div className={styles.errorState} role="alert">
           <div>
             <h2>Não foi possível exibir os processos</h2>
@@ -194,22 +246,29 @@ export default function ProcessosClient({
             {isReloading ? 'Tentando novamente' : 'Tentar novamente'}
           </button>
         </div>
-      ) : (
-        <ProcessTable
-          processes={enrichedProcesses}
-          canEdit={canEdit}
-          canDelete={canDelete}
-          totalItems={totalItems}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          hasActiveFilters={hasActiveFilters}
-          onPageChange={setCurrentPage}
-          onView={setDetailProcess}
-          onEdit={openEditForm}
-          onDelete={openDeleteModal}
-        />
       )}
+      {isReloading && (
+        <p role="status" className={styles.syncHint}>
+          Atualizando processos…
+        </p>
+      )}
+      {(!loadError || processos.length > 0) &&
+        (!isReloading || processos.length > 0) && (
+          <ProcessTable
+            processes={enrichedProcesses}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            totalItems={totalItems}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            hasActiveFilters={hasActiveFilters}
+            onPageChange={setCurrentPage}
+            onView={setDetailProcess}
+            onEdit={openEditForm}
+            onDelete={openDeleteModal}
+          />
+        )}
 
       <ProcessFormModal
         process={editingProcess ? enrichProcess(editingProcess) : null}
@@ -221,8 +280,11 @@ export default function ProcessosClient({
       />
 
       <ProcessDetailsModal
+        key={detailProcess?.processo_id ?? 'closed'}
         process={enrichedDetails}
         onClose={() => setDetailProcess(null)}
+        error={detailError}
+        onRetry={reloadProcesses}
       />
 
       <DeleteProcessModal

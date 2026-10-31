@@ -3,9 +3,15 @@ import { listarFuncionarios } from '@/services/funcionarios';
 import {
   atualizarProcesso,
   criarProcesso,
+  excluirDocumento,
   excluirProcesso,
   getProcessosData,
+  listarDocumentos,
   listarProcessos,
+  listarProcessosCriticos,
+  obterResumoProcessos,
+  obterUrlDocumento,
+  uploadDocumento,
 } from './processos';
 
 vi.mock('@/services/funcionarios', () => ({
@@ -76,6 +82,41 @@ describe('serviço de processos', () => {
       'http://localhost:8000/processos/?busca=0061234&status=Ativo&responsavel_id=3&prazo_inicio=2026-09-01&prazo_fim=2026-09-30&page=2&page_size=5',
       { cache: 'no-store', headers: authorization }
     );
+  });
+
+  describe('listarProcessosCriticos', () => {
+    it('lista processos críticos com padrão de 15 dias sem movimentação', async () => {
+      const criticos = [processData];
+      fetch.mockResolvedValue(jsonResponse(criticos));
+
+      await expect(listarProcessosCriticos()).resolves.toEqual(criticos);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/processos/criticos/?dias_sem_movimentacao=15',
+        { cache: 'no-store', headers: authorization }
+      );
+    });
+
+    it('envia dias personalizados e funcionarioId quando informados', async () => {
+      fetch.mockResolvedValue(jsonResponse([]));
+
+      await listarProcessosCriticos({
+        diasSemMovimentacao: 30,
+        funcionarioId: 4,
+      });
+
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/processos/criticos/?dias_sem_movimentacao=30&funcionario_id=4',
+        { cache: 'no-store', headers: authorization }
+      );
+    });
+
+    it('rejeita com erro se a resposta não for um array', async () => {
+      fetch.mockResolvedValue(jsonResponse({ detalhe: 'invalido' }));
+
+      await expect(listarProcessosCriticos()).rejects.toThrow(
+        'Não foi possível carregar os processos críticos.'
+      );
+    });
   });
 
   it('envia o cadastro por POST', async () => {
@@ -262,6 +303,70 @@ describe('serviço de processos', () => {
       const { initialError } = await getProcessosData();
 
       expect(initialError).toBe('Não foi possível carregar os processos.');
+    });
+
+    it('retorna mensagem de sessão expirada para status 401', async () => {
+      fetch.mockResolvedValue(errorResponse({}, 401));
+      listarFuncionarios.mockResolvedValue([]);
+
+      const { initialError } = await getProcessosData();
+
+      expect(initialError).toBe('Sessão expirada. Faça login novamente.');
+    });
+
+    it('gerencia documentos e consulta links de download', async () => {
+      fetch.mockResolvedValueOnce(
+        jsonResponse([{ documento_id: 1, nome_original: 'peticao.pdf' }])
+      );
+      await expect(listarDocumentos(1)).resolves.toEqual([
+        { documento_id: 1, nome_original: 'peticao.pdf' },
+      ]);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/processos/1/documentos',
+        {
+          method: 'GET',
+          headers: authorization,
+        }
+      );
+
+      const mockFile = new File(['content'], 'teste.pdf', {
+        type: 'application/pdf',
+      });
+      fetch.mockResolvedValueOnce(
+        jsonResponse({ documento_id: 2, nome_original: 'teste.pdf' })
+      );
+      await expect(uploadDocumento(1, mockFile)).resolves.toEqual({
+        documento_id: 2,
+        nome_original: 'teste.pdf',
+      });
+
+      fetch.mockResolvedValueOnce(
+        jsonResponse({ documento_id: 1, url: 'http://minio/doc.pdf' })
+      );
+      await expect(obterUrlDocumento(1, 1)).resolves.toEqual({
+        documento_id: 1,
+        url: 'http://minio/doc.pdf',
+      });
+
+      fetch.mockResolvedValueOnce(jsonResponse(null, { status: 204 }));
+      await expect(excluirDocumento(1, 1)).resolves.toBeUndefined();
+    });
+
+    it('consulta resumo de processos com parâmetros opcionais', async () => {
+      const resumo = {
+        total: 10,
+        em_andamento: 5,
+        em_analise: 3,
+        finalizados: 2,
+      };
+      fetch.mockResolvedValueOnce(jsonResponse(resumo));
+      await expect(
+        obterResumoProcessos({ diasProximoPrazo: 10, funcionarioId: 2 })
+      ).resolves.toEqual(resumo);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/processos/resumo?dias_proximo_prazo=10&funcionario_id=2',
+        { cache: 'no-store', headers: authorization }
+      );
     });
   });
 });
