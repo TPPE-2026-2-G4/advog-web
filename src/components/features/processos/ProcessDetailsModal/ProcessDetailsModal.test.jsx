@@ -84,10 +84,8 @@ describe('ProcessDetailsModal', () => {
     };
     render(<ProcessDetailsModal process={processWithSync} onClose={vi.fn()} />);
 
-    // Aba padrão é Resumo
     expect(screen.getByText('15/10/2026')).toBeInTheDocument();
 
-    // Clica na aba Movimentações
     fireEvent.click(screen.getByRole('tab', { name: 'Movimentações' }));
     expect(
       screen.getByText(
@@ -96,11 +94,9 @@ describe('ProcessDetailsModal', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText('DataJud')).not.toBeInTheDocument();
 
-    // Volta para a aba Resumo
     fireEvent.click(screen.getByRole('tab', { name: 'Resumo' }));
     expect(screen.getByText('15/10/2026')).toBeInTheDocument();
 
-    // Clica na aba Documentos
     fireEvent.click(screen.getByRole('tab', { name: 'Documentos' }));
     expect(
       screen.getByText(

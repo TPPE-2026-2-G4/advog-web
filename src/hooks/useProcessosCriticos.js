@@ -32,7 +32,6 @@ export function useProcessosCriticos({
 
   const detailId = detailProcess?.processo_id;
 
-  // Carregamento de processos críticos
   useEffect(() => {
     if (!enabled) return;
 
@@ -60,7 +59,6 @@ export function useProcessosCriticos({
     };
   }, [diasSemMovimentacao, funcionarioId, enabled, reloadKey, requestKey]);
 
-  // Atualização periódica e ao retomar foco/visibilidade
   useEffect(() => {
     if (!enabled) return;
 
@@ -92,7 +90,6 @@ export function useProcessosCriticos({
     };
   }, [enabled]);
 
-  // Consulta atualizada dos detalhes do processo selecionado
   const fetchDetail = (procId) => {
     if (!procId) return;
     setIsDetailLoading(true);

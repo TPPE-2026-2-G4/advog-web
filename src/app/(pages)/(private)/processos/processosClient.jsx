@@ -116,7 +116,6 @@ export default function ProcessosClient({
   const enrichProcess = (process) => {
     if (!process) return null;
 
-    // Normalize IDs and fields that might have different names in the API
     const procId = process.processo_id || process.id || process.cnj;
     const respId = process.responsavel_id || process.funcionario_id;
     const clienteId = process.cliente_id;

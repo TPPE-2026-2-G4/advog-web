@@ -335,7 +335,6 @@
   border: 0;
 }
 
-/* Responsividade Mobile (< 768px) */
 @media (max-width: 767px) {
   .accordionToggle {
     display: flex;

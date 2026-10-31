@@ -61,7 +61,6 @@ describe('useProcessosCriticos', () => {
       diasSemMovimentacao: 15,
       funcionarioId: undefined,
     });
-    // Processo 2 tem data_realizado mais antiga (2026-09-01), deve vir primeiro
     expect(result.current.processos[0].processo_id).toBe(2);
     expect(result.current.processos[1].processo_id).toBe(1);
     expect(result.current.error).toBe('');
@@ -187,7 +186,6 @@ describe('useProcessosCriticos', () => {
       );
     });
 
-    // Test retry
     obterProcesso.mockRejectedValueOnce(new Error('Falha no servidor'));
     act(() => {
       result.current.retryDetail();
@@ -211,20 +209,17 @@ describe('useProcessosCriticos', () => {
       );
     });
 
-    // Chamada com null não deve quebrar
     act(() => {
       result.current.openDetail(null);
       result.current.retryDetail();
     });
     expect(result.current.detailProcess).toBeNull();
 
-    // Chamada sem processo_id nem id
     act(() => {
       result.current.openDetail({ cnj: 'apenas-cnj' });
     });
     expect(result.current.detailProcess).toEqual({ cnj: 'apenas-cnj' });
 
-    // Erro não-Error em obterProcesso
     obterProcesso.mockRejectedValueOnce('falha-detalhe');
     act(() => {
       result.current.openDetail({ processo_id: 88 });

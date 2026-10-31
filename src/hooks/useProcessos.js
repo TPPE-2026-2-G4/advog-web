@@ -137,8 +137,6 @@ export function useProcessos({
     responsavelNames,
     enabled,
   ]);
-
-  // The job runs on the server. Refreshing the view must not trigger a new job.
   useEffect(() => {
     if (!enabled || isReloading || isSyncing) return;
     const refreshIfVisible = () => {

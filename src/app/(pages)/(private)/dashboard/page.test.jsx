@@ -115,8 +115,6 @@ describe('DashboardPage e DashboardClient', () => {
     expect(
       screen.getByText('Descrição completa do caso crítico')
     ).toBeInTheDocument();
-
-    // Fecha o modal
     const closeButton = screen.getByRole('button', { name: 'Fechar' });
     fireEvent.click(closeButton);
 

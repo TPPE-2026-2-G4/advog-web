@@ -80,7 +80,6 @@ export default function CriticalProcessesCard({
           )}
         </div>
 
-        {/* Botão de Accordion para dispositivos móveis (< 768px) */}
         <button
           type="button"
           className={styles.accordionToggle}
@@ -145,7 +144,6 @@ export default function CriticalProcessesCard({
           id="critical-processes-content"
           className={`${styles.contentWrapper} ${isExpanded ? styles.contentExpanded : ''}`}
         >
-          {/* Visualização em Tabela para Desktop */}
           <div className={styles.tableScroll}>
             <table className={styles.table}>
               <thead className={styles.thead}>
@@ -189,7 +187,6 @@ export default function CriticalProcessesCard({
             </table>
           </div>
 
-          {/* Visualização em Cards empilhados para Mobile */}
           <div className={styles.mobileList}>
             {processes.map((proc) => (
               <div

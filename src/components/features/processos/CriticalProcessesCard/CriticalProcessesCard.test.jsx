@@ -183,7 +183,6 @@ describe('CriticalProcessesCard', () => {
     fireEvent.click(mobileButtons[0]);
     expect(handleAnalyze).toHaveBeenCalledWith(proc1Day);
 
-    // Render sem onAnalyze e sem onRetry
     const { unmount } = render(
       <CriticalProcessesCard processes={[proc1Day]} error="Erro sem retry" />
     );
@@ -194,6 +193,6 @@ describe('CriticalProcessesCard', () => {
 
     render(<CriticalProcessesCard processes={[proc1Day]} />);
     const buttons = screen.getAllByRole('button', { name: 'Analisar' });
-    fireEvent.click(buttons[0]); // Sem onAnalyze fornecido não deve quebrar
+    fireEvent.click(buttons[0]);
   });
 });
