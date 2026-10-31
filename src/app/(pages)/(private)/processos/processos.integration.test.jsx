@@ -765,7 +765,8 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         return Promise.resolve(jsonResponse(mockFuncionarios));
       }
       if (
-        urlString === `${API_BASE}/processos/${initialApiProcess.processo_id}/documentos` &&
+        urlString ===
+          `${API_BASE}/processos/${initialApiProcess.processo_id}/documentos` &&
         options.method === 'POST'
       ) {
         documents = [
@@ -779,7 +780,8 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         return Promise.resolve(jsonResponse({ documento_id: 1 }, 201));
       }
       if (
-        urlString === `${API_BASE}/processos/${initialApiProcess.processo_id}/documentos`
+        urlString ===
+        `${API_BASE}/processos/${initialApiProcess.processo_id}/documentos`
       ) {
         return Promise.resolve(jsonResponse(documents));
       }
@@ -811,7 +813,9 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     const detailsModal = screen.getByRole('dialog', {
       name: initialApiProcess.titulo_proc,
     });
-    fireEvent.click(within(detailsModal).getByRole('tab', { name: 'Documentos' }));
+    fireEvent.click(
+      within(detailsModal).getByRole('tab', { name: 'Documentos' })
+    );
 
     await within(detailsModal).findByText('Nenhum documento anexado.');
     const fileInput = within(detailsModal).getByTestId('file-upload-input');
@@ -821,7 +825,9 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     fireEvent.change(fileInput, { target: { files: [file] } });
     await within(detailsModal).findByText('peticao-inicial.pdf');
 
-    fireEvent.click(within(detailsModal).getByRole('button', { name: 'Visualizar' }));
+    fireEvent.click(
+      within(detailsModal).getByRole('button', { name: 'Visualizar' })
+    );
     await waitFor(() =>
       expect(openSpy).toHaveBeenCalledWith(
         'https://example.com/documento.pdf',
@@ -847,7 +853,8 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         return Promise.resolve(jsonResponse(mockFuncionarios));
       }
       if (
-        urlString === `${API_BASE}/processos/${processWithoutMovement.processo_id}/documentos` &&
+        urlString ===
+          `${API_BASE}/processos/${processWithoutMovement.processo_id}/documentos` &&
         options.method === 'POST'
       ) {
         return Promise.resolve(
@@ -855,10 +862,14 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         );
       }
       if (
-        urlString === `${API_BASE}/processos/${processWithoutMovement.processo_id}/documentos`
+        urlString ===
+        `${API_BASE}/processos/${processWithoutMovement.processo_id}/documentos`
       ) {
         return Promise.resolve(
-          jsonResponse({ detail: 'Não foi possível carregar os documentos.' }, 500)
+          jsonResponse(
+            { detail: 'Não foi possível carregar os documentos.' },
+            500
+          )
         );
       }
       if (urlString.startsWith(`${API_BASE}/processos/`)) {
@@ -891,16 +902,22 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       )
     ).toBeInTheDocument();
 
-    fireEvent.click(within(detailsModal).getByRole('tab', { name: 'Documentos' }));
+    fireEvent.click(
+      within(detailsModal).getByRole('tab', { name: 'Documentos' })
+    );
     await within(detailsModal).findByRole('alert');
-    expect(within(detailsModal).getByText('Nenhum documento anexado.')).toBeInTheDocument();
+    expect(
+      within(detailsModal).getByText('Nenhum documento anexado.')
+    ).toBeInTheDocument();
 
     const fileInput = within(detailsModal).getByTestId('file-upload-input');
     const file = new File(['conteudo pdf'], 'peticao-inicial.pdf', {
       type: 'application/pdf',
     });
     fireEvent.change(fileInput, { target: { files: [file] } });
-    await within(detailsModal).findByText('Não foi possível enviar o documento.');
+    await within(detailsModal).findByText(
+      'Não foi possível enviar o documento.'
+    );
   });
 
   it('valida intervalo de datas inválido, limpa filtros e navega entre páginas e status no ProcessTable/ProcessDetailsModal', async () => {
