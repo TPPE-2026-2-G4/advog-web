@@ -4,6 +4,7 @@ import { listarAtuacoes } from '@/services/atuacoes';
 import { getLawyerInitials, formatOab } from '@/utils/funcionario';
 import { getImageUrl, formatParagraphs } from '@/utils/institucional';
 import { Scale } from 'lucide-react';
+import SolicitarAtendimento from '@/components/features/atendimento/SolicitarAtendimento/SolicitarAtendimento';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,10 @@ export default async function Home() {
     (f) => f.exibicaoInstitucional
   );
 
+  const areasSubtitle =
+    institucional?.sobreAreas ||
+    'Oferecemos assessoria jurídica especializada em diversas áreas do Direito.';
+
   const teamSubtitle =
     institucional?.textoEquipe ||
     institucional?.descricaoEquipe ||
@@ -32,6 +37,25 @@ export default async function Home() {
   return (
     <div className={styles.pageWrapper}>
       <main>
+        {atuacoesVisiveis.length > 0 && (
+          <section className={styles.areasSection}>
+            <div className={styles.container}>
+              <h2 className={styles.areasTitle}>Áreas de Atuação</h2>
+              <p className={styles.areasSubtitle}>{areasSubtitle}</p>
+              <div className={styles.areasGrid}>
+                {atuacoesVisiveis.map((area) => (
+                  <article key={area.atuacao_id} className={styles.areaCard}>
+                    <h3 className={styles.areaCardTitle}>
+                      {area.titulo || area.nome}
+                    </h3>
+                    <p className={styles.areaCardDesc}>{area.descricao}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className={styles.sobreSection}>
           <div className={styles.container}>
             <div className={styles.contentWrapper}>
@@ -66,24 +90,6 @@ export default async function Home() {
             </div>
           </div>
         </section>
-
-        {atuacoesVisiveis.length > 0 && (
-          <section className={styles.areasSection}>
-            <div className={styles.container}>
-              <h2 className={styles.title}>Áreas de Atuação</h2>
-              <div className={styles.areasGrid}>
-                {atuacoesVisiveis.map((area) => (
-                  <div key={area.atuacao_id} className={styles.areaCard}>
-                    <h3 className={styles.areaCardTitle}>
-                      {area.titulo || area.nome}
-                    </h3>
-                    <p className={styles.areaCardDesc}>{area.descricao}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
 
         {visibleTeam.length > 0 && (
           <section className={styles.equipeSection}>
@@ -161,6 +167,7 @@ export default async function Home() {
             </div>
           </section>
         )}
+        <SolicitarAtendimento />
       </main>
     </div>
   );

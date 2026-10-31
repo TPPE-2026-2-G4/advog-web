@@ -6,8 +6,32 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { createEmptyPermission } from '@/constants/permissions';
+import {
+  createEmptyPermission,
+  getPermissionLabel,
+} from '@/constants/permissions';
+import {
+  atualizarCargo,
+  criarCargo,
+  excluirCargo,
+  listarCargos,
+} from '@/services/cargos';
+import {
+  criarFuncionario,
+  excluirFuncionario,
+  listarFuncionarios,
+  mudarAcessoFuncionario,
+  mudarCargoFuncionario,
+  mudarExibicaoInstitucional,
+} from '@/services/funcionarios';
+import {
+  formatOab,
+  getInitials,
+  getLawyerInitials,
+  toTeamMember,
+} from '@/utils/funcionario';
 import EquipeClient from './equipeClient';
+import EquipePage from './page';
 
 const withAllowedPermissions = (...permissionNames) => ({
   ...createEmptyPermission(),
@@ -464,5 +488,288 @@ describe('integração da página de equipe', () => {
     expect(
       screen.queryByRole('heading', { name: 'Excluir cargo?' })
     ).not.toBeInTheDocument();
+  });
+
+  it('carrega EquipePage buscando GET /funcionarios e GET /cargos e trata falhas de rede/HTTP', async () => {
+    fetch.mockImplementation((url) => {
+      if (String(url).endsWith('/funcionarios')) {
+        return Promise.resolve(
+          createApiResponse([
+            {
+              funcionario_id: 10,
+              nome: 'Roberto Alves',
+              email: 'roberto@teste.local',
+              cargo_id: 2,
+              cargo: roles[1],
+              status: 'Ativo',
+              telefone: '(61) 98888-7777',
+            },
+          ])
+        );
+      }
+      if (String(url).endsWith('/cargos')) {
+        return Promise.resolve(createApiResponse(roles));
+      }
+      return Promise.resolve(createApiResponse([], false));
+    });
+
+    const pageElement = await EquipePage();
+    render(pageElement);
+
+    expect(screen.getByText('Roberto Alves')).toBeInTheDocument();
+    expect(screen.getByText('roberto@teste.local')).toBeInTheDocument();
+
+    fetch.mockResolvedValueOnce(createApiResponse(null, false));
+    expect(await listarFuncionarios()).toEqual([]);
+
+    fetch.mockRejectedValueOnce(new Error('Network error'));
+    expect(await listarFuncionarios()).toEqual([]);
+
+    fetch.mockResolvedValueOnce(createApiResponse(null, false));
+    expect(await listarCargos()).toEqual([]);
+
+    fetch.mockRejectedValueOnce(new Error('Network error'));
+    expect(await listarCargos()).toEqual([]);
+  });
+
+  it('valida e fecha EditUserModal (Escape, overlay, cancelar) e exibe erros ao falhar atualização de cargo', async () => {
+    const memberByRoleName = createMember({
+      funcionario_id: 11,
+      nome_func: 'Camila Rocha',
+      cargo: 'Advogado',
+    });
+    const memberWithoutRole = createMember({
+      funcionario_id: 12,
+      nome_func: 'Lucas Dias',
+      cargo: '',
+    });
+
+    renderEquipe([memberByRoleName, memberWithoutRole]);
+
+    const editButtons = screen.getAllByTitle('Editar usuário');
+    fireEvent.click(editButtons[0]);
+
+    const dialog = screen.getByRole('dialog', { name: 'Editar Usuário' });
+    expect(within(dialog).getByLabelText('Nível de Acesso')).toHaveValue('2');
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(
+      screen.queryByRole('dialog', { name: 'Editar Usuário' })
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(editButtons[1]);
+    const dialog2 = screen.getByRole('dialog', { name: 'Editar Usuário' });
+    expect(within(dialog2).getByLabelText('Nível de Acesso')).toHaveValue('');
+
+    fireEvent.click(dialog2.parentElement);
+    expect(
+      screen.queryByRole('dialog', { name: 'Editar Usuário' })
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(editButtons[0]);
+    const dialog3 = screen.getByRole('dialog', { name: 'Editar Usuário' });
+    fireEvent.change(within(dialog3).getByLabelText('Nível de Acesso'), {
+      target: { value: '3' },
+    });
+
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      json: vi.fn().mockRejectedValue(new Error('Invalid JSON')),
+    });
+    fireEvent.click(within(dialog3).getByRole('button', { name: 'Salvar' }));
+
+    expect(await within(dialog3).findByRole('alert')).toHaveTextContent(
+      'Não foi possível alterar o cargo.'
+    );
+
+    fireEvent.click(within(dialog3).getByRole('button', { name: 'Cancelar' }));
+    expect(
+      screen.queryByRole('dialog', { name: 'Editar Usuário' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('valida NewRoleModal, trata erros na criação/edição de cargos e fecha modais via Escape e overlay', async () => {
+    renderEquipe();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo Cargo' }));
+    const newRoleDialog = screen.getByRole('dialog', {
+      name: 'Criar Novo Cargo',
+    });
+
+    fireEvent.click(
+      within(newRoleDialog).getByRole('button', { name: 'Criar Cargo' })
+    );
+    expect(within(newRoleDialog).getByRole('alert')).toHaveTextContent(
+      'Informe o nome do cargo.'
+    );
+
+    fireEvent.change(within(newRoleDialog).getByLabelText('Nome do Cargo'), {
+      target: { value: '  advogado  ' },
+    });
+    fireEvent.click(
+      within(newRoleDialog).getByRole('button', { name: 'Criar Cargo' })
+    );
+    expect(within(newRoleDialog).getByRole('alert')).toHaveTextContent(
+      'Já existe um cargo com esse nome.'
+    );
+
+    fireEvent.change(within(newRoleDialog).getByLabelText('Nome do Cargo'), {
+      target: { value: 'Sócio' },
+    });
+    fireEvent.change(
+      within(newRoleDialog).getByLabelText('Descrição (opcional)'),
+      {
+        target: { value: 'Gestão societária' },
+      }
+    );
+
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      json: vi.fn().mockRejectedValue(new Error('Invalid JSON')),
+    });
+    fireEvent.click(
+      within(newRoleDialog).getByRole('button', { name: 'Criar Cargo' })
+    );
+
+    expect(await within(newRoleDialog).findByRole('alert')).toHaveTextContent(
+      'Não foi possível criar o cargo.'
+    );
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(
+      screen.queryByRole('dialog', { name: 'Criar Novo Cargo' })
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo Cargo' }));
+    const reopenedNewRole = screen.getByRole('dialog', {
+      name: 'Criar Novo Cargo',
+    });
+    fireEvent.click(reopenedNewRole.parentElement);
+    expect(
+      screen.queryByRole('dialog', { name: 'Criar Novo Cargo' })
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Editar permissões →' })[0]
+    );
+    const permDialog = screen.getByRole('dialog');
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      json: vi.fn().mockRejectedValue(new Error('Invalid JSON')),
+    });
+    fireEvent.click(within(permDialog).getByRole('button', { name: 'Salvar' }));
+
+    expect(await within(permDialog).findByRole('alert')).toHaveTextContent(
+      'Não foi possível atualizar o cargo.'
+    );
+    await waitFor(() => {
+      expect(permDialog).toHaveAttribute('aria-busy', 'false');
+    });
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Editar permissões →' })[0]
+    );
+    const reopenedPermDialog = screen.getByRole('dialog');
+    fireEvent.click(reopenedPermDialog.parentElement);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('cobre funções utilitárias de funcionario.js, permissões e ramos de erro dos serviços de funcionários e cargos', async () => {
+    expect(getInitials('  Ana   Beatriz   Costa ')).toBe('AB');
+    expect(getLawyerInitials('')).toBe('');
+    expect(getLawyerInitials('Dr.   ')).toBe('');
+    expect(getLawyerInitials('Dr. Carlos')).toBe('CA');
+    expect(getLawyerInitials('Dra. Fernanda Lima')).toBe('FL');
+    expect(getLawyerInitials('Adv. Marcos Vinícius')).toBe('MV');
+
+    expect(formatOab(null)).toBe('');
+    expect(formatOab({ uf_oab: 'df', numero_oab: '' })).toBe('');
+    expect(formatOab({ ufOab: 'sp', numeroOab: 'OAB/SP 99.888' })).toBe(
+      'OAB/SP 99.888'
+    );
+    expect(formatOab({ uf: 'rj', oab_numero: '12345' })).toBe('OAB/RJ 12.345');
+    expect(formatOab({ estado_oab: '', numero: '12345' })).toBe('OAB 12.345');
+    expect(formatOab({ oab: '987' })).toBe('OAB 987');
+    expect(formatOab('mg', '54321')).toBe('OAB/MG 54.321');
+    expect(formatOab('', '')).toBe('');
+
+    expect(
+      toTeamMember({
+        funcionario_id: 99,
+        nome: 'Pedro Costa',
+        email: 'pedro@teste.local',
+        cargo: { nome: 'Consultor' },
+        status: 'Ativo',
+      }).cargo
+    ).toBe('Consultor');
+    expect(
+      toTeamMember({
+        funcionario_id: 100,
+        nome: 'Julia Souza',
+        email: 'julia@teste.local',
+        status: 'Inativo',
+      }).cargo
+    ).toBe('Não informado');
+
+    expect(getPermissionLabel('gerenciar_documentos_extras')).toBe(
+      'Gerenciar documentos extras'
+    );
+
+    fetch.mockResolvedValueOnce(
+      createApiResponse({ funcionario_id: 1, exibicaoInstitucional: true })
+    );
+    expect(await mudarExibicaoInstitucional(1, true)).toEqual({
+      funcionario_id: 1,
+      exibicaoInstitucional: true,
+    });
+
+    fetch.mockResolvedValueOnce(
+      createApiResponse(
+        {
+          detail: [
+            { loc: ['body', 'nome'], msg: 'Field required', type: 'missing' },
+            { loc: ['body', 'email'], msg: 'inválido', type: 'value_error' },
+            { loc: [], msg: '' },
+          ],
+        },
+        false
+      )
+    );
+    await expect(mudarExibicaoInstitucional(1, false)).rejects.toThrow(
+      'Nome: campo obrigatório. E-mail: inválido'
+    );
+
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      json: vi.fn().mockRejectedValue(new Error('bad json')),
+    });
+    await expect(excluirCargo(99)).rejects.toThrow(
+      'Não foi possível excluir o cargo.'
+    );
+
+    sessionStorage.removeItem('access_token');
+    await expect(criarFuncionario({})).rejects.toThrow(
+      'Sessão expirada. Faça login novamente.'
+    );
+    await expect(mudarCargoFuncionario(1, 2)).rejects.toThrow(
+      'Sessão expirada. Faça login novamente.'
+    );
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      json: vi.fn().mockRejectedValue(new Error('bad json')),
+    });
+    await expect(excluirFuncionario(1)).rejects.toThrow(
+      'Não foi possível excluir o usuário.'
+    );
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      json: vi.fn().mockRejectedValue(new Error('bad json')),
+    });
+    await expect(mudarAcessoFuncionario(1)).rejects.toThrow(
+      'Não foi possível atualizar o acesso.'
+    );
   });
 });

@@ -154,68 +154,6 @@
   font-weight: 600;
 }
 
-/* Movimentações / Sincronização Datajud */
-.movementsList {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.movementItem {
-  display: flex;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.movementItem:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.movementIconWrapper {
-  width: 32px;
-  height: 32px;
-  border-radius: 9999px;
-  background-color: rgba(15, 23, 42, 0.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: #0f172a;
-}
-
-.movementInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.movementTitle {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 500;
-  color: #0f172a;
-}
-
-.movementMeta {
-  margin: 0;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.movementTag {
-  display: inline-flex;
-  align-items: center;
-  font-weight: 600;
-  color: #1e3a8a;
-  background-color: #eff6ff;
-  padding: 1px 6px;
-  border-radius: 4px;
-  margin-left: 6px;
-  border: 1px solid #bfdbfe;
-}
-
 /* Documentos */
 .emptyDocuments {
   display: flex;
@@ -239,21 +177,22 @@
   color: #64748b;
 }
 
-.uploadButton {
-  margin-top: 14px;
-  padding: 6px 14px;
+.emptyHint {
+  color: #64748b;
   font-size: 13px;
-  font-weight: 500;
-  color: #0f172a;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
+  line-height: 1.5;
 }
 
-.uploadButton:hover {
-  background-color: #f8fafc;
+.refreshError {
+  padding: 12px;
+  color: #991b1b;
+  background: #fef2f2;
+  font-size: 14px;
+}
+
+.tabButton:focus-visible {
+  outline: 2px solid #c5a059;
+  outline-offset: -2px;
 }
 
 @media (max-width: 560px) {

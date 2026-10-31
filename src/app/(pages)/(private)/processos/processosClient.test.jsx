@@ -11,6 +11,7 @@ import {
   criarProcesso,
   excluirProcesso,
   listarProcessos,
+  obterProcesso,
 } from '@/services/processos';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
@@ -22,6 +23,8 @@ vi.mock('@/services/processos', () => ({
   criarProcesso: vi.fn(),
   excluirProcesso: vi.fn(),
   listarProcessos: vi.fn(),
+  obterProcesso: vi.fn(),
+  sincronizarProcessos: vi.fn(),
 }));
 
 vi.mock('@/services/clientes', () => ({
@@ -114,6 +117,7 @@ const renderClient = (overrides = {}) =>
 describe('ProcessosClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    obterProcesso.mockImplementation(async (id) => apiProcess);
     sessionStorage.clear();
     sessionStorage.setItem('current_user', JSON.stringify(currentUser));
     listarClientes.mockResolvedValue(clientes);

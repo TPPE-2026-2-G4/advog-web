@@ -50,34 +50,54 @@ describe('ClientesPage', () => {
     vi.clearAllMocks();
   });
 
-  it('busca clientes e funcionários e repassa para o componente ClientesClient', async () => {
-    listarClientes.mockResolvedValue(mockClientes);
-    listarFuncionarios.mockResolvedValue(mockFuncionarios);
+  it.each([
+    {
+      cenario: 'listas preenchidas',
+      clientes: mockClientes,
+      funcionarios: mockFuncionarios,
+    },
+    {
+      cenario: 'listas vazias',
+      clientes: [],
+      funcionarios: [],
+    },
+  ])(
+    'busca clientes e funcionários ($cenario) e repassa para o ClientesClient',
+    async ({ clientes, funcionarios }) => {
+      listarClientes.mockResolvedValue(clientes);
+      listarFuncionarios.mockResolvedValue(funcionarios);
 
-    const elemento = await ClientesPage();
+      const elemento = await ClientesPage();
 
-    expect(listarClientes).toHaveBeenCalledOnce();
-    expect(listarFuncionarios).toHaveBeenCalledOnce();
-    expect(elemento.props.initialClientes).toBe(mockClientes);
-    expect(elemento.props.initialFuncionarios).toBe(mockFuncionarios);
-  });
+      expect(listarClientes).toHaveBeenCalledOnce();
+      expect(listarFuncionarios).toHaveBeenCalledOnce();
+      expect(elemento.props.initialClientes).toEqual(clientes);
+      expect(elemento.props.initialFuncionarios).toEqual(funcionarios);
+    }
+  );
 
-  it('funciona corretamente quando as listas retornam vazias', async () => {
-    listarClientes.mockResolvedValue([]);
-    listarFuncionarios.mockResolvedValue([]);
+  it.each([
+    {
+      servico: 'listarClientes',
+      setup: () => {
+        listarClientes.mockRejectedValue(new Error('Falha ao buscar clientes'));
+        listarFuncionarios.mockResolvedValue([]);
+      },
+      mensagemErro: 'Falha ao buscar clientes',
+    },
+    {
+      servico: 'listarFuncionarios',
+      setup: () => {
+        listarClientes.mockResolvedValue([]);
+        listarFuncionarios.mockRejectedValue(
+          new Error('Falha ao buscar funcionários')
+        );
+      },
+      mensagemErro: 'Falha ao buscar funcionários',
+    },
+  ])('propaga o erro caso $servico falhe', async ({ setup, mensagemErro }) => {
+    setup();
 
-    const elemento = await ClientesPage();
-
-    expect(listarClientes).toHaveBeenCalledOnce();
-    expect(listarFuncionarios).toHaveBeenCalledOnce();
-    expect(elemento.props.initialClientes).toEqual([]);
-    expect(elemento.props.initialFuncionarios).toEqual([]);
-  });
-
-  it('propaga o erro caso listarClientes ou listarFuncionarios falhe', async () => {
-    listarClientes.mockRejectedValue(new Error('Falha ao buscar clientes'));
-    listarFuncionarios.mockResolvedValue([]);
-
-    await expect(ClientesPage()).rejects.toThrow('Falha ao buscar clientes');
+    await expect(ClientesPage()).rejects.toThrow(mensagemErro);
   });
 });

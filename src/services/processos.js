@@ -96,6 +96,48 @@ export function listarProcessos(filtros = {}) {
   );
 }
 
+export async function obterProcesso(processoId) {
+  const page = await request(
+    `/processos/?processo_id=${encodeURIComponent(processoId)}&page_size=1`,
+    { cache: 'no-store' },
+    'Não foi possível atualizar os detalhes do processo.'
+  );
+  return page.itens[0] ?? null;
+}
+
+export async function listarProcessosCriticos({
+  diasSemMovimentacao = 15,
+  funcionarioId,
+} = {}) {
+  const params = new URLSearchParams();
+  if (diasSemMovimentacao !== undefined && diasSemMovimentacao !== null) {
+    params.set('dias_sem_movimentacao', String(diasSemMovimentacao));
+  }
+  if (funcionarioId !== undefined && funcionarioId !== null) {
+    params.set('funcionario_id', String(funcionarioId));
+  }
+  const query = params.toString();
+  const data = await request(
+    `/processos/criticos/${query ? `?${query}` : ''}`,
+    { cache: 'no-store' },
+    'Não foi possível carregar os processos críticos.'
+  );
+
+  if (!Array.isArray(data)) {
+    throw new Error('Não foi possível carregar os processos críticos.');
+  }
+
+  return data;
+}
+
+export function sincronizarProcessos() {
+  return request(
+    '/processos/sincronizar',
+    { method: 'POST' },
+    'Não foi possível sincronizar com o DataJud. Tente novamente.'
+  );
+}
+
 export function criarProcesso(dados) {
   return request(
     '/processos/',

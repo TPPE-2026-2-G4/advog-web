@@ -39,6 +39,12 @@ function FirstLoginConsumer() {
     ),
     field('uf', firstLogin.uf, firstLogin.setUf),
     field('numero OAB', firstLogin.numeroOab, firstLogin.setNumeroOab),
+    createElement('input', {
+      'aria-label': 'sem OAB',
+      type: 'checkbox',
+      checked: firstLogin.semOab,
+      onChange: (event) => firstLogin.setSemOab(event.target.checked),
+    }),
     createElement('output', { 'data-testid': 'erro' }, firstLogin.erro),
     createElement('button', { type: 'submit' }, 'Concluir')
   );
@@ -50,69 +56,112 @@ describe('useFirstLogin', () => {
     getTokenMock.mockReturnValue('token-de-acesso');
   });
 
-  it('inicia vazio e atualiza todos os campos', () => {
+  it.each([
+    { label: 'nome', value: 'Maria Souza' },
+    { label: 'senha', value: 'senha-segura' },
+    { label: 'confirmar senha', value: 'senha-segura' },
+    { label: 'uf', value: 'DF' },
+    { label: 'numero OAB', value: '123456' },
+  ])('inicia vazio e atualiza o campo "$label"', ({ label, value }) => {
     render(createElement(FirstLoginConsumer));
 
-    const values = [
-      ['nome', 'Maria Souza'],
-      ['senha', 'senha-segura'],
-      ['confirmar senha', 'senha-segura'],
-      ['uf', 'DF'],
-      ['numero OAB', '123456'],
-    ];
+    const input = screen.getByLabelText(label);
+    expect(input).toHaveValue('');
 
-    values.forEach(([label, value]) => {
-      const input = screen.getByLabelText(label);
-      expect(input).toHaveValue('');
-      fireEvent.change(input, { target: { value } });
-      expect(input).toHaveValue(value);
-    });
+    fireEvent.change(input, { target: { value } });
+    expect(input).toHaveValue(value);
   });
 
-  it('impede o envio quando as senhas não conferem', async () => {
-    render(createElement(FirstLoginConsumer));
+  it.each([
+    {
+      cenario: 'o token de primeiro acesso está ausente',
+      token: null,
+      senha: 'senha-1',
+      confirmarSenha: 'senha-1',
+      mensagemEsperada:
+        'Token de primeiro acesso ausente ou inválido. Acesse através do link recebido por e-mail.',
+    },
+    {
+      cenario: 'as senhas não conferem',
+      token: 'token-de-acesso',
+      senha: 'senha-1',
+      confirmarSenha: 'senha-2',
+      mensagemEsperada: 'As senhas não conferem.',
+    },
+  ])(
+    'impede o envio quando $cenario',
+    async ({ token, senha, confirmarSenha, mensagemEsperada }) => {
+      getTokenMock.mockReturnValue(token);
+      render(createElement(FirstLoginConsumer));
 
-    fireEvent.change(screen.getByLabelText('senha'), {
-      target: { value: 'senha-1' },
-    });
-    fireEvent.change(screen.getByLabelText('confirmar senha'), {
-      target: { value: 'senha-2' },
-    });
-    fireEvent.submit(screen.getByRole('button', { name: 'Concluir' }));
+      fireEvent.change(screen.getByLabelText('senha'), {
+        target: { value: senha },
+      });
+      fireEvent.change(screen.getByLabelText('confirmar senha'), {
+        target: { value: confirmarSenha },
+      });
+      fireEvent.submit(screen.getByRole('button', { name: 'Concluir' }));
 
-    expect(await screen.findByTestId('erro')).toHaveTextContent(
-      'As senhas não conferem.'
-    );
-    expect(firstLoginMock).not.toHaveBeenCalled();
-  });
+      expect(await screen.findByTestId('erro')).toHaveTextContent(
+        mensagemEsperada
+      );
+      expect(firstLoginMock).not.toHaveBeenCalled();
+    }
+  );
 
-  it('conclui o cadastro e redireciona para login', async () => {
-    firstLoginMock.mockResolvedValueOnce({ success: true });
-    render(createElement(FirstLoginConsumer));
-
-    const fields = [
-      ['nome', 'Maria Souza'],
-      ['senha', 'senha-segura'],
-      ['confirmar senha', 'senha-segura'],
-      ['uf', 'DF'],
-      ['numero OAB', '123456'],
-    ];
-    fields.forEach(([label, value]) => {
-      fireEvent.change(screen.getByLabelText(label), { target: { value } });
-    });
-    fireEvent.submit(screen.getByRole('button', { name: 'Concluir' }));
-
-    await waitFor(() => {
-      expect(firstLoginMock).toHaveBeenCalledWith({
+  it.each([
+    {
+      cenario: 'com dados da OAB',
+      semOab: false,
+      payloadEsperado: {
         token: 'token-de-acesso',
         nome: 'Maria Souza',
         senha: 'senha-segura',
         uf: 'DF',
         numeroOab: '123456',
+      },
+    },
+    {
+      cenario: 'marcando a opção sem OAB',
+      semOab: true,
+      payloadEsperado: {
+        token: 'token-de-acesso',
+        nome: 'Maria Souza',
+        senha: 'senha-segura',
+      },
+    },
+  ])(
+    'conclui o cadastro ($cenario) e redireciona para login',
+    async ({ semOab, payloadEsperado }) => {
+      firstLoginMock.mockResolvedValueOnce({ success: true });
+      render(createElement(FirstLoginConsumer));
+
+      fireEvent.change(screen.getByLabelText('nome'), {
+        target: { value: 'Maria Souza' },
       });
-      expect(pushMock).toHaveBeenCalledWith('/login?cadastro=sucesso');
-    });
-  });
+      fireEvent.change(screen.getByLabelText('senha'), {
+        target: { value: 'senha-segura' },
+      });
+      fireEvent.change(screen.getByLabelText('confirmar senha'), {
+        target: { value: 'senha-segura' },
+      });
+      fireEvent.change(screen.getByLabelText('uf'), {
+        target: { value: 'DF' },
+      });
+      fireEvent.change(screen.getByLabelText('numero OAB'), {
+        target: { value: '123456' },
+      });
+      if (semOab) {
+        fireEvent.click(screen.getByLabelText('sem OAB'));
+      }
+      fireEvent.submit(screen.getByRole('button', { name: 'Concluir' }));
+
+      await waitFor(() => {
+        expect(firstLoginMock).toHaveBeenCalledWith(payloadEsperado);
+        expect(pushMock).toHaveBeenCalledWith('/login?cadastro=sucesso');
+      });
+    }
+  );
 
   it('ignora uma segunda submissão enquanto o cadastro está em andamento', async () => {
     let resolveFirstLogin;
@@ -142,37 +191,34 @@ describe('useFirstLogin', () => {
     });
   });
 
-  it('exibe a mensagem de erro retornada pelo serviço', async () => {
-    firstLoginMock.mockRejectedValueOnce(new Error('Cadastro inválido'));
-    render(createElement(FirstLoginConsumer));
+  it.each([
+    {
+      cenario: 'instância de Error retornada pelo serviço',
+      rejeicao: new Error('Cadastro inválido'),
+      mensagemEsperada: 'Cadastro inválido',
+    },
+    {
+      cenario: 'rejeição que não é um Error',
+      rejeicao: 'falha',
+      mensagemEsperada: 'Não foi possível concluir o cadastro.',
+    },
+  ])(
+    'exibe a mensagem adequada em caso de falha ($cenario)',
+    async ({ rejeicao, mensagemEsperada }) => {
+      firstLoginMock.mockRejectedValueOnce(rejeicao);
+      render(createElement(FirstLoginConsumer));
 
-    fireEvent.change(screen.getByLabelText('senha'), {
-      target: { value: 'senha' },
-    });
-    fireEvent.change(screen.getByLabelText('confirmar senha'), {
-      target: { value: 'senha' },
-    });
-    fireEvent.submit(screen.getByRole('button', { name: 'Concluir' }));
+      fireEvent.change(screen.getByLabelText('senha'), {
+        target: { value: 'senha' },
+      });
+      fireEvent.change(screen.getByLabelText('confirmar senha'), {
+        target: { value: 'senha' },
+      });
+      fireEvent.submit(screen.getByRole('button', { name: 'Concluir' }));
 
-    expect(await screen.findByTestId('erro')).toHaveTextContent(
-      'Cadastro inválido'
-    );
-  });
-
-  it('exibe a mensagem padrão para uma rejeição que não é um Error', async () => {
-    firstLoginMock.mockRejectedValueOnce('falha');
-    render(createElement(FirstLoginConsumer));
-
-    fireEvent.change(screen.getByLabelText('senha'), {
-      target: { value: 'senha' },
-    });
-    fireEvent.change(screen.getByLabelText('confirmar senha'), {
-      target: { value: 'senha' },
-    });
-    fireEvent.submit(screen.getByRole('button', { name: 'Concluir' }));
-
-    expect(await screen.findByTestId('erro')).toHaveTextContent(
-      'Não foi possível concluir o cadastro.'
-    );
-  });
+      expect(await screen.findByTestId('erro')).toHaveTextContent(
+        mensagemEsperada
+      );
+    }
+  );
 });

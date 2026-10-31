@@ -42,20 +42,17 @@ describe('useLogin', () => {
     vi.clearAllMocks();
   });
 
-  it('inicia vazio e atualiza email e senha', () => {
+  it.each([
+    { label: 'email', value: 'ana@exemplo.com' },
+    { label: 'senha', value: 'senha-segura' },
+  ])('inicia vazio e atualiza o campo "$label"', ({ label, value }) => {
     render(createElement(LoginConsumer));
 
-    const email = screen.getByLabelText('email');
-    const senha = screen.getByLabelText('senha');
+    const input = screen.getByLabelText(label);
+    expect(input).toHaveValue('');
 
-    expect(email).toHaveValue('');
-    expect(senha).toHaveValue('');
-
-    fireEvent.change(email, { target: { value: 'ana@exemplo.com' } });
-    fireEvent.change(senha, { target: { value: 'senha-segura' } });
-
-    expect(email).toHaveValue('ana@exemplo.com');
-    expect(senha).toHaveValue('senha-segura');
+    fireEvent.change(input, { target: { value } });
+    expect(input).toHaveValue(value);
   });
 
   it('faz login e redireciona para o dashboard', async () => {
@@ -97,26 +94,29 @@ describe('useLogin', () => {
     });
   });
 
-  it('exibe a mensagem de um erro de login', async () => {
-    loginMock.mockRejectedValueOnce(new Error('Credenciais inválidas'));
-    render(createElement(LoginConsumer));
+  it.each([
+    {
+      cenario: 'instância de Error com mensagem customizada',
+      rejeicao: new Error('Credenciais inválidas'),
+      mensagemEsperada: 'Credenciais inválidas',
+    },
+    {
+      cenario: 'rejeição que não é um Error',
+      rejeicao: 'falha',
+      mensagemEsperada: 'Não foi possível entrar.',
+    },
+  ])(
+    'exibe a mensagem de erro apropriada quando o login falha ($cenario)',
+    async ({ rejeicao, mensagemEsperada }) => {
+      loginMock.mockRejectedValueOnce(rejeicao);
+      render(createElement(LoginConsumer));
 
-    fireEvent.submit(screen.getByRole('button', { name: 'Entrar' }));
+      fireEvent.submit(screen.getByRole('button', { name: 'Entrar' }));
 
-    expect(await screen.findByTestId('erro')).toHaveTextContent(
-      'Credenciais inválidas'
-    );
-    expect(pushMock).not.toHaveBeenCalled();
-  });
-
-  it('exibe a mensagem padrão para uma rejeição que não é um Error', async () => {
-    loginMock.mockRejectedValueOnce('falha');
-    render(createElement(LoginConsumer));
-
-    fireEvent.submit(screen.getByRole('button', { name: 'Entrar' }));
-
-    expect(await screen.findByTestId('erro')).toHaveTextContent(
-      'Não foi possível entrar.'
-    );
-  });
+      expect(await screen.findByTestId('erro')).toHaveTextContent(
+        mensagemEsperada
+      );
+      expect(pushMock).not.toHaveBeenCalled();
+    }
+  );
 });

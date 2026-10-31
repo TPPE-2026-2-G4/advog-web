@@ -6,6 +6,7 @@ import {
   excluirProcesso,
   getProcessosData,
   listarProcessos,
+  listarProcessosCriticos,
 } from './processos';
 
 vi.mock('@/services/funcionarios', () => ({
@@ -76,6 +77,41 @@ describe('serviço de processos', () => {
       'http://localhost:8000/processos/?busca=0061234&status=Ativo&responsavel_id=3&prazo_inicio=2026-09-01&prazo_fim=2026-09-30&page=2&page_size=5',
       { cache: 'no-store', headers: authorization }
     );
+  });
+
+  describe('listarProcessosCriticos', () => {
+    it('lista processos críticos com padrão de 15 dias sem movimentação', async () => {
+      const criticos = [processData];
+      fetch.mockResolvedValue(jsonResponse(criticos));
+
+      await expect(listarProcessosCriticos()).resolves.toEqual(criticos);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/processos/criticos/?dias_sem_movimentacao=15',
+        { cache: 'no-store', headers: authorization }
+      );
+    });
+
+    it('envia dias personalizados e funcionarioId quando informados', async () => {
+      fetch.mockResolvedValue(jsonResponse([]));
+
+      await listarProcessosCriticos({
+        diasSemMovimentacao: 30,
+        funcionarioId: 4,
+      });
+
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/processos/criticos/?dias_sem_movimentacao=30&funcionario_id=4',
+        { cache: 'no-store', headers: authorization }
+      );
+    });
+
+    it('rejeita com erro se a resposta não for um array', async () => {
+      fetch.mockResolvedValue(jsonResponse({ detalhe: 'invalido' }));
+
+      await expect(listarProcessosCriticos()).rejects.toThrow(
+        'Não foi possível carregar os processos críticos.'
+      );
+    });
   });
 
   it('envia o cadastro por POST', async () => {

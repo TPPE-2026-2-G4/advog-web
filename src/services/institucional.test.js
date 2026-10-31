@@ -38,7 +38,7 @@ describe('serviço institucional', () => {
   });
 
   describe('buscarDadosInstitucionais', () => {
-    it('retorna os dados da API quando sucesso', async () => {
+    it('retorna os dados da API mesclados quando sucesso', async () => {
       const dadosApi = {
         nomeEscritorio: 'Carreiro Advogados Atualizado',
         corPrimaria: '#000000',
@@ -56,56 +56,87 @@ describe('serviço institucional', () => {
       );
     });
 
-    it('retorna DEFAULT_INSTITUCIONAL em caso de erro da API ou falha de rede', async () => {
-      fetch.mockResolvedValue(respostaComErro('Erro interno'));
-      const resultadoErro = await buscarDadosInstitucionais();
-      expect(resultadoErro).toEqual(DEFAULT_INSTITUCIONAL);
-
-      fetch.mockRejectedValue(new Error('Network error'));
-      const resultadoRede = await buscarDadosInstitucionais();
-      expect(resultadoRede).toEqual(DEFAULT_INSTITUCIONAL);
-    });
+    it.each([
+      {
+        cenario: 'resposta da API com erro HTTP',
+        setupFetch: () =>
+          fetch.mockResolvedValue(respostaComErro('Erro interno')),
+      },
+      {
+        cenario: 'exceção de rede no fetch',
+        setupFetch: () => fetch.mockRejectedValue(new Error('Network error')),
+      },
+    ])(
+      'retorna DEFAULT_INSTITUCIONAL quando ocorre $cenario',
+      async ({ setupFetch }) => {
+        setupFetch();
+        const resultado = await buscarDadosInstitucionais();
+        expect(resultado).toEqual(DEFAULT_INSTITUCIONAL);
+      }
+    );
   });
 
   describe('salvarDadosInstitucionais', () => {
-    it('envia dados via PUT e retorna resposta da API com token se autenticado', async () => {
-      getAccessToken.mockReturnValue('token-123');
-      const novosDados = { nomeEscritorio: 'Novo Nome' };
-      fetch.mockResolvedValue(respostaJson(novosDados));
+    it.each([
+      {
+        cenario: 'autenticado com token Bearer',
+        token: 'token-123',
+        novosDados: { nomeEscritorio: 'Novo Nome' },
+        headersEsperados: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer token-123',
+        },
+      },
+      {
+        cenario: 'sem token de autenticação',
+        token: null,
+        novosDados: { nomeEscritorio: 'Sem Token' },
+        headersEsperados: {
+          'Content-Type': 'application/json',
+        },
+      },
+    ])(
+      'envia dados via PUT e retorna resposta da API ($cenario)',
+      async ({ token, novosDados, headersEsperados }) => {
+        getAccessToken.mockReturnValue(token);
+        fetch.mockResolvedValue(respostaJson(novosDados));
 
-      const res = await salvarDadosInstitucionais(novosDados);
-      expect(res).toEqual(novosDados);
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/institucional',
-        expect.objectContaining({
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer token-123',
-          },
-          body: JSON.stringify(novosDados),
-        })
-      );
-    });
+        const res = await salvarDadosInstitucionais(novosDados);
+        expect(res).toEqual(novosDados);
+        expect(fetch).toHaveBeenCalledWith(
+          'http://localhost:8000/institucional',
+          expect.objectContaining({
+            method: 'PUT',
+            headers: headersEsperados,
+            body: JSON.stringify(novosDados),
+          })
+        );
+      }
+    );
 
-    it('lança erro caso a API retorne erro detalhado', async () => {
-      fetch.mockResolvedValue(respostaComErro('Cor primária inválida'));
-
-      await expect(salvarDadosInstitucionais({})).rejects.toThrow(
-        'Cor primária inválida'
-      );
-    });
-
-    it('lança erro padrão quando resposta com erro não possui detail', async () => {
-      fetch.mockResolvedValue({
-        ok: false,
-        json: vi.fn().mockRejectedValue(new Error('Invalid json')),
-      });
-
-      await expect(salvarDadosInstitucionais({})).rejects.toThrow(
-        'Não foi possível salvar as configurações do site.'
-      );
-    });
+    it.each([
+      {
+        cenario: 'API retorna erro detalhado',
+        respostaMock: respostaComErro('Cor primária inválida'),
+        mensagemEsperada: 'Cor primária inválida',
+      },
+      {
+        cenario: 'resposta com erro não possui JSON/detail válido',
+        respostaMock: {
+          ok: false,
+          json: vi.fn().mockRejectedValue(new Error('Invalid json')),
+        },
+        mensagemEsperada: 'Não foi possível salvar as configurações do site.',
+      },
+    ])(
+      'lança erro quando $cenario',
+      async ({ respostaMock, mensagemEsperada }) => {
+        fetch.mockResolvedValue(respostaMock);
+        await expect(salvarDadosInstitucionais({})).rejects.toThrow(
+          mensagemEsperada
+        );
+      }
+    );
 
     it('retorna dados mesclados caso ocorra falha de conexão fetch', async () => {
       fetch.mockRejectedValue(new Error('fetch failed'));
@@ -115,84 +146,79 @@ describe('serviço institucional', () => {
       });
       expect(res.nomeEscritorio).toBe('Offline Test');
     });
-
-    it('salva sem header de Authorization quando getAccessToken retorna null', async () => {
-      getAccessToken.mockReturnValue(null);
-      const novosDados = { nomeEscritorio: 'Sem Token' };
-      fetch.mockResolvedValue(respostaJson(novosDados));
-
-      const res = await salvarDadosInstitucionais(novosDados);
-      expect(res).toEqual(novosDados);
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/institucional',
-        expect.objectContaining({
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-      );
-    });
   });
 
   describe('uploadImagemInstitucional', () => {
-    it('retorna URL da imagem após upload bem-sucedido de sobre com token', async () => {
-      getAccessToken.mockReturnValue('token-456');
-      fetch.mockResolvedValue(
-        respostaJson({
-          url: 'http://localhost:9000/institucional/sobre/foto.jpg',
-        })
-      );
+    it.each([
+      {
+        cenario: 'tipo "sobre" com token de autenticação',
+        token: 'token-456',
+        tipo: 'sobre',
+        arquivoNome: 'foto.jpg',
+        mimeType: 'image/jpeg',
+        urlRetornada: 'http://localhost:9000/institucional/sobre/foto.jpg',
+        endpointEsperado: 'http://localhost:8000/institucional/upload/sobre',
+        headersEsperados: { Authorization: 'Bearer token-456' },
+      },
+      {
+        cenario: 'tipo padrão ("logo") sem token de autenticação',
+        token: null,
+        tipo: undefined,
+        arquivoNome: 'logo.png',
+        mimeType: 'image/png',
+        urlRetornada: 'http://minio/logo.png',
+        endpointEsperado: 'http://localhost:8000/institucional/upload/logo',
+        headersEsperados: {},
+      },
+    ])(
+      'retorna URL da imagem após upload bem-sucedido para $cenario',
+      async ({
+        token,
+        tipo,
+        arquivoNome,
+        mimeType,
+        urlRetornada,
+        endpointEsperado,
+        headersEsperados,
+      }) => {
+        getAccessToken.mockReturnValue(token);
+        fetch.mockResolvedValue(respostaJson({ url: urlRetornada }));
 
-      const fakeFile = new File(['fake content'], 'foto.jpg', {
-        type: 'image/jpeg',
-      });
-      const url = await uploadImagemInstitucional(fakeFile, 'sobre');
-      expect(url).toBe('http://localhost:9000/institucional/sobre/foto.jpg');
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/institucional/upload/sobre',
-        expect.objectContaining({
-          headers: {
-            Authorization: 'Bearer token-456',
-          },
-        })
-      );
-    });
+        const fakeFile = new File(['fake content'], arquivoNome, {
+          type: mimeType,
+        });
+        const url = await uploadImagemInstitucional(fakeFile, tipo);
+        expect(url).toBe(urlRetornada);
+        expect(fetch).toHaveBeenCalledWith(
+          endpointEsperado,
+          expect.objectContaining({
+            headers: headersEsperados,
+          })
+        );
+      }
+    );
 
-    it('faz upload sem Authorization quando getAccessToken retorna null', async () => {
-      getAccessToken.mockReturnValue(null);
-      fetch.mockResolvedValue(respostaJson({ url: 'http://minio/logo.png' }));
-
-      const fakeFile = new File(['fake content'], 'logo.png', {
-        type: 'image/png',
-      });
-      const url = await uploadImagemInstitucional(fakeFile);
-      expect(url).toBe('http://minio/logo.png');
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/institucional/upload/logo',
-        expect.objectContaining({
-          headers: {},
-        })
-      );
-    });
-
-    it('retorna createObjectURL quando a API responde sem url', async () => {
-      fetch.mockResolvedValue(respostaJson({}));
-
-      const fakeFile = new File(['fake content'], 'logo.png', {
-        type: 'image/png',
-      });
-      const url = await uploadImagemInstitucional(fakeFile, 'logo');
-      expect(url).toMatch(/^blob:/);
-    });
-
-    it('retorna createObjectURL caso a API falhe ou ocorra exceção', async () => {
-      fetch.mockResolvedValue(respostaComErro('Erro no upload'));
-
-      const fakeFile = new File(['fake content'], 'logo.png', {
-        type: 'image/png',
-      });
-      const url = await uploadImagemInstitucional(fakeFile, 'logo');
-      expect(typeof url).toBe('string');
-    });
+    it.each([
+      {
+        cenario: 'API responde sucesso mas sem campo url',
+        setupFetch: () => fetch.mockResolvedValue(respostaJson({})),
+      },
+      {
+        cenario: 'API responde com erro HTTP',
+        setupFetch: () =>
+          fetch.mockResolvedValue(respostaComErro('Erro no upload')),
+      },
+    ])(
+      'retorna fallback createObjectURL quando $cenario',
+      async ({ setupFetch }) => {
+        setupFetch();
+        const fakeFile = new File(['fake content'], 'logo.png', {
+          type: 'image/png',
+        });
+        const url = await uploadImagemInstitucional(fakeFile, 'logo');
+        expect(typeof url).toBe('string');
+        expect(url.length).toBeGreaterThan(0);
+      }
+    );
   });
 });

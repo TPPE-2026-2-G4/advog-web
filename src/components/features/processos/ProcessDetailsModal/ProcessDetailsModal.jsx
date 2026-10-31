@@ -13,15 +13,37 @@ const getStatusStyle = (status) => {
   return styles.statusPending;
 };
 
-export default function ProcessDetailsModal({ process, onClose }) {
+export default function ProcessDetailsModal({
+  process,
+  onClose,
+  error,
+  onRetry,
+}) {
   const [activeTab, setActiveTab] = useState('resumo');
 
   if (!process) return null;
 
   const titleId = 'process-details-title';
 
-  const hasSyncDate = Boolean(process.data_realizado);
-  const syncDateFormatted = formatProcessDate(process.data_realizado);
+  const tabs = [
+    { id: 'resumo', label: 'Resumo' },
+    { id: 'movimentacoes', label: 'Movimentações' },
+    { id: 'documentos', label: 'Documentos' },
+  ];
+  const tabId = (id) => `process-${process.processo_id}-${id}`;
+  const handleTabKeyDown = (event, index) => {
+    const positions = {
+      ArrowRight: (index + 1) % tabs.length,
+      ArrowLeft: (index + tabs.length - 1) % tabs.length,
+      Home: 0,
+      End: tabs.length - 1,
+    };
+    const nextIndex = positions[event.key];
+    if (nextIndex === undefined) return;
+    event.preventDefault();
+    setActiveTab(tabs[nextIndex].id);
+    document.getElementById(tabId(tabs[nextIndex].id))?.focus();
+  };
 
   return (
     <Modal
@@ -53,37 +75,43 @@ export default function ProcessDetailsModal({ process, onClose }) {
         )}
 
         <div className={styles.tabsContainer}>
-          <div className={styles.tabsList} role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'resumo'}
-              className={`${styles.tabButton} ${activeTab === 'resumo' ? styles.tabButtonActive : ''}`}
-              onClick={() => setActiveTab('resumo')}
-            >
-              Resumo
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'movimentacoes'}
-              className={`${styles.tabButton} ${activeTab === 'movimentacoes' ? styles.tabButtonActive : ''}`}
-              onClick={() => setActiveTab('movimentacoes')}
-            >
-              Movimentações
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'documentos'}
-              className={`${styles.tabButton} ${activeTab === 'documentos' ? styles.tabButtonActive : ''}`}
-              onClick={() => setActiveTab('documentos')}
-            >
-              Documentos
-            </button>
+          <div
+            className={styles.tabsList}
+            role="tablist"
+            aria-label="Detalhes do processo"
+          >
+            {tabs.map((tab, index) => (
+              <button
+                key={tab.id}
+                id={tabId(tab.id)}
+                type="button"
+                role="tab"
+                aria-controls={`${tabId(tab.id)}-panel`}
+                aria-selected={activeTab === tab.id}
+                tabIndex={activeTab === tab.id ? 0 : -1}
+                className={`${styles.tabButton} ${activeTab === tab.id ? styles.tabButtonActive : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+                onKeyDown={(event) => handleTabKeyDown(event, index)}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-
-          <div className={styles.tabContent}>
+          {error && (
+            <div role="alert" className={styles.refreshError}>
+              <p>{error} Os dados exibidos podem estar desatualizados.</p>
+              <button type="button" onClick={onRetry}>
+                Tentar novamente
+              </button>
+            </div>
+          )}
+          <div
+            className={styles.tabContent}
+            role="tabpanel"
+            id={`${tabId(activeTab)}-panel`}
+            aria-labelledby={tabId(activeTab)}
+            tabIndex={0}
+          >
             {activeTab === 'resumo' && (
               <dl className={styles.detailsGrid}>
                 <div className={styles.detailItem}>
@@ -104,7 +132,7 @@ export default function ProcessDetailsModal({ process, onClose }) {
                 </div>
                 <div className={styles.detailItem}>
                   <dt>Data de Realização</dt>
-                  <dd>{syncDateFormatted}</dd>
+                  <dd>{formatProcessDate(process.data_realizado)}</dd>
                 </div>
                 <div className={styles.detailItem}>
                   <dt>Próximo Prazo</dt>
@@ -114,25 +142,17 @@ export default function ProcessDetailsModal({ process, onClose }) {
             )}
 
             {activeTab === 'movimentacoes' && (
-              <div className={styles.movementsList}>
-                <div className={styles.movementItem}>
-                  <div className={styles.movementIconWrapper}>
-                    <FileText size={16} aria-hidden="true" />
-                  </div>
-                  <div className={styles.movementInfo}>
-                    <p className={styles.movementTitle}>
-                      {hasSyncDate
-                        ? 'Atualização de Movimentação Sincronizada'
-                        : 'Decisão Publicada'}
-                    </p>
-                    <p className={styles.movementMeta}>
-                      {hasSyncDate
-                        ? `${syncDateFormatted}`
-                        : 'Sincronizado recentemente'}{' '}
-                      — <span className={styles.movementTag}>DataJud</span>
-                    </p>
-                  </div>
-                </div>
+              <div className={styles.emptyDocuments}>
+                <FileText
+                  className={styles.emptyDocumentsIcon}
+                  aria-hidden="true"
+                />
+                <p className={styles.emptyDocumentsText}>
+                  O histórico de movimentações ainda não está disponível.
+                </p>
+                <p className={styles.emptyHint}>
+                  Consulte os dados atuais do processo na aba Resumo.
+                </p>
               </div>
             )}
 
@@ -143,11 +163,8 @@ export default function ProcessDetailsModal({ process, onClose }) {
                   aria-hidden="true"
                 />
                 <p className={styles.emptyDocumentsText}>
-                  Nenhum documento anexado.
+                  A consulta de documentos ainda não está disponível nesta tela.
                 </p>
-                <button type="button" className={styles.uploadButton}>
-                  Fazer Upload
-                </button>
               </div>
             )}
           </div>

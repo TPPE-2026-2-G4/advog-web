@@ -5,13 +5,34 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Vitest Check [Coverage > 90%]
+  parameterized-tests:
+    name: Testes Parametrizados [Coverage > 90%]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout do código
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm ci
-      - run: npm run test:coverage
+          cache: 'npm'
+      - name: Instalar dependências
+        run: npm ci
+      - name: Executar testes parametrizados e validar cobertura (> 90%)
+        run: npm run test:param:coverage
+
+  integration-tests:
+    name: Testes de Integração [Coverage > 90%]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+      - name: Instalar dependências
+        run: npm ci
+      - name: Executar testes de integração e validar cobertura (> 90%)
+        run: npm run test:integration:coverage

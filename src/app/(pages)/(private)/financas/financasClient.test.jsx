@@ -219,35 +219,33 @@ describe('FinancasClient', () => {
     ).toBeInTheDocument();
   });
 
-  it('renderiza os botões de ação com os textos esperados', () => {
-    render(<FinancasClient initialData={mockLancamentos} />);
+  it.each([
+    {
+      botao: /Relatório/i,
+      propName: 'onExportReport',
+    },
+    {
+      botao: /Novo Lançamento/i,
+      propName: 'onNewEntry',
+    },
+  ])(
+    'renderiza o botão $botao e dispara a callback $propName ao clicar',
+    ({ botao, propName }) => {
+      const handler = vi.fn();
 
-    expect(
-      screen.getByRole('button', { name: /Relatório/i })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Novo Lançamento/i })
-    ).toBeInTheDocument();
-  });
+      render(
+        <FinancasClient
+          initialData={mockLancamentos}
+          {...{ [propName]: handler }}
+        />
+      );
 
-  it('dispara as ações ao clicar nos botões', () => {
-    const handleExportReport = vi.fn();
-    const handleNewEntry = vi.fn();
-
-    render(
-      <FinancasClient
-        initialData={mockLancamentos}
-        onExportReport={handleExportReport}
-        onNewEntry={handleNewEntry}
-      />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: /Relatório/i }));
-    expect(handleExportReport).toHaveBeenCalledOnce();
-
-    fireEvent.click(screen.getByRole('button', { name: /Novo Lançamento/i }));
-    expect(handleNewEntry).toHaveBeenCalledOnce();
-  });
+      const buttonEl = screen.getByRole('button', { name: botao });
+      expect(buttonEl).toBeInTheDocument();
+      fireEvent.click(buttonEl);
+      expect(handler).toHaveBeenCalledOnce();
+    }
+  );
 
   it('renderiza a tabela de lançamentos recentes com os dados iniciais', () => {
     render(<FinancasClient initialData={mockLancamentos} />);

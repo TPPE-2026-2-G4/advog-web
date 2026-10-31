@@ -1,0 +1,411 @@
+.card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #d4a017;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(22, 34, 56, 0.04);
+  overflow: hidden;
+  margin-top: 24px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 12px;
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.clockIcon {
+  color: #d4a017;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  font-family:
+    var(--font-cormorant),
+    Cormorant Garamond,
+    serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #b45309;
+  margin: 0;
+}
+
+.countBadge {
+  background-color: #fef3c7;
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid #fde68a;
+}
+
+.reloadingIndicator {
+  display: inline-flex;
+  align-items: center;
+  color: #92400e;
+  margin-left: 6px;
+}
+
+.spinningIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.accordionToggle {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.accordionToggle:hover {
+  background-color: #f9fafb;
+}
+
+.chevronIcon {
+  transition: transform 0.2s ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.errorState {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 24px;
+  background-color: #fef2f2;
+  border-bottom: 1px solid #fee2e2;
+  color: #991b1b;
+}
+
+.errorIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #dc2626;
+}
+
+.errorContent {
+  flex: 1;
+}
+
+.errorMessage {
+  margin: 0 0 8px 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.retryButton {
+  background-color: #ffffff;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.retryButton:hover {
+  background-color: #fef2f2;
+}
+
+.loadingState {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeletonRow {
+  height: 44px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.emptyState {
+  text-align: center;
+  padding: 48px 24px;
+  color: #6b7280;
+}
+
+.emptyIcon {
+  margin: 0 auto 12px;
+  color: #9ca3af;
+}
+
+.emptyTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 6px 0;
+}
+
+.emptySubtitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.thead {
+  background-color: rgba(22, 34, 56, 0.04);
+}
+
+.th {
+  padding: 12px 24px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+}
+
+.actionsHeading {
+  text-align: right;
+}
+
+.tbody {
+  background-color: #ffffff;
+}
+
+.tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.15s ease;
+}
+
+.tr:hover {
+  background-color: rgba(183, 154, 99, 0.05);
+}
+
+.tr:last-child {
+  border-bottom: none;
+}
+
+.td {
+  padding: 16px 24px;
+  vertical-align: middle;
+}
+
+.processNumber {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0 0 2px 0;
+}
+
+.processTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #162238;
+  margin: 0;
+}
+
+.clientName {
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.movementContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.warningBadge {
+  display: inline-block;
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.noMovementBadge {
+  display: inline-block;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.daysText {
+  font-size: 0.75rem;
+  color: #8a8a86;
+}
+
+.actionTd {
+  text-align: right;
+}
+
+.analyzeButton {
+  background: transparent;
+  color: #162238;
+  border: 1px solid #d6d3cd;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 36px;
+}
+
+.analyzeButton:hover {
+  background-color: #162238;
+  color: #ffffff;
+  border-color: #162238;
+}
+
+.analyzeButton:focus-visible,
+.accordionToggle:focus-visible,
+.mobileAnalyzeButton:focus-visible {
+  outline: 2px solid #b79a63;
+  outline-offset: 2px;
+}
+
+.mobileList {
+  display: none;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Responsividade Mobile (< 768px) */
+@media (max-width: 767px) {
+  .accordionToggle {
+    display: flex;
+  }
+
+  .tableScroll {
+    display: none;
+  }
+
+  .contentWrapper {
+    display: none;
+  }
+
+  .contentExpanded {
+    display: block;
+  }
+
+  .mobileList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .mobileCard {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mobileCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .mobileCardTitle {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #162238;
+    margin: 0;
+  }
+
+  .mobileClientText {
+    font-size: 0.8125rem;
+    color: #4b5563;
+    margin: 0;
+  }
+
+  .mobileAnalyzeButton {
+    margin-top: 6px;
+    width: 100%;
+    min-height: 44px;
+    background-color: #f9fafb;
+    border: 1px solid #d6d3cd;
+    border-radius: 6px;
+    color: #162238;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  .mobileAnalyzeButton:hover {
+    background-color: #162238;
+    color: #ffffff;
+  }
+}

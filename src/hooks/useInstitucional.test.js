@@ -98,29 +98,58 @@ describe('useInstitucional', () => {
     expect(result.current.areas).toHaveLength(2);
   });
 
-  it('permite alterar a aba ativa', () => {
-    const { result } = renderHook(() => useInstitucional());
+  it.each([{ aba: 'content' }, { aba: 'colors' }, { aba: 'team' }])(
+    'permite alterar a aba ativa para "$aba"',
+    ({ aba }) => {
+      const { result } = renderHook(() => useInstitucional());
 
-    act(() => {
-      result.current.setActiveTab('content');
-    });
-    expect(result.current.activeTab).toBe('content');
+      act(() => {
+        result.current.setActiveTab(aba);
+      });
 
-    act(() => {
-      result.current.setActiveTab('colors');
-    });
-    expect(result.current.activeTab).toBe('colors');
-  });
+      expect(result.current.activeTab).toBe(aba);
+    }
+  );
 
-  it('atualiza campos do formulário através de handleInputChange', () => {
-    const { result } = renderHook(() => useInstitucional());
+  it.each([
+    {
+      campo: 'nomeEscritorio',
+      valorInicial: 'Carreiro Advogados',
+      novoValor: 'Novo Escritório',
+    },
+    {
+      campo: 'logotipo',
+      valorInicial: 'http://example.com/logo.png',
+      novoValor: '',
+    },
+    {
+      campo: 'bannerHero',
+      valorInicial: 'http://example.com/banner.jpg',
+      novoValor: '',
+    },
+  ])(
+    'atualiza o campo "$campo" do formulário através de handleInputChange',
+    ({ campo, valorInicial, novoValor }) => {
+      const { result } = renderHook(() =>
+        useInstitucional(
+          {
+            ...DEFAULT_INSTITUCIONAL,
+            [campo]: valorInicial,
+          },
+          { isAdmin: false }
+        )
+      );
 
-    act(() => {
-      result.current.handleInputChange('nomeEscritorio', 'Novo Escritório');
-    });
+      expect(result.current.isAdmin).toBe(false);
+      expect(result.current.formData[campo]).toBe(valorInicial);
 
-    expect(result.current.formData.nomeEscritorio).toBe('Novo Escritório');
-  });
+      act(() => {
+        result.current.handleInputChange(campo, novoValor);
+      });
+
+      expect(result.current.formData[campo]).toBe(novoValor);
+    }
+  );
 
   it('abre e fecha o modal de prévia', () => {
     const { result } = renderHook(() => useInstitucional());
@@ -136,71 +165,178 @@ describe('useInstitucional', () => {
     expect(result.current.isPreviewOpen).toBe(false);
   });
 
-  it('valida formato e tamanho ao fazer upload de logotipo', async () => {
+  it.each([
+    {
+      cenario: 'logotipo com formato inválido',
+      handler: 'handleUploadLogo',
+      file: new File(['x'], 'doc.pdf', { type: 'application/pdf' }),
+      erroEsperado: 'Formato inválido. Selecione um arquivo PNG ou SVG.',
+    },
+    {
+      cenario: 'logotipo acima do tamanho máximo (2 MB)',
+      handler: 'handleUploadLogo',
+      file: new File([new ArrayBuffer(3 * 1024 * 1024)], 'logo.png', {
+        type: 'image/png',
+      }),
+      erroEsperado: 'O arquivo excede o limite máximo de 2 MB.',
+    },
+    {
+      cenario: 'banner hero com formato inválido',
+      handler: 'handleUploadBanner',
+      file: new File(['x'], 'anim.gif', { type: 'image/gif' }),
+      erroEsperado: 'Formato inválido. Selecione um arquivo JPG ou PNG.',
+    },
+    {
+      cenario: 'banner hero acima do tamanho máximo (5 MB)',
+      handler: 'handleUploadBanner',
+      file: new File([new ArrayBuffer(6 * 1024 * 1024)], 'banner.png', {
+        type: 'image/png',
+      }),
+      erroEsperado: 'O arquivo excede o limite máximo de 5 MB.',
+    },
+    {
+      cenario: 'imagem sobre com formato inválido',
+      handler: 'handleUploadImagemSobre',
+      file: new File(['x'], 'doc.pdf', { type: 'application/pdf' }),
+      erroEsperado: 'Formato inválido. Selecione um arquivo JPG ou PNG.',
+    },
+    {
+      cenario: 'imagem sobre acima do tamanho máximo (5 MB)',
+      handler: 'handleUploadImagemSobre',
+      file: new File([new ArrayBuffer(6 * 1024 * 1024)], 'sobre.png', {
+        type: 'image/png',
+      }),
+      erroEsperado: 'O arquivo excede o limite máximo de 5 MB.',
+    },
+  ])('rejeita upload de $cenario', async ({ handler, file, erroEsperado }) => {
     const { result } = renderHook(() => useInstitucional());
 
-    const arquivoInvalido = new File(['x'], 'doc.pdf', {
-      type: 'application/pdf',
-    });
     await act(async () => {
-      await result.current.handleUploadLogo(arquivoInvalido);
+      await result.current[handler](file);
     });
-    expect(result.current.uploadError).toContain('Formato inválido');
 
-    const arquivoGrande = new File(
-      [new ArrayBuffer(3 * 1024 * 1024)],
-      'logo.png',
-      {
-        type: 'image/png',
-      }
-    );
-    await act(async () => {
-      await result.current.handleUploadLogo(arquivoGrande);
-    });
-    expect(result.current.uploadError).toContain('excede o limite');
-
-    uploadImagemInstitucional.mockResolvedValueOnce('http://minio/logo.png');
-    const arquivoValido = new File(['ok'], 'logo.png', { type: 'image/png' });
-    await act(async () => {
-      await result.current.handleUploadLogo(arquivoValido);
-    });
-    expect(result.current.formData.logotipo).toBe('http://minio/logo.png');
-    expect(result.current.logoPreview).toBe('http://minio/logo.png');
+    expect(result.current.uploadError).toBe(erroEsperado);
+    expect(uploadImagemInstitucional).not.toHaveBeenCalled();
   });
 
-  it('valida formato ao fazer upload de banner hero', async () => {
-    const { result } = renderHook(() => useInstitucional());
+  it.each([
+    {
+      tipo: 'logotipo',
+      handler: 'handleUploadLogo',
+      file: new File(['ok'], 'logo.png', { type: 'image/png' }),
+      urlRetornada: 'http://minio/logo.png',
+      formField: 'logotipo',
+      previewKey: 'logoPreview',
+    },
+    {
+      tipo: 'banner hero',
+      handler: 'handleUploadBanner',
+      file: new File(['ok'], 'banner.jpg', { type: 'image/jpeg' }),
+      urlRetornada: 'http://minio/banner.jpg',
+      formField: 'bannerHero',
+      previewKey: 'bannerPreview',
+    },
+    {
+      tipo: 'imagem sobre',
+      handler: 'handleUploadImagemSobre',
+      file: new File(['ok'], 'sobre.jpg', { type: 'image/jpeg' }),
+      urlRetornada: 'http://minio/sobre.jpg',
+      formField: 'imagemSobre',
+      previewKey: 'sobreImagePreview',
+    },
+  ])(
+    'realiza upload válido de $tipo e atualiza preview e formData',
+    async ({ handler, file, urlRetornada, formField, previewKey }) => {
+      uploadImagemInstitucional.mockResolvedValueOnce(urlRetornada);
+      const { result } = renderHook(() => useInstitucional());
 
-    const arquivoInvalido = new File(['x'], 'anim.gif', { type: 'image/gif' });
-    await act(async () => {
-      await result.current.handleUploadBanner(arquivoInvalido);
-    });
-    expect(result.current.uploadError).toContain('Formato inválido');
+      await act(async () => {
+        await result.current[handler](file);
+      });
 
-    const arquivoGrande = new File(
-      [new ArrayBuffer(6 * 1024 * 1024)],
-      'banner.png',
-      {
-        type: 'image/png',
-      }
-    );
-    await act(async () => {
-      await result.current.handleUploadBanner(arquivoGrande);
-    });
-    expect(result.current.uploadError).toContain('excede o limite');
+      expect(result.current.formData[formField]).toBe(urlRetornada);
+      expect(result.current[previewKey]).toBe(urlRetornada);
+      expect(result.current.uploadError).toBe('');
+    }
+  );
 
-    uploadImagemInstitucional.mockResolvedValueOnce('http://minio/banner.jpg');
-    const arquivoValido = new File(['ok'], 'banner.jpg', {
-      type: 'image/jpeg',
-    });
-    await act(async () => {
-      await result.current.handleUploadBanner(arquivoValido);
-    });
-    expect(result.current.formData.bannerHero).toBe('http://minio/banner.jpg');
-    expect(result.current.bannerPreview).toBe('http://minio/banner.jpg');
-  });
+  it.each([
+    {
+      cenario: 'logotipo com mensagem de erro da API',
+      handler: 'handleUploadLogo',
+      file: new File(['ok'], 'logo.png', { type: 'image/png' }),
+      erroSimulado: new Error('Falha no upload do logo'),
+      mensagemEsperada: 'Falha no upload do logo',
+    },
+    {
+      cenario: 'logotipo com erro sem mensagem explícita',
+      handler: 'handleUploadLogo',
+      file: new File(['ok'], 'logo.png', { type: 'image/png' }),
+      erroSimulado: {},
+      mensagemEsperada: 'Falha ao carregar logotipo.',
+    },
+    {
+      cenario: 'banner hero com mensagem de erro da API',
+      handler: 'handleUploadBanner',
+      file: new File(['ok'], 'banner.jpg', { type: 'image/jpeg' }),
+      erroSimulado: new Error('Falha no upload do banner'),
+      mensagemEsperada: 'Falha no upload do banner',
+    },
+    {
+      cenario: 'banner hero com erro sem mensagem explícita',
+      handler: 'handleUploadBanner',
+      file: new File(['ok'], 'banner.jpg', { type: 'image/jpeg' }),
+      erroSimulado: {},
+      mensagemEsperada: 'Falha ao carregar imagem do banner.',
+    },
+    {
+      cenario: 'imagem sobre com mensagem de erro da API',
+      handler: 'handleUploadImagemSobre',
+      file: new File(['ok'], 'sobre.jpg', { type: 'image/jpeg' }),
+      erroSimulado: new Error('Falha no upload sobre'),
+      mensagemEsperada: 'Falha no upload sobre',
+    },
+    {
+      cenario: 'imagem sobre com erro sem mensagem explícita',
+      handler: 'handleUploadImagemSobre',
+      file: new File(['ok'], 'sobre.jpg', { type: 'image/jpeg' }),
+      erroSimulado: {},
+      mensagemEsperada: 'Falha ao carregar imagem da seção sobre.',
+    },
+  ])(
+    'trata erro no upload de $cenario',
+    async ({ handler, file, erroSimulado, mensagemEsperada }) => {
+      uploadImagemInstitucional.mockRejectedValueOnce(erroSimulado);
+      const { result } = renderHook(() => useInstitucional());
 
-  it('salva configurações com sucesso através de handleSave', async () => {
+      await act(async () => {
+        await result.current[handler](file);
+      });
+
+      expect(result.current.uploadError).toBe(mensagemEsperada);
+    }
+  );
+
+  it.each([
+    { handler: 'handleUploadLogo' },
+    { handler: 'handleUploadBanner' },
+    { handler: 'handleUploadImagemSobre' },
+  ])(
+    'não executa upload em $handler se o arquivo for nulo',
+    async ({ handler }) => {
+      const { result } = renderHook(() => useInstitucional());
+
+      await act(async () => {
+        await result.current[handler](null);
+      });
+
+      expect(result.current.uploadError).toBe('');
+      expect(uploadImagemInstitucional).not.toHaveBeenCalled();
+    }
+  );
+
+  it('salva configurações com sucesso através de handleSave e reseta saveSuccess após 4000ms', async () => {
+    vi.useFakeTimers();
     const dadosSalvos = {
       ...DEFAULT_INSTITUCIONAL,
       nomeEscritorio: 'Escritório Salvo',
@@ -216,22 +352,6 @@ describe('useInstitucional', () => {
     expect(result.current.saveSuccess).toBe(true);
     expect(result.current.formData.nomeEscritorio).toBe('Escritório Salvo');
     expect(result.current.isSaving).toBe(false);
-  });
-
-  it('reseta saveSuccess para false após 4000ms com setTimeout', async () => {
-    vi.useFakeTimers();
-    salvarDadosInstitucionais.mockResolvedValueOnce({
-      ...DEFAULT_INSTITUCIONAL,
-      nomeEscritorio: 'Timer Test',
-    });
-
-    const { result } = renderHook(() => useInstitucional());
-
-    await act(async () => {
-      await result.current.handleSave();
-    });
-
-    expect(result.current.saveSuccess).toBe(true);
 
     act(() => {
       vi.advanceTimersByTime(4000);
@@ -241,100 +361,32 @@ describe('useInstitucional', () => {
     vi.useRealTimers();
   });
 
-  it('trata erro ao salvar configurações', async () => {
-    salvarDadosInstitucionais.mockRejectedValueOnce(
-      new Error('Erro de conexão ao salvar')
-    );
+  it.each([
+    {
+      cenario: 'erro com mensagem explícita',
+      erroSimulado: new Error('Erro de conexão ao salvar'),
+      mensagemEsperada: 'Erro de conexão ao salvar',
+    },
+    {
+      cenario: 'erro genérico sem mensagem explícita',
+      erroSimulado: {},
+      mensagemEsperada: 'Erro ao salvar as configurações.',
+    },
+  ])(
+    'trata falha ao salvar configurações ($cenario)',
+    async ({ erroSimulado, mensagemEsperada }) => {
+      salvarDadosInstitucionais.mockRejectedValueOnce(erroSimulado);
+      const { result } = renderHook(() => useInstitucional());
 
-    const { result } = renderHook(() => useInstitucional());
+      await act(async () => {
+        await result.current.handleSave();
+      });
 
-    await act(async () => {
-      await result.current.handleSave();
-    });
-
-    expect(result.current.saveSuccess).toBe(false);
-    expect(result.current.saveError).toBe('Erro de conexão ao salvar');
-    expect(result.current.isSaving).toBe(false);
-  });
-
-  it('trata erro no upload de logotipo e banner quando serviço lança exceção', async () => {
-    uploadImagemInstitucional.mockRejectedValueOnce(
-      new Error('Falha no upload do logo')
-    );
-    const { result } = renderHook(() => useInstitucional());
-    const arquivoValido = new File(['ok'], 'logo.png', { type: 'image/png' });
-
-    await act(async () => {
-      await result.current.handleUploadLogo(arquivoValido);
-    });
-    expect(result.current.uploadError).toBe('Falha no upload do logo');
-
-    uploadImagemInstitucional.mockRejectedValueOnce(
-      new Error('Falha no upload do banner')
-    );
-    const bannerValido = new File(['ok'], 'banner.jpg', {
-      type: 'image/jpeg',
-    });
-    await act(async () => {
-      await result.current.handleUploadBanner(bannerValido);
-    });
-    expect(result.current.uploadError).toBe('Falha no upload do banner');
-
-    uploadImagemInstitucional.mockRejectedValueOnce({});
-    await act(async () => {
-      await result.current.handleUploadLogo(arquivoValido);
-    });
-    expect(result.current.uploadError).toBe('Falha ao carregar logotipo.');
-
-    uploadImagemInstitucional.mockRejectedValueOnce({});
-    await act(async () => {
-      await result.current.handleUploadBanner(bannerValido);
-    });
-    expect(result.current.uploadError).toBe(
-      'Falha ao carregar imagem do banner.'
-    );
-  });
-
-  it('não executa upload se o arquivo for nulo ou indefinido', async () => {
-    const { result } = renderHook(() => useInstitucional());
-
-    await act(async () => {
-      await result.current.handleUploadLogo(null);
-      await result.current.handleUploadBanner(null);
-    });
-
-    expect(result.current.uploadError).toBe('');
-  });
-
-  it('permite limpar o logotipo e o banner através de handleInputChange', () => {
-    const { result } = renderHook(() =>
-      useInstitucional(
-        {
-          logotipo: 'http://example.com/logo.png',
-          bannerHero: 'http://example.com/banner.jpg',
-        },
-        { isAdmin: false }
-      )
-    );
-
-    expect(result.current.isAdmin).toBe(false);
-
-    act(() => {
-      result.current.handleInputChange('logotipo', '');
-      result.current.handleInputChange('bannerHero', '');
-    });
-    expect(result.current.formData.logotipo).toBe('');
-    expect(result.current.formData.bannerHero).toBe('');
-  });
-
-  it('permite alterar a aba ativa para team', () => {
-    const { result } = renderHook(() => useInstitucional());
-
-    act(() => {
-      result.current.setActiveTab('team');
-    });
-    expect(result.current.activeTab).toBe('team');
-  });
+      expect(result.current.saveSuccess).toBe(false);
+      expect(result.current.saveError).toBe(mensagemEsperada);
+      expect(result.current.isSaving).toBe(false);
+    }
+  );
 
   it('inicializa team e areas com opções customizadas quando fornecidas', () => {
     const customTeam = [
@@ -352,67 +404,6 @@ describe('useInstitucional', () => {
 
     expect(result.current.team).toEqual(customTeam);
     expect(result.current.areas).toEqual(customAreas);
-  });
-
-  it('valida formato e tamanho ao fazer upload de imagem sobre', async () => {
-    const { result } = renderHook(() => useInstitucional());
-
-    const arquivoInvalido = new File(['x'], 'doc.pdf', {
-      type: 'application/pdf',
-    });
-    await act(async () => {
-      await result.current.handleUploadImagemSobre(arquivoInvalido);
-    });
-    expect(result.current.uploadError).toContain('Formato inválido');
-
-    const arquivoGrande = new File(
-      [new ArrayBuffer(6 * 1024 * 1024)],
-      'sobre.png',
-      {
-        type: 'image/png',
-      }
-    );
-    await act(async () => {
-      await result.current.handleUploadImagemSobre(arquivoGrande);
-    });
-    expect(result.current.uploadError).toContain('excede o limite');
-
-    uploadImagemInstitucional.mockResolvedValueOnce('http://minio/sobre.jpg');
-    const arquivoValido = new File(['ok'], 'sobre.jpg', {
-      type: 'image/jpeg',
-    });
-    await act(async () => {
-      await result.current.handleUploadImagemSobre(arquivoValido);
-    });
-    expect(result.current.formData.imagemSobre).toBe('http://minio/sobre.jpg');
-    expect(result.current.sobreImagePreview).toBe('http://minio/sobre.jpg');
-  });
-
-  it('trata erro no upload de imagem sobre', async () => {
-    uploadImagemInstitucional.mockRejectedValueOnce(
-      new Error('Falha no upload sobre')
-    );
-    const { result } = renderHook(() => useInstitucional());
-    const arquivoValido = new File(['ok'], 'sobre.jpg', {
-      type: 'image/jpeg',
-    });
-
-    await act(async () => {
-      await result.current.handleUploadImagemSobre(arquivoValido);
-    });
-    expect(result.current.uploadError).toBe('Falha no upload sobre');
-
-    uploadImagemInstitucional.mockRejectedValueOnce({});
-    await act(async () => {
-      await result.current.handleUploadImagemSobre(arquivoValido);
-    });
-    expect(result.current.uploadError).toBe(
-      'Falha ao carregar imagem da seção sobre.'
-    );
-
-    await act(async () => {
-      await result.current.handleUploadImagemSobre(null);
-    });
   });
 
   it('alterna a visibilidade de um advogado da equipe através de handleToggleLawyerVisibility', () => {
@@ -479,22 +470,32 @@ describe('useInstitucional', () => {
       await result.current.handleDeleteArea(3);
     });
     expect(result.current.areas).toHaveLength(2);
-
-    // Erro ao excluir com mensagem e sem mensagem
-    excluirAtuacao.mockRejectedValueOnce(new Error('Falha ao excluir'));
-    await act(async () => {
-      await result.current.handleDeleteArea(1);
-    });
-    expect(result.current.saveError).toBe('Falha ao excluir');
-
-    excluirAtuacao.mockRejectedValueOnce({});
-    await act(async () => {
-      await result.current.handleDeleteArea(1);
-    });
-    expect(result.current.saveError).toBe(
-      'Não foi possível excluir a área de atuação.'
-    );
   });
+
+  it.each([
+    {
+      cenario: 'erro com mensagem explícita',
+      erroSimulado: new Error('Falha ao excluir'),
+      mensagemEsperada: 'Falha ao excluir',
+    },
+    {
+      cenario: 'erro sem mensagem explícita',
+      erroSimulado: {},
+      mensagemEsperada: 'Não foi possível excluir a área de atuação.',
+    },
+  ])(
+    'trata erro ao excluir área de atuação ($cenario)',
+    async ({ erroSimulado, mensagemEsperada }) => {
+      excluirAtuacao.mockRejectedValueOnce(erroSimulado);
+      const { result } = renderHook(() => useInstitucional());
+
+      await act(async () => {
+        await result.current.handleDeleteArea(1);
+      });
+
+      expect(result.current.saveError).toBe(mensagemEsperada);
+    }
+  );
 
   it('sincroniza a visibilidade da equipe e áreas no salvar', async () => {
     salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
@@ -518,17 +519,6 @@ describe('useInstitucional', () => {
     expect(mudarExibicaoInstitucional).toHaveBeenCalledWith(1, false);
     expect(mudarExibicaoAtuacao).toHaveBeenCalledWith(1, false);
     expect(result.current.saveSuccess).toBe(true);
-  });
-
-  it('trata erro genérico sem mensagem explícita ao salvar configurações', async () => {
-    salvarDadosInstitucionais.mockRejectedValueOnce({});
-    const { result } = renderHook(() => useInstitucional());
-
-    await act(async () => {
-      await result.current.handleSave();
-    });
-
-    expect(result.current.saveError).toBe('Erro ao salvar as configurações.');
   });
 
   it('salva com sucesso quando team e areas são vazios ou inexistentes', async () => {
@@ -590,7 +580,6 @@ describe('useInstitucional', () => {
     expect(result.current.areas).toHaveLength(1);
     expect(result.current.areas[0].nome).toBe('Direito Tributário');
 
-    // Testa também retorno sem logotipo/banner/imagemSobre e sem nomeEscritorio
     buscarDadosInstitucionais.mockResolvedValueOnce({
       id: 1,
       nomeEscritorio: 'Escritório Sem Mídia',

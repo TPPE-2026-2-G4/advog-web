@@ -20,39 +20,43 @@ describe('ProcessosPage', () => {
     vi.clearAllMocks();
   });
 
-  it('entrega ao cliente os dados iniciais carregados no servidor', async () => {
-    const data = {
-      initialPage: {
-        itens: [{ processo_id: 1, cnj: '0061234-56.2026.8.26.0100' }],
-        total: 1,
-        page: 1,
-        pageSize: 5,
-        totalPages: 1,
+  it.each([
+    {
+      cenario: 'os dados iniciais carregados no servidor',
+      payload: {
+        initialPage: {
+          itens: [{ processo_id: 1, cnj: '0061234-56.2026.8.26.0100' }],
+          total: 1,
+          page: 1,
+          pageSize: 5,
+          totalPages: 1,
+        },
+        responsaveis: [{ value: '3', label: 'Ana Paula Ribeiro' }],
+        initialError: '',
       },
-      responsaveis: [{ value: '3', label: 'Ana Paula Ribeiro' }],
-      initialError: '',
-    };
-    getProcessosData.mockResolvedValue(data);
+    },
+    {
+      cenario: 'o erro inicial sem derrubar a página',
+      payload: {
+        initialPage: {
+          itens: [],
+          total: 0,
+          page: 1,
+          pageSize: 5,
+          totalPages: 1,
+        },
+        responsaveis: [],
+        initialError: 'API indisponível',
+      },
+    },
+  ])('entrega ao cliente $cenario', async ({ payload }) => {
+    getProcessosData.mockResolvedValue(payload);
 
     render(await ProcessosPage());
 
     expect(getProcessosData).toHaveBeenCalledTimes(1);
     expect(
       JSON.parse(screen.getByTestId('processos-client').textContent)
-    ).toEqual(data);
-  });
-
-  it('entrega o erro inicial sem derrubar a página', async () => {
-    getProcessosData.mockResolvedValue({
-      initialPage: { itens: [], total: 0, page: 1, pageSize: 5, totalPages: 1 },
-      responsaveis: [],
-      initialError: 'API indisponível',
-    });
-
-    render(await ProcessosPage());
-
-    expect(screen.getByTestId('processos-client')).toHaveTextContent(
-      '"initialError":"API indisponível"'
-    );
+    ).toEqual(payload);
   });
 });

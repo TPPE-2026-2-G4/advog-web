@@ -139,3 +139,33 @@
     animation: none;
   }
 }
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.syncHint,
+.syncSuccess,
+.syncError {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.syncHint {
+  color: #64748b;
+}
+.syncSuccess {
+  color: #166534;
+}
+.syncError {
+  color: #991b1b;
+}
+
+@media (max-width: 640px) {
+  .headerActions {
+    flex-direction: column;
+  }
+}

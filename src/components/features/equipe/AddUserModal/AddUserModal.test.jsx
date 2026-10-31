@@ -18,6 +18,22 @@ const renderModal = (props = {}) =>
     />
   );
 
+function fillUserForm({
+  nome = 'Maria Silva',
+  email = 'maria@teste.local',
+  cargo = '2',
+} = {}) {
+  fireEvent.change(screen.getByLabelText('Nome completo'), {
+    target: { value: nome },
+  });
+  fireEvent.change(screen.getByLabelText('Email empresarial'), {
+    target: { value: email },
+  });
+  fireEvent.change(screen.getByLabelText('Cargo'), {
+    target: { value: cargo },
+  });
+}
+
 describe('AddUserModal', () => {
   it('não renderiza quando está fechado', () => {
     renderModal({ isOpen: false });
@@ -27,19 +43,12 @@ describe('AddUserModal', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('renderiza título, campos obrigatórios e ações', () => {
+  it('renderiza título e botões de ação principais', () => {
     renderModal();
 
     expect(
       screen.getByRole('heading', { name: 'Adicionar Novo Usuário' })
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('Nome completo')).toBeRequired();
-    expect(screen.getByLabelText('Email empresarial')).toBeRequired();
-    expect(screen.getByLabelText('Cargo')).toBeRequired();
-    expect(screen.getByRole('option', { name: 'Administrador' })).toHaveValue(
-      '1'
-    );
-    expect(screen.getByRole('option', { name: 'Advogado' })).toHaveValue('2');
     expect(
       screen.getByRole('button', { name: 'Adicionar' })
     ).toBeInTheDocument();
@@ -48,19 +57,29 @@ describe('AddUserModal', () => {
     ).toBeInTheDocument();
   });
 
+  it.each(['Nome completo', 'Email empresarial', 'Cargo'])(
+    'renderiza o campo obrigatório "%s"',
+    (label) => {
+      renderModal();
+      expect(screen.getByLabelText(label)).toBeRequired();
+    }
+  );
+
+  it.each(roles)(
+    'renderiza a opção de cargo "$nome_cargo" com valor $cargo_id',
+    ({ cargo_id, nome_cargo }) => {
+      renderModal();
+      expect(screen.getByRole('option', { name: nome_cargo })).toHaveValue(
+        String(cargo_id)
+      );
+    }
+  );
+
   it('atualiza os campos e envia os dados ao submeter o formulário', async () => {
     const onCreated = vi.fn().mockResolvedValue({ funcionario_id: 1 });
     renderModal({ onCreated });
 
-    fireEvent.change(screen.getByLabelText('Nome completo'), {
-      target: { value: 'Maria Silva' },
-    });
-    fireEvent.change(screen.getByLabelText('Email empresarial'), {
-      target: { value: 'maria@teste.local' },
-    });
-    fireEvent.change(screen.getByLabelText('Cargo'), {
-      target: { value: '2' },
-    });
+    fillUserForm();
     fireEvent.submit(screen.getByRole('button', { name: 'Adicionar' }));
 
     await waitFor(() =>
@@ -77,12 +96,10 @@ describe('AddUserModal', () => {
     renderModal({ onCreated });
     const email = screen.getByLabelText('Email empresarial');
 
-    fireEvent.change(screen.getByLabelText('Nome completo'), {
-      target: { value: 'João Santos' },
-    });
-    fireEvent.change(email, { target: { value: 'joao@teste.local' } });
-    fireEvent.change(screen.getByLabelText('Cargo'), {
-      target: { value: '1' },
+    fillUserForm({
+      nome: 'João Santos',
+      email: 'joao@teste.local',
+      cargo: '1',
     });
     fireEvent.keyDown(email, { key: 'Enter', code: 'Enter' });
     fireEvent.submit(email.form);
@@ -95,15 +112,7 @@ describe('AddUserModal', () => {
     const onCreated = vi.fn().mockResolvedValue({ funcionario_id: 1 });
     const { rerender } = renderModal({ onClose, onCreated });
 
-    fireEvent.change(screen.getByLabelText('Nome completo'), {
-      target: { value: 'Maria Silva' },
-    });
-    fireEvent.change(screen.getByLabelText('Email empresarial'), {
-      target: { value: 'maria@teste.local' },
-    });
-    fireEvent.change(screen.getByLabelText('Cargo'), {
-      target: { value: '2' },
-    });
+    fillUserForm();
     fireEvent.submit(screen.getByRole('button', { name: 'Adicionar' }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
@@ -127,15 +136,7 @@ describe('AddUserModal', () => {
       .mockRejectedValue(new Error('E-mail já cadastrado'));
     renderModal({ onClose, onCreated });
 
-    fireEvent.change(screen.getByLabelText('Nome completo'), {
-      target: { value: 'Maria Silva' },
-    });
-    fireEvent.change(screen.getByLabelText('Email empresarial'), {
-      target: { value: 'maria@teste.local' },
-    });
-    fireEvent.change(screen.getByLabelText('Cargo'), {
-      target: { value: '2' },
-    });
+    fillUserForm();
     fireEvent.submit(screen.getByRole('button', { name: 'Adicionar' }));
 
     expect(await screen.findByText('E-mail já cadastrado')).toBeInTheDocument();
@@ -151,15 +152,7 @@ describe('AddUserModal', () => {
     );
     renderModal({ onCreated });
 
-    fireEvent.change(screen.getByLabelText('Nome completo'), {
-      target: { value: 'Maria Silva' },
-    });
-    fireEvent.change(screen.getByLabelText('Email empresarial'), {
-      target: { value: 'maria@teste.local' },
-    });
-    fireEvent.change(screen.getByLabelText('Cargo'), {
-      target: { value: '2' },
-    });
+    fillUserForm();
     fireEvent.submit(screen.getByRole('button', { name: 'Adicionar' }));
 
     const loadingIndicator = await screen.findByRole('status', {
@@ -170,15 +163,32 @@ describe('AddUserModal', () => {
     await waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
   });
 
-  it('fecha ao clicar em cancelar, fechar ou fora do modal', () => {
+  it.each([
+    {
+      acao: 'clicar no botão Cancelar',
+      disparar: () =>
+        fireEvent.click(screen.getByRole('button', { name: 'Cancelar' })),
+    },
+    {
+      acao: 'clicar no botão Fechar',
+      disparar: () =>
+        fireEvent.click(screen.getByRole('button', { name: 'Fechar' })),
+    },
+    {
+      acao: 'clicar no backdrop fora do modal',
+      disparar: (container) => fireEvent.click(container.firstChild),
+    },
+    {
+      acao: 'pressionar a tecla Escape',
+      disparar: () => fireEvent.keyDown(document, { key: 'Escape' }),
+    },
+  ])('fecha o modal ao $acao', ({ disparar }) => {
     const onClose = vi.fn();
     const { container } = renderModal({ onClose });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
-    fireEvent.click(container.firstChild);
+    disparar(container);
 
-    expect(onClose).toHaveBeenCalledTimes(3);
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it('impede o cadastro quando não há cargos disponíveis', () => {
@@ -191,15 +201,6 @@ describe('AddUserModal', () => {
     ).toBeInTheDocument();
   });
 
-  it('fecha ao pressionar Escape', () => {
-    const onClose = vi.fn();
-    renderModal({ onClose });
-
-    fireEvent.keyDown(document, { key: 'Escape' });
-
-    expect(onClose).toHaveBeenCalledOnce();
-  });
-
   it('não fecha ao pressionar Escape durante o envio', async () => {
     let resolver;
     const onClose = vi.fn();
@@ -210,15 +211,7 @@ describe('AddUserModal', () => {
     );
     renderModal({ onClose, onCreated });
 
-    fireEvent.change(screen.getByLabelText('Nome completo'), {
-      target: { value: 'Maria Silva' },
-    });
-    fireEvent.change(screen.getByLabelText('Email empresarial'), {
-      target: { value: 'maria@teste.local' },
-    });
-    fireEvent.change(screen.getByLabelText('Cargo'), {
-      target: { value: '2' },
-    });
+    fillUserForm();
     fireEvent.submit(screen.getByRole('button', { name: 'Adicionar' }));
     fireEvent.keyDown(document, { key: 'Escape' });
 

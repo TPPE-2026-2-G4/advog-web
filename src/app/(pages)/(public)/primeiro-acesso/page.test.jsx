@@ -39,21 +39,26 @@ describe('FirstLoginPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('renderiza todos os campos e ações do formulário', () => {
+  it.each([
+    'Nome completo',
+    'Senha',
+    'Confirmar senha',
+    'UF da OAB',
+    'Número da OAB',
+  ])('renderiza o campo "%s" no formulário inicial', (label) => {
     render(<FirstLoginPage />);
 
-    expect(screen.getByLabelText('Nome completo')).toBeInTheDocument();
-    expect(screen.getByLabelText('Senha')).toBeInTheDocument();
-    expect(screen.getByLabelText('Confirmar senha')).toBeInTheDocument();
+    expect(screen.getByLabelText(label)).toBeInTheDocument();
+  });
+
+  it('renderiza o checkbox de estagiário e o botão de conclusão', () => {
+    render(<FirstLoginPage />);
 
     expect(
       screen.getByRole('checkbox', {
         name: 'Sou estagiário(a) / ainda não possuo OAB',
       })
     ).toBeInTheDocument();
-
-    expect(screen.getByLabelText('UF da OAB')).toBeInTheDocument();
-    expect(screen.getByLabelText('Número da OAB')).toBeInTheDocument();
 
     expect(
       screen.getByRole('button', { name: 'Concluir cadastro' })

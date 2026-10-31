@@ -43,9 +43,79 @@ const mockClientes = [
 describe('ClientesClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clientesService.listarClientes.mockResolvedValue([]);
   });
 
-  it('renderiza o cabeçalho e a contagem no plural quando há múltiplos clientes', () => {
+  it.each([
+    {
+      descricao: 'no plural quando há 2 clientes',
+      clientes: mockClientes,
+      textoEsperado: /2 clientes cadastrados/,
+    },
+    {
+      descricao: 'no singular quando há apenas 1 cliente',
+      clientes: [mockClientes[0]],
+      textoEsperado: /1 cliente cadastrado/,
+    },
+    {
+      descricao: 'no plural quando há 3 clientes',
+      clientes: [
+        ...mockClientes,
+        { ...mockClientes[0], cliente_id: 3, nome: 'Machado de Assis' },
+      ],
+      textoEsperado: /3 clientes cadastrados/,
+    },
+  ])(
+    'renderiza o cabeçalho e a contagem $descricao',
+    ({ clientes, textoEsperado }) => {
+      render(
+        <ClientesClient
+          initialClientes={clientes}
+          initialFuncionarios={mockFuncionarios}
+        />
+      );
+
+      expect(
+        screen.getByRole('heading', { name: 'Clientes' })
+      ).toBeInTheDocument();
+      expect(screen.getByText(textoEsperado)).toBeInTheDocument();
+    }
+  );
+
+  it.each([
+    {
+      cenario: 'busca de texto pelo nome',
+      acao: () =>
+        fireEvent.change(screen.getByLabelText('Buscar clientes'), {
+          target: { value: 'Clarice' },
+        }),
+      visivel: 'Clarice Lispector',
+      oculto: 'Carlos Drummond',
+    },
+    {
+      cenario: 'responsável selecionado no autocomplete',
+      acao: () => {
+        const inputResponsavel = screen.getByLabelText(
+          'Filtrar por responsável'
+        );
+        fireEvent.focus(inputResponsavel);
+        fireEvent.click(
+          screen.getByRole('option', { name: /dr\. roberto silva/i })
+        );
+      },
+      visivel: 'Carlos Drummond',
+      oculto: 'Clarice Lispector',
+    },
+    {
+      cenario: 'status / etapa selecionado',
+      acao: () =>
+        fireEvent.change(screen.getByLabelText('Filtrar por status'), {
+          target: { value: '4' },
+        }),
+      visivel: 'Clarice Lispector',
+      oculto: 'Carlos Drummond',
+    },
+  ])('filtra clientes por $cenario', ({ acao, visivel, oculto }) => {
     render(
       <ClientesClient
         initialClientes={mockClientes}
@@ -53,72 +123,10 @@ describe('ClientesClient', () => {
       />
     );
 
-    expect(
-      screen.getByRole('heading', { name: 'Clientes' })
-    ).toBeInTheDocument();
-    expect(screen.getByText(/2 clientes cadastrados/)).toBeInTheDocument();
-  });
+    acao();
 
-  it('renderiza a contagem no singular quando há apenas 1 cliente', () => {
-    render(
-      <ClientesClient
-        initialClientes={[mockClientes[0]]}
-        initialFuncionarios={mockFuncionarios}
-      />
-    );
-
-    expect(screen.getByText(/1 cliente cadastrado/)).toBeInTheDocument();
-  });
-
-  it('filtra clientes por busca de texto', () => {
-    render(
-      <ClientesClient
-        initialClientes={mockClientes}
-        initialFuncionarios={mockFuncionarios}
-      />
-    );
-
-    expect(screen.getByText('Carlos Drummond')).toBeInTheDocument();
-    expect(screen.getByText('Clarice Lispector')).toBeInTheDocument();
-
-    const searchInput = screen.getByLabelText('Buscar clientes');
-    fireEvent.change(searchInput, { target: { value: 'Clarice' } });
-
-    expect(screen.queryByText('Carlos Drummond')).not.toBeInTheDocument();
-    expect(screen.getByText('Clarice Lispector')).toBeInTheDocument();
-  });
-
-  it('filtra clientes por responsável', () => {
-    render(
-      <ClientesClient
-        initialClientes={mockClientes}
-        initialFuncionarios={mockFuncionarios}
-      />
-    );
-
-    const inputResponsavel = screen.getByLabelText('Filtrar por responsável');
-    fireEvent.focus(inputResponsavel);
-    const option = screen.getByRole('option', { name: /dr\. roberto silva/i });
-    fireEvent.click(option);
-
-    expect(screen.getByText('Carlos Drummond')).toBeInTheDocument();
-    expect(screen.queryByText('Clarice Lispector')).not.toBeInTheDocument();
-  });
-
-  it('filtra clientes por status / etapa', () => {
-    render(
-      <ClientesClient
-        initialClientes={mockClientes}
-        initialFuncionarios={mockFuncionarios}
-      />
-    );
-
-    const selectStatus = screen.getByLabelText('Filtrar por status');
-    // Etapa 4: Cliente ativo
-    fireEvent.change(selectStatus, { target: { value: '4' } });
-
-    expect(screen.queryByText('Carlos Drummond')).not.toBeInTheDocument();
-    expect(screen.getByText('Clarice Lispector')).toBeInTheDocument();
+    expect(screen.getByText(visivel)).toBeInTheDocument();
+    expect(screen.queryByText(oculto)).not.toBeInTheDocument();
   });
 
   it('abre e fecha o modal de cadastro de novo cliente', () => {

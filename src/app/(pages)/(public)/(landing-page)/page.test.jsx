@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import Home from './page';
 import { buscarDadosInstitucionais } from '@/services/institucional';
 import { listarFuncionarios } from '@/services/funcionarios';
@@ -18,6 +18,28 @@ vi.mock('@/services/atuacoes', () => ({
 }));
 
 describe('Landing Page', () => {
+  it('exibe o formulário público de solicitação de atendimento', async () => {
+    render(await Home());
+
+    expect(
+      screen.getByRole('heading', { name: 'Solicitar Atendimento' })
+    ).toBeInTheDocument();
+    for (const label of [
+      'Nome completo',
+      'Email',
+      'Telefone',
+      'Descreva sua demanda',
+    ]) {
+      expect(screen.getByLabelText(label)).toBeRequired();
+    }
+    expect(screen.getByRole('main')).toContainElement(
+      screen.getByRole('region', { name: 'Solicitar Atendimento' })
+    );
+    expect(
+      screen.getByRole('button', { name: 'Enviar Solicitação' })
+    ).toBeEnabled();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     listarFuncionarios.mockResolvedValue([]);
@@ -76,7 +98,7 @@ describe('Landing Page', () => {
   });
 
   describe('Áreas de Atuação', () => {
-    it('renderiza o título e áreas de atuação visíveis fornecidos pela API', async () => {
+    it('renderiza o título, o subtítulo e os cards das áreas visíveis fornecidas pela API', async () => {
       listarAtuacoes.mockResolvedValue([
         {
           atuacao_id: 1,
@@ -102,22 +124,90 @@ describe('Landing Page', () => {
       render(jsx);
 
       expect(
-        screen.getByRole('heading', { name: 'Áreas de Atuação' })
+        screen.getByRole('heading', { name: 'Áreas de Atuação', level: 2 })
       ).toBeInTheDocument();
-      expect(screen.getByText('Direito Civil')).toBeInTheDocument();
-      expect(screen.getByText('Direito Trabalhista')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Oferecemos assessoria jurídica especializada em diversas áreas do Direito.'
+        )
+      ).toBeInTheDocument();
+
+      const cards = screen.getAllByRole('article');
+      expect(cards).toHaveLength(2);
+      expect(
+        within(cards[0]).getByRole('heading', {
+          name: 'Direito Civil',
+          level: 3,
+        })
+      ).toBeInTheDocument();
+      expect(
+        within(cards[0]).getByText('Contratos e obrigações.')
+      ).toBeInTheDocument();
+      expect(
+        within(cards[1]).getByRole('heading', {
+          name: 'Direito Trabalhista',
+          level: 3,
+        })
+      ).toBeInTheDocument();
+      expect(
+        within(cards[1]).getByText('Defesa trabalhista.')
+      ).toBeInTheDocument();
       expect(screen.queryByText('Direito Oculto')).not.toBeInTheDocument();
+      expect(screen.queryByText('Não deve aparecer.')).not.toBeInTheDocument();
     });
 
-    it('não renderiza a seção Áreas de Atuação se não houver áreas visíveis', async () => {
-      listarAtuacoes.mockResolvedValue([]);
+    it('renderiza o subtítulo personalizado cadastrado para as áreas de atuação', async () => {
+      buscarDadosInstitucionais.mockResolvedValue({
+        sobreAreas: 'Conheça nossas especialidades jurídicas.',
+      });
+      listarAtuacoes.mockResolvedValue([
+        {
+          atuacao_id: 1,
+          titulo: 'Direito Civil',
+          exibicaoInstitucional: true,
+        },
+      ]);
 
-      const jsx = await Home();
-      render(jsx);
+      render(await Home());
+
+      expect(
+        screen.getByText('Conheça nossas especialidades jurídicas.')
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(
+          'Oferecemos assessoria jurídica especializada em diversas áreas do Direito.'
+        )
+      ).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ['lista vazia', []],
+      [
+        'apenas áreas ocultas',
+        [
+          {
+            atuacao_id: 1,
+            titulo: 'Direito Oculto',
+            exibicaoInstitucional: false,
+          },
+        ],
+      ],
+      ['resposta nula', null],
+    ])('não renderiza a seção quando há %s', async (_caso, atuacoes) => {
+      listarAtuacoes.mockResolvedValue(atuacoes);
+      buscarDadosInstitucionais.mockResolvedValue({
+        sobreAreas: 'Conheça nossas especialidades jurídicas.',
+      });
+
+      render(await Home());
 
       expect(
         screen.queryByRole('heading', { name: 'Áreas de Atuação' })
       ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Conheça nossas especialidades jurídicas.')
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('article')).not.toBeInTheDocument();
     });
   });
 
