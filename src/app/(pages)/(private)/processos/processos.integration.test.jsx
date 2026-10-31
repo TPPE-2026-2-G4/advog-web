@@ -754,6 +754,155 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     );
   });
 
+  it('permite carregar documentos vazios, realizar upload e abrir o link de visualização no ProcessDetailsModal', async () => {
+    let documents = [];
+    fetchMock.mockImplementation((url, options = {}) => {
+      const urlString = String(url);
+      if (urlString.startsWith(`${API_BASE}/clientes/`)) {
+        return Promise.resolve(jsonResponse(mockClientes));
+      }
+      if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
+        return Promise.resolve(jsonResponse(mockFuncionarios));
+      }
+      if (
+        urlString === `${API_BASE}/processos/${initialApiProcess.processo_id}/documentos` &&
+        options.method === 'POST'
+      ) {
+        documents = [
+          {
+            documento_id: 1,
+            nome_original: 'peticao-inicial.pdf',
+            tamanho_bytes: 2048,
+            data_upload: '2026-03-05T00:00:00',
+          },
+        ];
+        return Promise.resolve(jsonResponse({ documento_id: 1 }, 201));
+      }
+      if (
+        urlString === `${API_BASE}/processos/${initialApiProcess.processo_id}/documentos`
+      ) {
+        return Promise.resolve(jsonResponse(documents));
+      }
+      if (
+        urlString ===
+        `${API_BASE}/processos/${initialApiProcess.processo_id}/documentos/1/url`
+      ) {
+        return Promise.resolve(
+          jsonResponse({ url: 'https://example.com/documento.pdf' })
+        );
+      }
+      if (urlString.startsWith(`${API_BASE}/processos/`)) {
+        return Promise.resolve(
+          jsonResponse(makePageResponse([initialApiProcess]))
+        );
+      }
+      return Promise.resolve(jsonResponse({}, 404));
+    });
+
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    renderIntegration();
+    await within(screen.getByRole('table')).findByText('Maria Silva');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `Visualizar processo ${initialApiProcess.cnj}`,
+      })
+    );
+    const detailsModal = screen.getByRole('dialog', {
+      name: initialApiProcess.titulo_proc,
+    });
+    fireEvent.click(within(detailsModal).getByRole('tab', { name: 'Documentos' }));
+
+    await within(detailsModal).findByText('Nenhum documento anexado.');
+    const fileInput = within(detailsModal).getByTestId('file-upload-input');
+    const file = new File(['conteudo pdf'], 'peticao-inicial.pdf', {
+      type: 'application/pdf',
+    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    await within(detailsModal).findByText('peticao-inicial.pdf');
+
+    fireEvent.click(within(detailsModal).getByRole('button', { name: 'Visualizar' }));
+    await waitFor(() =>
+      expect(openSpy).toHaveBeenCalledWith(
+        'https://example.com/documento.pdf',
+        '_blank'
+      )
+    );
+  });
+
+  it('mantém a modal funcional quando documentos retornam erro e quando o processo não possui movimentações', async () => {
+    const processWithoutMovement = {
+      ...initialApiProcess,
+      processo_id: 19,
+      titulo_proc: 'Processo sem movimentações',
+      data_inicio: null,
+      data_realizado: null,
+    };
+    fetchMock.mockImplementation((url, options = {}) => {
+      const urlString = String(url);
+      if (urlString.startsWith(`${API_BASE}/clientes/`)) {
+        return Promise.resolve(jsonResponse(mockClientes));
+      }
+      if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
+        return Promise.resolve(jsonResponse(mockFuncionarios));
+      }
+      if (
+        urlString === `${API_BASE}/processos/${processWithoutMovement.processo_id}/documentos` &&
+        options.method === 'POST'
+      ) {
+        return Promise.resolve(
+          jsonResponse({ detail: 'Não foi possível enviar o documento.' }, 500)
+        );
+      }
+      if (
+        urlString === `${API_BASE}/processos/${processWithoutMovement.processo_id}/documentos`
+      ) {
+        return Promise.resolve(
+          jsonResponse({ detail: 'Não foi possível carregar os documentos.' }, 500)
+        );
+      }
+      if (urlString.startsWith(`${API_BASE}/processos/`)) {
+        return Promise.resolve(
+          jsonResponse(makePageResponse([processWithoutMovement]))
+        );
+      }
+      return Promise.resolve(jsonResponse({}, 404));
+    });
+
+    renderIntegration({
+      initialPage: toProcessPage(makePageResponse([processWithoutMovement])),
+    });
+    await within(screen.getByRole('table')).findByText('Maria Silva');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `Visualizar processo ${processWithoutMovement.cnj}`,
+      })
+    );
+    const detailsModal = screen.getByRole('dialog', {
+      name: processWithoutMovement.titulo_proc,
+    });
+    fireEvent.click(
+      within(detailsModal).getByRole('tab', { name: 'Movimentações' })
+    );
+    expect(
+      within(detailsModal).getByText(
+        'Nenhuma movimentação registrada para este processo.'
+      )
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(detailsModal).getByRole('tab', { name: 'Documentos' }));
+    await within(detailsModal).findByRole('alert');
+    expect(within(detailsModal).getByText('Nenhum documento anexado.')).toBeInTheDocument();
+
+    const fileInput = within(detailsModal).getByTestId('file-upload-input');
+    const file = new File(['conteudo pdf'], 'peticao-inicial.pdf', {
+      type: 'application/pdf',
+    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    await within(detailsModal).findByText('Não foi possível enviar o documento.');
+  });
+
   it('valida intervalo de datas inválido, limpa filtros e navega entre páginas e status no ProcessTable/ProcessDetailsModal', async () => {
     const page1Processes = [
       { ...initialApiProcess, processo_id: 10, status: 'Concluído' },
