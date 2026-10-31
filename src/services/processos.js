@@ -56,7 +56,7 @@ const getErrorMessage = async (response, fallbackMessage) => {
 };
 
 const request = async (path, options, fallbackMessage) => {
-  const token = getAccessToken();
+  const token = options?.token || getAccessToken();
   if (!token) throw new Error('Sessão expirada. Faça login novamente.');
 
   let response;
@@ -87,11 +87,12 @@ const request = async (path, options, fallbackMessage) => {
 };
 
 export function listarProcessos(filtros = {}) {
-  const query = buildProcessQuery(filtros);
+  const { token, ...rest } = filtros;
+  const query = buildProcessQuery(rest);
 
   return request(
     `/processos/${query ? `?${query}` : ''}`,
-    { cache: 'no-store' },
+    { cache: 'no-store', token },
     'Não foi possível carregar os processos.'
   );
 }
@@ -170,10 +171,66 @@ export function excluirProcesso(processoId) {
   );
 }
 
-export async function getProcessosData() {
+export function listarDocumentos(processoId) {
+  return request(
+    `/processos/${encodeURIComponent(processoId)}/documentos`,
+    { method: 'GET' },
+    'Não foi possível carregar os documentos.'
+  );
+}
+
+export function uploadDocumento(processoId, file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request(
+    `/processos/${encodeURIComponent(processoId)}/documentos`,
+    {
+      method: 'POST',
+      body: formData,
+    },
+    'Não foi possível enviar o documento.'
+  );
+}
+
+export function obterUrlDocumento(processoId, documentoId) {
+  return request(
+    `/processos/${encodeURIComponent(processoId)}/documentos/${encodeURIComponent(documentoId)}/url`,
+    { method: 'GET' },
+    'Não foi possível obter o link do documento.'
+  );
+}
+
+export function excluirDocumento(processoId, documentoId) {
+  return request(
+    `/processos/${encodeURIComponent(processoId)}/documentos/${encodeURIComponent(documentoId)}`,
+    { method: 'DELETE' },
+    'Não foi possível excluir o documento.'
+  );
+}
+
+export function obterResumoProcessos({
+  diasProximoPrazo = 7,
+  funcionarioId,
+} = {}) {
+  const params = new URLSearchParams();
+  if (diasProximoPrazo !== undefined && diasProximoPrazo !== null) {
+    params.set('dias_proximo_prazo', String(diasProximoPrazo));
+  }
+  if (funcionarioId !== undefined && funcionarioId !== null) {
+    params.set('funcionario_id', String(funcionarioId));
+  }
+  const query = params.toString();
+  return request(
+    `/processos/resumo${query ? `?${query}` : ''}`,
+    { cache: 'no-store' },
+    'Não foi possível carregar o resumo de processos.'
+  );
+}
+
+export async function getProcessosData({ token } = {}) {
   try {
     const [page, funcionarios] = await Promise.all([
-      listarProcessos({ page: 1, pageSize: PROCESS_PAGE_SIZE }),
+      listarProcessos({ page: 1, pageSize: PROCESS_PAGE_SIZE, token }),
       listarFuncionarios(),
     ]);
 
@@ -182,13 +239,22 @@ export async function getProcessosData() {
 
     return { initialPage, responsaveis, initialError: '' };
   } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (
+      message.includes('Sessão expirada') &&
+      typeof window === 'undefined' &&
+      !token
+    ) {
+      return {
+        initialPage: DEFAULT_PROCESS_PAGE,
+        responsaveis: [],
+        initialError: '',
+      };
+    }
     return {
       initialPage: DEFAULT_PROCESS_PAGE,
       responsaveis: [],
-      initialError:
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível carregar os processos.',
+      initialError: message || 'Não foi possível carregar os processos.',
     };
   }
 }

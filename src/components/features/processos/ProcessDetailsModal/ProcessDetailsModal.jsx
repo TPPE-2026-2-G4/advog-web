@@ -1,9 +1,14 @@
 'use client';
 
 import { File, FileText } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import { formatProcessDate } from '@/utils/processo';
+import {
+  listarDocumentos,
+  obterUrlDocumento,
+  uploadDocumento,
+} from '@/services/processos';
 import styles from './ProcessDetailsModal.module.css';
 
 const getStatusStyle = (status) => {
@@ -20,6 +25,54 @@ export default function ProcessDetailsModal({
   onRetry,
 }) {
   const [activeTab, setActiveTab] = useState('resumo');
+  const [documents, setDocuments] = useState([]);
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [docsError, setDocsError] = useState('');
+  const fileInputRef = useRef(null);
+
+  const processoId = process?.processo_id;
+
+  const loadDocuments = useCallback(async () => {
+    if (!processoId) return;
+    setIsLoadingDocs(true);
+    setDocsError('');
+    try {
+      const data = await listarDocumentos(processoId);
+      setDocuments(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setDocsError(
+        err instanceof Error ? err.message : 'Falha ao carregar documentos.'
+      );
+    } finally {
+      setIsLoadingDocs(false);
+    }
+  }, [processoId]);
+
+  useEffect(() => {
+    let ignore = false;
+    if (activeTab === 'documentos' && processoId) {
+      listarDocumentos(processoId)
+        .then((data) => {
+          if (!ignore) {
+            setDocuments(Array.isArray(data) ? data : []);
+            setDocsError('');
+          }
+        })
+        .catch((err) => {
+          if (!ignore) {
+            setDocsError(
+              err instanceof Error
+                ? err.message
+                : 'Falha ao carregar documentos.'
+            );
+          }
+        });
+    }
+    return () => {
+      ignore = true;
+    };
+  }, [activeTab, processoId]);
 
   if (!process) return null;
 
@@ -43,6 +96,43 @@ export default function ProcessDetailsModal({
     event.preventDefault();
     setActiveTab(tabs[nextIndex].id);
     document.getElementById(tabId(tabs[nextIndex].id))?.focus();
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !processoId) return;
+    setIsUploading(true);
+    setDocsError('');
+    try {
+      await uploadDocumento(processoId, file);
+      await loadDocuments();
+    } catch (err) {
+      setDocsError(
+        err instanceof Error ? err.message : 'Falha ao enviar documento.'
+      );
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleViewDoc = async (docId) => {
+    try {
+      const res = await obterUrlDocumento(processoId, docId);
+      if (res?.url) {
+        window.open(res.url, '_blank');
+      }
+    } catch (err) {
+      setDocsError(
+        err instanceof Error ? err.message : 'Falha ao abrir documento.'
+      );
+    }
   };
 
   return (
@@ -142,29 +232,145 @@ export default function ProcessDetailsModal({
             )}
 
             {activeTab === 'movimentacoes' && (
-              <div className={styles.emptyDocuments}>
-                <FileText
-                  className={styles.emptyDocumentsIcon}
-                  aria-hidden="true"
-                />
-                <p className={styles.emptyDocumentsText}>
-                  O histórico de movimentações ainda não está disponível.
-                </p>
-                <p className={styles.emptyHint}>
-                  Consulte os dados atuais do processo na aba Resumo.
-                </p>
+              <div className={styles.movementsList}>
+                {process.data_realizado ? (
+                  <div className={styles.movementItem}>
+                    <div className={styles.movementIconWrapper}>
+                      <FileText size={16} aria-hidden="true" />
+                    </div>
+                    <div className={styles.movementInfo}>
+                      <p className={styles.movementTitle}>
+                        Atualização de Movimentação Sincronizada
+                      </p>
+                      <p className={styles.movementMeta}>
+                        <span>{formatProcessDate(process.data_realizado)}</span>
+                        <span>—</span>
+                        <span className={styles.movementTag}>DataJud</span>
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {process.data_inicio ? (
+                  <div className={styles.movementItem}>
+                    <div className={styles.movementIconWrapper}>
+                      <FileText size={16} aria-hidden="true" />
+                    </div>
+                    <div className={styles.movementInfo}>
+                      <p className={styles.movementTitle}>
+                        Distribuição Inicial do Processo
+                      </p>
+                      <p className={styles.movementMeta}>
+                        <span>{formatProcessDate(process.data_inicio)}</span>
+                        <span>—</span>
+                        <span>{process.tribunal || 'Tribunal de Origem'}</span>
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {!process.data_realizado && !process.data_inicio && (
+                  <div className={styles.emptyDocuments}>
+                    <FileText
+                      className={styles.emptyDocumentsIcon}
+                      aria-hidden="true"
+                    />
+                    <p className={styles.emptyDocumentsText}>
+                      Nenhuma movimentação registrada para este processo.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === 'documentos' && (
-              <div className={styles.emptyDocuments}>
-                <File
-                  className={styles.emptyDocumentsIcon}
-                  aria-hidden="true"
+              <div className={styles.documentsContainer}>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                  data-testid="file-upload-input"
                 />
-                <p className={styles.emptyDocumentsText}>
-                  A consulta de documentos ainda não está disponível nesta tela.
-                </p>
+
+                {docsError && (
+                  <div role="alert" className={styles.refreshError}>
+                    {docsError}
+                  </div>
+                )}
+
+                {isLoadingDocs ? (
+                  <div className={styles.emptyDocuments}>
+                    <p className={styles.emptyDocumentsText}>
+                      Carregando documentos…
+                    </p>
+                  </div>
+                ) : documents.length > 0 ? (
+                  <>
+                    <div className={styles.documentsHeader}>
+                      <button
+                        type="button"
+                        className={styles.uploadButton}
+                        onClick={handleUploadClick}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? 'Enviando…' : '+ Adicionar Documento'}
+                      </button>
+                    </div>
+                    <div className={styles.documentsList}>
+                      {documents.map((doc) => (
+                        <div
+                          key={doc.documento_id}
+                          className={styles.documentItem}
+                        >
+                          <div className={styles.documentMain}>
+                            <File
+                              size={20}
+                              className={styles.documentIcon}
+                              aria-hidden="true"
+                            />
+                            <div>
+                              <p className={styles.documentName}>
+                                {doc.nome_original}
+                              </p>
+                              <p className={styles.documentMeta}>
+                                {(doc.tamanho_bytes / 1024).toFixed(1)} KB •{' '}
+                                {formatProcessDate(doc.data_upload)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className={styles.documentActions}>
+                            <button
+                              type="button"
+                              className={styles.docActionBtn}
+                              onClick={() => handleViewDoc(doc.documento_id)}
+                            >
+                              Visualizar
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className={styles.emptyDocuments}>
+                    <File
+                      className={styles.emptyDocumentsIcon}
+                      aria-hidden="true"
+                    />
+                    <p className={styles.emptyDocumentsText}>
+                      Nenhum documento anexado.
+                    </p>
+                    <button
+                      type="button"
+                      className={styles.uploadButton}
+                      onClick={handleUploadClick}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? 'Enviando…' : 'Fazer Upload'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

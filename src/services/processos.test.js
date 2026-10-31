@@ -3,10 +3,15 @@ import { listarFuncionarios } from '@/services/funcionarios';
 import {
   atualizarProcesso,
   criarProcesso,
+  excluirDocumento,
   excluirProcesso,
   getProcessosData,
+  listarDocumentos,
   listarProcessos,
   listarProcessosCriticos,
+  obterResumoProcessos,
+  obterUrlDocumento,
+  uploadDocumento,
 } from './processos';
 
 vi.mock('@/services/funcionarios', () => ({
@@ -307,6 +312,61 @@ describe('serviço de processos', () => {
       const { initialError } = await getProcessosData();
 
       expect(initialError).toBe('Sessão expirada. Faça login novamente.');
+    });
+
+    it('gerencia documentos e consulta links de download', async () => {
+      fetch.mockResolvedValueOnce(
+        jsonResponse([{ documento_id: 1, nome_original: 'peticao.pdf' }])
+      );
+      await expect(listarDocumentos(1)).resolves.toEqual([
+        { documento_id: 1, nome_original: 'peticao.pdf' },
+      ]);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/processos/1/documentos',
+        {
+          method: 'GET',
+          headers: authorization,
+        }
+      );
+
+      const mockFile = new File(['content'], 'teste.pdf', {
+        type: 'application/pdf',
+      });
+      fetch.mockResolvedValueOnce(
+        jsonResponse({ documento_id: 2, nome_original: 'teste.pdf' })
+      );
+      await expect(uploadDocumento(1, mockFile)).resolves.toEqual({
+        documento_id: 2,
+        nome_original: 'teste.pdf',
+      });
+
+      fetch.mockResolvedValueOnce(
+        jsonResponse({ documento_id: 1, url: 'http://minio/doc.pdf' })
+      );
+      await expect(obterUrlDocumento(1, 1)).resolves.toEqual({
+        documento_id: 1,
+        url: 'http://minio/doc.pdf',
+      });
+
+      fetch.mockResolvedValueOnce(jsonResponse(null, { status: 204 }));
+      await expect(excluirDocumento(1, 1)).resolves.toBeUndefined();
+    });
+
+    it('consulta resumo de processos com parâmetros opcionais', async () => {
+      const resumo = {
+        total: 10,
+        em_andamento: 5,
+        em_analise: 3,
+        finalizados: 2,
+      };
+      fetch.mockResolvedValueOnce(jsonResponse(resumo));
+      await expect(
+        obterResumoProcessos({ diasProximoPrazo: 10, funcionarioId: 2 })
+      ).resolves.toEqual(resumo);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/processos/resumo?dias_proximo_prazo=10&funcionario_id=2',
+        { cache: 'no-store', headers: authorization }
+      );
     });
   });
 });

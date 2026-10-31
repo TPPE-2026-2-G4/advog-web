@@ -144,11 +144,9 @@ describe('US19 — integração do frontend com o contrato HTTP de processos', (
     });
     fireEvent.click(within(dialog).getByRole('tab', { name: 'Movimentações' }));
     expect(
-      within(dialog).getByText(
-        'O histórico de movimentações ainda não está disponível.'
-      )
+      within(dialog).getByText('Atualização de Movimentação Sincronizada')
     ).toBeInTheDocument();
-    expect(within(dialog).queryByText('DataJud')).not.toBeInTheDocument();
+    expect(within(dialog).getByText('DataJud')).toBeInTheDocument();
   });
 
   it.each([401, 403, 500])(

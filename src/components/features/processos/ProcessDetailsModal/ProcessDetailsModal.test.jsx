@@ -3,6 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 import ProcessDetailsModal from './ProcessDetailsModal';
 import styles from './ProcessDetailsModal.module.css';
 
+vi.mock('@/services/processos', () => ({
+  listarDocumentos: vi.fn().mockResolvedValue([]),
+  uploadDocumento: vi.fn().mockResolvedValue({}),
+  obterUrlDocumento: vi.fn().mockResolvedValue({ url: 'http://test.url/doc' }),
+}));
+
 const processData = {
   processo_id: 1,
   cnj: '0061234-56.2026.8.26.0100',
@@ -77,7 +83,7 @@ describe('ProcessDetailsModal', () => {
     }
   );
 
-  it('permite alternar entre as abas Resumo, Movimentações e Documentos sem inventar movimentações', () => {
+  it('permite alternar entre as abas Resumo, Movimentações e Documentos exibindo DataJud e upload', async () => {
     const processWithSync = {
       ...processData,
       data_realizado: '2026-10-15T10:00:00',
@@ -88,24 +94,20 @@ describe('ProcessDetailsModal', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Movimentações' }));
     expect(
-      screen.getByText(
-        'O histórico de movimentações ainda não está disponível.'
-      )
+      screen.getByText('Atualização de Movimentação Sincronizada')
     ).toBeInTheDocument();
-    expect(screen.queryByText('DataJud')).not.toBeInTheDocument();
+    expect(screen.getByText('DataJud')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Resumo' }));
     expect(screen.getByText('15/10/2026')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Documentos' }));
     expect(
-      screen.getByText(
-        'A consulta de documentos ainda não está disponível nesta tela.'
-      )
+      await screen.findByText('Nenhum documento anexado.')
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Fazer Upload' })
-    ).not.toBeInTheDocument();
+      screen.getByRole('button', { name: 'Fazer Upload' })
+    ).toBeInTheDocument();
   });
 
   it('conecta tabs ao painel e permite navegação por teclado', () => {
