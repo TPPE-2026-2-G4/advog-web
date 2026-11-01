@@ -102,9 +102,9 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
     }
   );
 
-  it('redireciona DashboardPage (/dashboard) para /equipe', () => {
-    DashboardPage();
-    expect(mockRedirect).toHaveBeenCalledWith('/equipe');
+  it('renderiza DashboardPage (/dashboard) com sucesso', () => {
+    const element = DashboardPage();
+    expect(element).toBeTruthy();
   });
 
   it('renderiza RootLayout + AuthProvider + PrivateLayout com Sidebar ativa, UserMenu, abre modal de confirmação e executa logout completo', async () => {

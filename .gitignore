@@ -12,6 +12,12 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
+/e2e/
+/e2e-screenshots/
+playwright.config.js
+AGENTS.md
 
 # next.js
 /.next/

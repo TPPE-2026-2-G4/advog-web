@@ -82,6 +82,21 @@ export function isOverdueDeadline(value, now = new Date()) {
   return remainingDays !== null && remainingDays < 0;
 }
 
+export function calculateDaysSince(value, now = new Date()) {
+  const normalizedDate = normalizeProcessDate(value);
+  if (!normalizedDate) return null;
+
+  const [year, month, day] = normalizedDate.split('-').map(Number);
+  const eventDate = Date.UTC(year, month - 1, day);
+  const today = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate()
+  );
+
+  return Math.max(0, Math.round((today - eventDate) / DAY_IN_MILLISECONDS));
+}
+
 export function toProcessApiDate(value) {
   const normalizedDate = normalizeProcessDate(value);
   return normalizedDate ? `${normalizedDate}T00:00:00` : null;
@@ -216,5 +231,55 @@ export function toProcessPage(page) {
     page: page.page ?? 1,
     pageSize: page.page_size ?? 0,
     totalPages: page.total_pages ?? 1,
+  };
+}
+
+export function sortCriticalProcesses(processes = []) {
+  return [...processes].sort((a, b) => {
+    const refDateA = normalizeProcessDate(a?.data_realizado || a?.data_inicio);
+    const refDateB = normalizeProcessDate(b?.data_realizado || b?.data_inicio);
+
+    if (refDateA && refDateB) {
+      const cmp = refDateA.localeCompare(refDateB);
+      if (cmp !== 0) return cmp;
+    } else if (refDateA) {
+      return -1;
+    } else if (refDateB) {
+      return 1;
+    }
+
+    const idA = Number(a?.processo_id ?? 0);
+    const idB = Number(b?.processo_id ?? 0);
+    return idB - idA;
+  });
+}
+
+export function enrichProcess(
+  process,
+  clientNames = new Map(),
+  employeeNames = new Map()
+) {
+  if (!process) return null;
+
+  const procId = process.processo_id || process.id || process.cnj;
+  const respId = process.responsavel_id || process.funcionario_id;
+  const clienteId = process.cliente_id;
+  const title = process.titulo_proc || process.titulo;
+  const desc = process.descricao_proc || process.descricao;
+
+  return {
+    ...process,
+    processo_id: procId,
+    id: procId,
+    titulo: title,
+    descricao: desc,
+    funcionario_id: respId,
+    responsavel_id: respId,
+    cliente:
+      clientNames.get(clienteId) ??
+      (clienteId ? `Cliente #${clienteId}` : 'Sem cliente'),
+    responsavel: respId
+      ? (employeeNames.get(respId) ?? `Responsável #${respId}`)
+      : 'Sem responsável',
   };
 }

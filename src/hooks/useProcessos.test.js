@@ -5,6 +5,7 @@ import {
   criarProcesso,
   excluirProcesso,
   listarProcessos,
+  obterProcesso,
 } from '@/services/processos';
 import { useProcessos } from './useProcessos';
 
@@ -13,6 +14,8 @@ vi.mock('@/services/processos', () => ({
   criarProcesso: vi.fn(),
   excluirProcesso: vi.fn(),
   listarProcessos: vi.fn(),
+  obterProcesso: vi.fn(),
+  sincronizarProcessos: vi.fn(),
 }));
 
 const responsaveis = [{ value: '3', label: 'Ana Paula' }];
@@ -52,6 +55,7 @@ const renderProcessos = (initialPage, initialError = '') =>
 describe('useProcessos', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    obterProcesso.mockImplementation(async (id) => createApiProcess(id));
   });
 
   it('inicia com a página entregue pelo servidor sem buscar novamente', () => {

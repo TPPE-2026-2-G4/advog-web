@@ -7,11 +7,14 @@ import {
   toResponsavelNames,
   toResponsavelOptions,
   CNJ_REGEX,
+  calculateDaysSince,
   calculateRemainingDays,
+  enrichProcess,
   formatCnjInput,
   formatProcessDate,
   isOverdueDeadline,
   normalizeProcessDate,
+  sortCriticalProcesses,
   toProcessFormData,
   toProcessPayload,
   toProcessUpdatePayload,
@@ -450,5 +453,112 @@ describe('filtros e listagem de processos', () => {
     },
   ])('toProcessPage converte $cenario', ({ input, expected }) => {
     expect(toProcessPage(input)).toEqual(expected);
+  });
+});
+
+describe('calculateDaysSince', () => {
+  it('calcula dias decorridos a partir de uma data no passado', () => {
+    const now = new Date('2026-10-30T12:00:00.000Z');
+    expect(calculateDaysSince('2026-10-15', now)).toBe(15);
+    expect(calculateDaysSince('10/10/2026', now)).toBe(20);
+  });
+
+  it('retorna 0 para datas iguais a hoje ou no futuro', () => {
+    const now = new Date('2026-10-30T12:00:00.000Z');
+    expect(calculateDaysSince('2026-10-30', now)).toBe(0);
+    expect(calculateDaysSince('2026-11-05', now)).toBe(0);
+  });
+
+  it('retorna null para valores vazios ou inválidos', () => {
+    expect(calculateDaysSince(null)).toBeNull();
+    expect(calculateDaysSince('')).toBeNull();
+    expect(calculateDaysSince('data-invalida')).toBeNull();
+  });
+});
+
+describe('sortCriticalProcesses', () => {
+  it('ordena por data de referência mais antiga primeiro (dias sem movimentação decrescente)', () => {
+    const p1 = { processo_id: 1, data_realizado: '2026-10-10' };
+    const p2 = { processo_id: 2, data_realizado: '2026-09-01' };
+    const p3 = { processo_id: 3, data_realizado: '2026-10-01' };
+
+    const sorted = sortCriticalProcesses([p1, p2, p3]);
+    expect(sorted.map((p) => p.processo_id)).toEqual([2, 3, 1]);
+  });
+
+  it('usa data_inicio como referência quando data_realizado for ausente', () => {
+    const p1 = { processo_id: 1, data_realizado: '2026-10-10' };
+    const p2 = {
+      processo_id: 2,
+      data_realizado: null,
+      data_inicio: '2026-08-01',
+    };
+
+    const sorted = sortCriticalProcesses([p1, p2]);
+    expect(sorted.map((p) => p.processo_id)).toEqual([2, 1]);
+  });
+
+  it('usa processo_id decrescente como desempate', () => {
+    const p1 = { processo_id: 10, data_realizado: '2026-10-01' };
+    const p2 = { processo_id: 20, data_realizado: '2026-10-01' };
+
+    const sorted = sortCriticalProcesses([p1, p2]);
+    expect(sorted.map((p) => p.processo_id)).toEqual([20, 10]);
+  });
+
+  it('posiciona processos sem nenhuma data no final', () => {
+    const p1 = { processo_id: 1, data_realizado: null, data_inicio: null };
+    const p2 = { processo_id: 2, data_realizado: '2026-10-01' };
+
+    const sorted = sortCriticalProcesses([p1, p2]);
+    expect(sorted.map((p) => p.processo_id)).toEqual([2, 1]);
+  });
+});
+
+describe('enrichProcess', () => {
+  it('retorna null se o processo for nulo ou indefinido', () => {
+    expect(enrichProcess(null)).toBeNull();
+    expect(enrichProcess(undefined)).toBeNull();
+  });
+
+  it('resolve cliente e responsável a partir dos mapas fornecidos', () => {
+    const clients = new Map([[1, 'João Santos']]);
+    const employees = new Map([[2, 'Alexandre Carreiro']]);
+    const raw = {
+      processo_id: 10,
+      titulo: 'Processo X',
+      cliente_id: 1,
+      funcionario_id: 2,
+    };
+
+    const enriched = enrichProcess(raw, clients, employees);
+    expect(enriched.cliente).toBe('João Santos');
+    expect(enriched.responsavel).toBe('Alexandre Carreiro');
+  });
+
+  it('usa identificador numérico como fallback quando não encontra nos mapas', () => {
+    const raw = {
+      processo_id: 10,
+      titulo: 'Processo X',
+      cliente_id: 99,
+      funcionario_id: 88,
+    };
+
+    const enriched = enrichProcess(raw);
+    expect(enriched.cliente).toBe('Cliente #99');
+    expect(enriched.responsavel).toBe('Responsável #88');
+  });
+
+  it('usa textos descritivos quando IDs forem nulos', () => {
+    const raw = {
+      processo_id: 10,
+      titulo: 'Processo X',
+      cliente_id: null,
+      funcionario_id: null,
+    };
+
+    const enriched = enrichProcess(raw);
+    expect(enriched.cliente).toBe('Sem cliente');
+    expect(enriched.responsavel).toBe('Sem responsável');
   });
 });

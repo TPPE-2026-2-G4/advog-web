@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getProcessosData } from '@/services/processos';
 import ProcessosPage from './page';
 
+vi.mock('next/headers', () => ({
+  cookies: vi.fn().mockResolvedValue({
+    get: () => undefined,
+  }),
+}));
+
 vi.mock('@/services/processos', () => ({
   getProcessosData: vi.fn(),
 }));

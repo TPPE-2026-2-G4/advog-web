@@ -3,6 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 import ProcessDetailsModal from './ProcessDetailsModal';
 import styles from './ProcessDetailsModal.module.css';
 
+vi.mock('@/services/processos', () => ({
+  listarDocumentos: vi.fn().mockResolvedValue([]),
+  uploadDocumento: vi.fn().mockResolvedValue({}),
+  obterUrlDocumento: vi.fn().mockResolvedValue({ url: 'http://test.url/doc' }),
+}));
+
 const processData = {
   processo_id: 1,
   cnj: '0061234-56.2026.8.26.0100',
@@ -76,4 +82,79 @@ describe('ProcessDetailsModal', () => {
       expect(screen.getByText('Sem responsável')).toBeInTheDocument();
     }
   );
+
+  it('permite alternar entre as abas Resumo, Movimentações e Documentos exibindo DataJud e upload', async () => {
+    const processWithSync = {
+      ...processData,
+      data_realizado: '2026-10-15T10:00:00',
+    };
+    render(<ProcessDetailsModal process={processWithSync} onClose={vi.fn()} />);
+
+    expect(screen.getByText('15/10/2026')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Movimentações' }));
+    expect(
+      screen.getByText('Atualização de Movimentação Sincronizada')
+    ).toBeInTheDocument();
+    expect(screen.getByText('DataJud')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Resumo' }));
+    expect(screen.getByText('15/10/2026')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Documentos' }));
+    expect(
+      await screen.findByText('Nenhum documento anexado.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Fazer Upload' })
+    ).toBeInTheDocument();
+  });
+
+  it('conecta tabs ao painel e permite navegação por teclado', () => {
+    render(<ProcessDetailsModal process={processData} onClose={vi.fn()} />);
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Resumo' }), {
+      key: 'ArrowRight',
+    });
+    const movements = screen.getByRole('tab', { name: 'Movimentações' });
+    expect(movements).toHaveFocus();
+    expect(movements).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute(
+      'aria-labelledby',
+      movements.id
+    );
+    fireEvent.keyDown(movements, { key: 'End' });
+    expect(screen.getByRole('tab', { name: 'Documentos' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Documentos' }), {
+      key: 'Home',
+    });
+    expect(screen.getByRole('tab', { name: 'Resumo' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Resumo' }), {
+      key: 'ArrowLeft',
+    });
+    expect(screen.getByRole('tab', { name: 'Documentos' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Documentos' }), {
+      key: 'Tab',
+    });
+    expect(screen.getByRole('tab', { name: 'Documentos' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+  });
+
+  it('avisa sobre detalhe desatualizado e permite nova consulta', () => {
+    const onRetry = vi.fn();
+    render(
+      <ProcessDetailsModal
+        process={processData}
+        error="Falha de rede"
+        onRetry={onRetry}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Os dados exibidos podem estar desatualizados'
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
 });
