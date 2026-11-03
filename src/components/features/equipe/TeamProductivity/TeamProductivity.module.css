@@ -18,8 +18,7 @@
   margin: 0;
   color: #172133;
   font-family: var(--font-cormorant), serif;
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 20px;
 }
 
 .title svg {
@@ -39,25 +38,18 @@
   text-align: left;
 }
 
-.table thead {
-  background: #f4f4f4;
-}
-
 .table thead th {
   padding: 12px 22px;
-  color: #8b8f94;
+  background-color: #f4f4f4;
+  color: #6b7280;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
 .table thead th:first-child {
-  border-radius: 16px 0 0 16px;
-}
-
-.table thead th:last-child {
-  border-radius: 0 16px 16px 0;
+  border-radius: 16px 0 0;
 }
 
 .table tbody tr {
@@ -72,10 +64,15 @@
 .table tbody td {
   padding: 14px 22px;
   font-size: 14px;
+  font-weight: 500;
+}
+
+.numericColumn {
+  text-align: center;
 }
 
 .table tbody th {
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -122,6 +119,7 @@
 .progressCell {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   min-width: 145px;
 }

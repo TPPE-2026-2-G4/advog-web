@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { listarProdutividadeEquipe } from '@/services/atividades';
-import { formatarSumarioEquipe } from '@/utils/teamProductivity';
+import { formatarSumarioEquipe } from '@/utils/produtividadeEquipe';
 
-export function useTeamProductivity(enabled = false) {
+export function useProdutividadeEquipe(enabled = false) {
   const [productivity, setProductivity] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');

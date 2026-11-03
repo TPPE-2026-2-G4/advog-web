@@ -1,12 +1,15 @@
 'use client';
 
 import { TrendingUp } from 'lucide-react';
-import { useTeamProductivity } from '@/hooks/useTeamProductivity';
-import { EMPTY_TEAM_SUMMARY, getTeamProgress } from '@/utils/teamProductivity';
+import { useProdutividadeEquipe } from '@/hooks/useProdutividadeEquipe';
+import {
+  EMPTY_TEAM_SUMMARY,
+  obterProgressoEquipe,
+} from '@/utils/produtividadeEquipe';
 import styles from './TeamProductivity.module.css';
 
-export default function TeamProductivity({ canView = false }) {
-  const { productivity, isLoading, error } = useTeamProductivity(canView);
+export default function ProdutividadeEquipe({ canView = false }) {
+  const { productivity, isLoading, error } = useProdutividadeEquipe(canView);
 
   if (!canView) return null;
 
@@ -28,40 +31,54 @@ export default function TeamProductivity({ canView = false }) {
           <thead>
             <tr>
               <th>Responsável</th>
-              <th>Finalizadas</th>
-              <th>Em andamento</th>
-              <th>A fazer</th>
-              <th>Atrasadas</th>
-              <th>Progresso</th>
+              <th className={styles.numericColumn}>Finalizadas</th>
+              <th className={styles.numericColumn}>Em andamento</th>
+              <th className={styles.numericColumn}>A fazer</th>
+              <th className={styles.numericColumn}>Atrasadas</th>
+              <th className={styles.numericColumn}>Progresso</th>
             </tr>
           </thead>
           <tbody>
             {productivity.map((summary) => {
               const currentSummary = summary || EMPTY_TEAM_SUMMARY;
-              const progress = getTeamProgress(currentSummary);
+              const progress = obterProgressoEquipe(currentSummary);
 
               return (
                 <tr key={currentSummary.funcionario_id}>
                   <th scope="row">{currentSummary.nome}</th>
-                  <td>
-                    <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-                      {isLoading ? '—' : currentSummary.finalizadas}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`${styles.badge} ${styles.badgeInfo}`}>
-                      {isLoading ? '—' : currentSummary.em_andamento}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`${styles.badge} ${styles.badgeWarning}`}>
-                      {isLoading ? '—' : currentSummary.a_fazer}
-                    </span>
-                  </td>
-                  <td>
-                    {isLoading ? (
+                  <td className={styles.numericColumn}>
+                    {!isLoading && currentSummary.finalizadas > 0 ? (
+                      <span
+                        className={`${styles.badge} ${styles.badgeSuccess}`}
+                      >
+                        {currentSummary.finalizadas}
+                      </span>
+                    ) : (
                       <span className={styles.muted}>—</span>
-                    ) : currentSummary.atrasadas > 0 ? (
+                    )}
+                  </td>
+                  <td className={styles.numericColumn}>
+                    {!isLoading && currentSummary.em_andamento > 0 ? (
+                      <span className={`${styles.badge} ${styles.badgeInfo}`}>
+                        {currentSummary.em_andamento}
+                      </span>
+                    ) : (
+                      <span className={styles.muted}>—</span>
+                    )}
+                  </td>
+                  <td className={styles.numericColumn}>
+                    {!isLoading && currentSummary.a_fazer > 0 ? (
+                      <span
+                        className={`${styles.badge} ${styles.badgeWarning}`}
+                      >
+                        {currentSummary.a_fazer}
+                      </span>
+                    ) : (
+                      <span className={styles.muted}>—</span>
+                    )}
+                  </td>
+                  <td className={styles.numericColumn}>
+                    {!isLoading && currentSummary.atrasadas > 0 ? (
                       <span className={`${styles.badge} ${styles.badgeDanger}`}>
                         {currentSummary.atrasadas}
                       </span>
@@ -69,7 +86,7 @@ export default function TeamProductivity({ canView = false }) {
                       <span className={styles.muted}>—</span>
                     )}
                   </td>
-                  <td>
+                  <td className={styles.numericColumn}>
                     <div className={styles.progressCell}>
                       <span className={styles.progressTrack}>
                         <span
