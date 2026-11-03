@@ -1,0 +1,167 @@
+.container {
+  margin-top: 32px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #f0f0ee;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.heading {
+  padding: 22px 24px 18px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #172133;
+  font-family: var(--font-cormorant), serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.title svg {
+  color: #c1a077;
+}
+
+.tableScroll {
+  overflow-x: auto;
+  padding: 0 24px 20px;
+}
+
+.table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  color: #172133;
+  text-align: left;
+}
+
+.table thead {
+  background: #f4f4f4;
+}
+
+.table thead th {
+  padding: 12px 22px;
+  color: #8b8f94;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.table thead th:first-child {
+  border-radius: 16px 0 0 16px;
+}
+
+.table thead th:last-child {
+  border-radius: 0 16px 16px 0;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #e4e0da;
+}
+
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table tbody th,
+.table tbody td {
+  padding: 14px 22px;
+  font-size: 14px;
+}
+
+.table tbody th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge {
+  display: inline-flex;
+  min-width: 27px;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badgeSuccess {
+  border-color: #c8dfd7;
+  background: #eef6f3;
+  color: #3d7c67;
+}
+
+.badgeInfo {
+  border-color: #cfdef0;
+  background: #f0f5fb;
+  color: #5a82ae;
+}
+
+.badgeWarning {
+  border-color: #f0e5d2;
+  background: #fdf8f1;
+  color: #b88c67;
+}
+
+.badgeDanger {
+  border-color: #f0cfd2;
+  background: #fdf0f1;
+  color: #bd6871;
+}
+
+.muted {
+  color: #92979d;
+}
+
+.progressCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 145px;
+}
+
+.progressTrack {
+  display: block;
+  width: 92px;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #efede9;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #34785f;
+  transition: width 0.25s ease;
+}
+
+.progressValue {
+  color: #92979d;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .heading {
+    padding: 18px 16px 14px;
+  }
+
+  .tableScroll {
+    padding: 0 16px 16px;
+  }
+
+  .table tbody th,
+  .table tbody td,
+  .table thead th {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+}

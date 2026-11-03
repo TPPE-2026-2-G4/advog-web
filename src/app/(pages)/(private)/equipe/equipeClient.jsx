@@ -5,6 +5,7 @@ import { useSyncExternalStore } from 'react';
 import StatCard from '@/components/ui/StatCard/StatCard';
 import TeamTable from '@/components/features/equipe/TeamTable/TeamTable';
 import RoleTables from '@/components/features/equipe/RolesTable/RolesTable';
+import TeamProductivity from '@/components/features/equipe/TeamProductivity/TeamProductivity';
 import AddUserModal from '@/components/features/equipe/AddUserModal/AddUserModal';
 import DeleteUserModal from '@/components/features/equipe/DeleteUserModal/DeleteUserModal';
 import AccessStatusModal from '@/components/features/equipe/AccessStatusModal/AccessStatusModal';
@@ -116,6 +117,8 @@ export default function EquipeClient({ initialData, initialRoles = [] }) {
         onEdit={handleOpenEditModal}
         canEditUsers={canEditUsers}
       />
+
+      <TeamProductivity canView={canEditUsers} />
 
       <RoleTables
         roles={roles}
