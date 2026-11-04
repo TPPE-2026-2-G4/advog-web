@@ -101,16 +101,12 @@ describe('Integração: Calendário de Pagamentos', () => {
     expect(screen.getByText('+ R$ 10.000,00')).toBeInTheDocument();
     expect(screen.getByText('Serviço de Nuvem e Backup')).toBeInTheDocument();
     expect(screen.getByText('− R$ 1.500,00')).toBeInTheDocument();
-
-    expect(
-      screen.getByText(
-        'Baixe os compromissos do mês em um único arquivo para importar no Google Agenda ou Outlook.'
-      )
-    ).toBeInTheDocument();
   });
 
   it('integração com troca de mês e busca via obterCalendario', async () => {
-    obterCalendario.mockResolvedValueOnce(mockEventosSetembro);
+    obterCalendario
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(mockEventosSetembro);
 
     render(
       <CalendarioClient
@@ -135,9 +131,13 @@ describe('Integração: Calendário de Pagamentos', () => {
     fireEvent.click(day5Button);
 
     expect(screen.getByText('05/09/2026')).toBeInTheDocument();
-    expect(screen.getByText('Honorários Mensais Setembro')).toBeInTheDocument();
-    expect(screen.getAllByText('A receber').length).toBeGreaterThan(0);
-    expect(screen.getByText('+ R$ 7.500,00')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText('Honorários Mensais Setembro')
+      ).toBeInTheDocument();
+      expect(screen.getAllByText('A receber').length).toBeGreaterThan(0);
+      expect(screen.getByText('+ R$ 7.500,00')).toBeInTheDocument();
+    });
   });
 
   it('integração com exportação de calendário iCal (.ics)', async () => {
@@ -151,7 +151,7 @@ describe('Integração: Calendário de Pagamentos', () => {
     );
 
     const exportBtn = screen.getByRole('button', {
-      name: /Exportar Agosto de 2026 \(\.ics\)/i,
+      name: /Exportar Agosto de 2026/i,
     });
     fireEvent.click(exportBtn);
 

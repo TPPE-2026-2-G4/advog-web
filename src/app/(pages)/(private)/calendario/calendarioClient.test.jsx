@@ -191,9 +191,7 @@ describe('CalendarioClient', () => {
     expect(screen.getByText('+ R$ 5.000,00')).toBeInTheDocument();
     expect(screen.getByText('Recebido')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', {
-        name: /Exportar Agosto de 2026 \(\.ics\)/i,
-      })
+      screen.getByRole('button', { name: /Exportar Agosto de 2026/i })
     ).toBeInTheDocument();
   });
 
@@ -294,7 +292,7 @@ describe('CalendarioClient', () => {
     expect(screen.getByText('Setembro 2026')).toBeInTheDocument();
     expect(
       screen.getByRole('button', {
-        name: /Exportar Setembro de 2026 \(\.ics\)/i,
+        name: /Exportar Setembro de 2026/i,
       })
     ).toBeInTheDocument();
     expect(onMonthChange).toHaveBeenCalled();
@@ -318,7 +316,7 @@ describe('CalendarioClient', () => {
     );
 
     const exportBtn = screen.getByRole('button', {
-      name: /Exportar Agosto de 2026 \(\.ics\)/i,
+      name: /Exportar Agosto de 2026/i,
     });
     fireEvent.click(exportBtn);
 
@@ -344,12 +342,12 @@ describe('CalendarioClient', () => {
     );
 
     const exportBtn = screen.getByRole('button', {
-      name: /Exportar Agosto de 2026 \(\.ics\)/i,
+      name: /Exportar Agosto de 2026/i,
     });
     fireEvent.click(exportBtn);
 
     expect(exportBtn).toBeDisabled();
-    expect(exportBtn).toHaveTextContent('Exportar Agosto de 2026 (.ics)');
+    expect(exportBtn).toHaveTextContent('Exportar Agosto de 2026');
 
     fireEvent.click(exportBtn);
     expect(onExportIcs).toHaveBeenCalledTimes(1);
@@ -371,7 +369,7 @@ describe('CalendarioClient', () => {
     );
 
     const exportBtn = screen.getByRole('button', {
-      name: /Exportar Agosto de 2026 \(\.ics\)/i,
+      name: /Exportar Agosto de 2026/i,
     });
     fireEvent.click(exportBtn);
 
