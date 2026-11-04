@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   AlertCircle,
   ArrowDownRight,
@@ -124,6 +124,7 @@ export default function CalendarioClient({
       : []
   );
   const [exportError, setExportError] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
 
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth();
@@ -188,46 +189,46 @@ export default function CalendarioClient({
 
   const selectedDayItems = selectedDay ? getLancamentosDoDia(selectedDay) : [];
 
-  const handlePrevMonth = async () => {
+  useEffect(() => {
+    let ativo = true;
+    const inicio = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+    const fim = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+
+    obterCalendario({ inicio, fim })
+      .then((novos) => {
+        if (!ativo) return;
+        if (novos && Array.isArray(novos)) {
+          setLancamentos((prev) => {
+            const map = new Map();
+            prev.forEach((item) =>
+              map.set(item.id || item.lancamento_id, item)
+            );
+            novos.forEach((item) =>
+              map.set(item.id || item.lancamento_id, item)
+            );
+            return Array.from(map.values());
+          });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      ativo = false;
+    };
+  }, [currentYear, currentMonth, daysInMonth]);
+
+  const handlePrevMonth = () => {
     const newDate = new Date(currentYear, currentMonth - 1, 1);
     setCurrentDate(newDate);
     setSelectedDay(null);
     onMonthChange?.(newDate);
-
-    const inicio = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}-01`;
-    const fim = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}-${new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0).getDate()}`;
-    try {
-      const novos = await obterCalendario({ inicio, fim });
-      if (novos && novos.length > 0) {
-        setLancamentos((prev) => {
-          const map = new Map();
-          prev.forEach((item) => map.set(item.id || item.lancamento_id, item));
-          novos.forEach((item) => map.set(item.id || item.lancamento_id, item));
-          return Array.from(map.values());
-        });
-      }
-    } catch {}
   };
 
-  const handleNextMonth = async () => {
+  const handleNextMonth = () => {
     const newDate = new Date(currentYear, currentMonth + 1, 1);
     setCurrentDate(newDate);
     setSelectedDay(null);
     onMonthChange?.(newDate);
-
-    const inicio = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}-01`;
-    const fim = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}-${new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0).getDate()}`;
-    try {
-      const novos = await obterCalendario({ inicio, fim });
-      if (novos && novos.length > 0) {
-        setLancamentos((prev) => {
-          const map = new Map();
-          prev.forEach((item) => map.set(item.id || item.lancamento_id, item));
-          novos.forEach((item) => map.set(item.id || item.lancamento_id, item));
-          return Array.from(map.values());
-        });
-      }
-    } catch {}
   };
 
   const handleSelectDay = (day) => {
@@ -237,7 +238,9 @@ export default function CalendarioClient({
   };
 
   const handleExportIcs = async () => {
+    if (isExporting) return;
     setExportError('');
+    setIsExporting(true);
     const inicio = `${monthPrefix}-01`;
     const fim = `${monthPrefix}-${String(daysInMonth).padStart(2, '0')}`;
     try {
@@ -248,6 +251,8 @@ export default function CalendarioClient({
       }
     } catch (err) {
       setExportError(err?.message || 'Erro ao exportar calendário.');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -264,7 +269,26 @@ export default function CalendarioClient({
             Controle financeiro por data de vencimento
           </p>
         </div>
+
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.exportButton}
+            onClick={handleExportIcs}
+            disabled={isExporting}
+            aria-busy={isExporting}
+          >
+            <Download size={16} />
+            {`Exportar ${MESES[currentMonth]} de ${currentYear}`}
+          </button>
+        </div>
       </div>
+
+      {exportError && (
+        <div role="alert" className={styles.errorMessage}>
+          {exportError}
+        </div>
+      )}
 
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
@@ -379,6 +403,7 @@ export default function CalendarioClient({
                   className={`${styles.dayButton} ${
                     isSelected ? styles.daySelected : ''
                   } ${isHoje ? styles.dayToday : ''}`}
+                  aria-pressed={isSelected}
                   aria-label={`Dia ${day} de ${MESES[currentMonth]}`}
                   data-testid={`day-${day}`}
                 >
@@ -515,31 +540,6 @@ export default function CalendarioClient({
                             {entrada ? 'Entrada' : 'Saída'}
                             {item.categoria ? ` · ${item.categoria}` : ''}
                           </span>
-
-                          <div className={styles.calendarLinks}>
-                            {item.google_calendar_url && (
-                              <a
-                                href={item.google_calendar_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={styles.calendarLink}
-                                title="Adicionar ao Google Agenda"
-                              >
-                                Google Agenda
-                              </a>
-                            )}
-                            {item.outlook_calendar_url && (
-                              <a
-                                href={item.outlook_calendar_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={styles.calendarLink}
-                                title="Adicionar ao Outlook"
-                              >
-                                Outlook
-                              </a>
-                            )}
-                          </div>
                         </div>
                       </div>
                     );

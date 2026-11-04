@@ -40,6 +40,31 @@ body {
   margin: 0;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.exportButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: transparent;
+  color: #172133;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #172133;
+  border-radius: 6px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.exportButton:hover {
+  background-color: rgba(23, 33, 51, 0.05);
+}
+
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -69,7 +94,7 @@ body {
 
 .iconSuccess {
   background-color: rgba(34, 197, 94, 0.12);
-  color: #16a34a;
+  color: #0f6b31;
 }
 
 .iconDanger {
@@ -115,7 +140,7 @@ body {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .calendarCard {
@@ -124,6 +149,9 @@ body {
   border: 1px solid #e5e7eb;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .calendarNav {
@@ -154,7 +182,7 @@ body {
 
 .monthTitle {
   font-family: var(--font-cormorant), serif;
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 600;
   color: #172133;
   margin: 0;
@@ -167,10 +195,11 @@ body {
 }
 
 .weekdayHeader {
+  font-family: var(--font-cormorant), serif;
   text-align: center;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 500;
-  color: #6b7280;
+  color: #374151;
   padding: 8px 0;
 }
 
@@ -199,12 +228,13 @@ body {
   transition: all 0.15s ease;
 }
 
-.dayButton:hover {
+.dayButton:hover:not(.daySelected) {
   background-color: #f9fafb;
 }
 
-.daySelected {
-  background-color: rgba(193, 160, 119, 0.15);
+.daySelected,
+.daySelected:hover {
+  background-color: rgba(193, 160, 119, 0.15) !important;
   border-color: #c1a077 !important;
 }
 
@@ -217,7 +247,7 @@ body {
   font-weight: 500;
   line-height: 1;
   margin-bottom: 6px;
-  color: #172133;
+  color: #000000;
 }
 
 .dayNumberToday {
@@ -240,7 +270,7 @@ body {
 }
 
 .dotSuccess {
-  background-color: #16a34a;
+  background-color: #0f6b31;
 }
 
 .dotWarning {
@@ -285,9 +315,10 @@ body {
   border: 1px solid #e5e7eb;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  min-height: 420px;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
 .detailsHeader {
@@ -331,8 +362,9 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 48px 16px;
+  padding: 24px 16px;
   margin: auto 0;
+  flex: 1;
 }
 
 .emptyIconWrap {
@@ -359,15 +391,20 @@ body {
   font-size: 14px;
   color: #6b7280;
   text-align: center;
-  padding: 40px 0;
-  margin: 0;
+  padding: 24px 0;
+  margin: auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
 }
 
 .itemsList {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 480px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -449,40 +486,20 @@ body {
 .itemFooter {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 4px;
   padding-top: 6px;
-  border-top: 1px dashed #e5e7eb;
+  border-top: none;
 }
 
 .itemTipo {
+  width: 100%;
   font-size: 11px;
   color: #6b7280;
   font-weight: 500;
-}
-
-.calendarLinks {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.calendarLink {
-  font-size: 11px;
-  color: #c1a077;
-  text-decoration: none;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  transition: color 0.15s ease;
-}
-
-.calendarLink:hover {
-  color: #9f7d54;
-  text-decoration: underline;
+  text-align: right;
 }
 
 .errorMessage {
@@ -512,5 +529,14 @@ body {
   .headerRow {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .exportButton {
+    flex: 1;
+    justify-content: center;
   }
 }
