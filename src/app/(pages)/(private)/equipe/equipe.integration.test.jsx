@@ -162,7 +162,10 @@ describe('integração da página de equipe', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
-    expect(await screen.findByText('E-mail já cadastrado')).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog');
+    expect(
+      await within(dialog).findByText('E-mail já cadastrado')
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: 'Adicionar Novo Usuário' })
     ).toBeInTheDocument();
@@ -204,7 +207,9 @@ describe('integração da página de equipe', () => {
     );
 
     expect(
-      await screen.findByText('Funcionário não encontrado')
+      await within(screen.getByRole('dialog')).findByText(
+        'Funcionário não encontrado'
+      )
     ).toBeInTheDocument();
     expect(screen.getAllByText('Maria Silva')).toHaveLength(2);
   });
@@ -255,7 +260,9 @@ describe('integração da página de equipe', () => {
     );
 
     expect(
-      await screen.findByText('Funcionário ainda está pendente')
+      await within(screen.getByRole('dialog')).findByText(
+        'Funcionário ainda está pendente'
+      )
     ).toBeInTheDocument();
     expect(screen.getByText('Ativo')).toBeInTheDocument();
   });
@@ -361,29 +368,42 @@ describe('integração da página de equipe', () => {
       'visualizar_processos',
       'visualizar_equipe'
     );
-    fetch
-      .mockResolvedValueOnce(
-        createApiResponse({
-          cargo_id: 4,
-          nome_cargo: 'Paralegal',
-          descricao: 'Cargo personalizado.',
-          permissao: createdPermission,
-        })
-      )
-      .mockResolvedValueOnce(
-        createApiResponse({
-          funcionario_id: 1,
-          nome: 'Maria Silva',
-          email: 'maria@teste.local',
-          cargo_id: 4,
-          cargo: {
+    fetch.mockImplementation((url, options = {}) => {
+      const endpoint = String(url);
+
+      if (endpoint.endsWith('/cargos') && options.method === 'POST') {
+        return Promise.resolve(
+          createApiResponse({
             cargo_id: 4,
             nome_cargo: 'Paralegal',
+            descricao: 'Cargo personalizado.',
             permissao: createdPermission,
-          },
-          status: 'Ativo',
-        })
-      );
+          })
+        );
+      }
+
+      if (
+        endpoint.endsWith('/funcionarios/1/mudar-cargo') &&
+        options.method === 'PATCH'
+      ) {
+        return Promise.resolve(
+          createApiResponse({
+            funcionario_id: 1,
+            nome: 'Maria Silva',
+            email: 'maria@teste.local',
+            cargo_id: 4,
+            cargo: {
+              cargo_id: 4,
+              nome_cargo: 'Paralegal',
+              permissao: createdPermission,
+            },
+            status: 'Ativo',
+          })
+        );
+      }
+
+      return Promise.resolve(createApiResponse([]));
+    });
     renderEquipe([member]);
 
     fireEvent.click(screen.getByRole('button', { name: 'Novo Cargo' }));
@@ -458,7 +478,9 @@ describe('integração da página de equipe', () => {
       })
     );
 
-    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole('dialog')).findByRole('alert')
+    ).toHaveTextContent(message);
     expect(screen.getAllByText('Advogado')).toHaveLength(2);
     expect(
       screen.getByRole('heading', { name: 'Excluir cargo?' })
@@ -635,10 +657,15 @@ describe('integração da página de equipe', () => {
       'Não foi possível criar o cargo.'
     );
 
+    await waitFor(() => {
+      expect(newRoleDialog).toHaveAttribute('aria-busy', 'false');
+    });
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(
-      screen.queryByRole('dialog', { name: 'Criar Novo Cargo' })
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('dialog', { name: 'Criar Novo Cargo' })
+      ).not.toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole('button', { name: 'Novo Cargo' }));
     const reopenedNewRole = screen.getByRole('dialog', {
@@ -771,5 +798,121 @@ describe('integração da página de equipe', () => {
     await expect(mudarAcessoFuncionario(1)).rejects.toThrow(
       'Não foi possível atualizar o acesso.'
     );
+  });
+
+  it('carrega e exibe a produtividade da equipe para usuários autorizados', async () => {
+    const member = createMember();
+
+    fetch.mockImplementation((url) => {
+      const endpoint = String(url);
+
+      if (endpoint.endsWith('/atividades/produtividade')) {
+        return Promise.resolve(
+          createApiResponse([
+            {
+              funcionario_id: 1,
+              nome: 'Maria Silva',
+              finalizadas: 4,
+              em_andamento: 2,
+              a_fazer: 1,
+              atrasadas: 0,
+              progresso: 80,
+            },
+          ])
+        );
+      }
+
+      return Promise.resolve(createApiResponse([]));
+    });
+
+    renderEquipe([member]);
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Produtividade da Equipe',
+      })
+    ).toBeInTheDocument();
+
+    const productivitySection = screen.getByRole('region', {
+      name: 'Produtividade da Equipe',
+    });
+    let productivityRow;
+
+    await waitFor(() => {
+      productivityRow = within(productivitySection).getByRole('row', {
+        name: /Maria Silva/,
+      });
+    });
+
+    const productivityCells = within(productivityRow).getAllByRole('cell');
+    expect(productivityCells[0]).toHaveTextContent('4');
+    expect(productivityCells[1]).toHaveTextContent('2');
+    expect(productivityCells[2]).toHaveTextContent('1');
+    expect(productivityCells[4]).toHaveTextContent('80%');
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/atividades/produtividade'),
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer token-jwt',
+        }),
+        cache: 'no-store',
+      })
+    );
+  });
+
+  it('exibe erro quando a produtividade da equipe não pode ser carregada', async () => {
+    fetch.mockImplementation((url) => {
+      const endpoint = String(url);
+
+      if (endpoint.endsWith('/atividades/produtividade')) {
+        return Promise.resolve(
+          createApiResponse(
+            {
+              detail: 'Não foi possível carregar a produtividade da equipe.',
+            },
+            false
+          )
+        );
+      }
+
+      return Promise.resolve(createApiResponse([]));
+    });
+
+    renderEquipe([createMember()]);
+
+    expect(
+      await screen.findByText(
+        'Não foi possível carregar a produtividade da equipe.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('não carrega produtividade para usuário sem permissão de gerenciar equipe', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        cargo: {
+          permissao: {
+            gerenciar_equipe: false,
+          },
+        },
+      })
+    );
+
+    renderEquipe([createMember()]);
+
+    expect(
+      screen.queryByRole('heading', {
+        name: 'Produtividade da Equipe',
+      })
+    ).not.toBeInTheDocument();
+
+    expect(
+      fetch.mock.calls.some(([url]) =>
+        String(url).endsWith('/atividades/produtividade')
+      )
+    ).toBe(false);
   });
 });
