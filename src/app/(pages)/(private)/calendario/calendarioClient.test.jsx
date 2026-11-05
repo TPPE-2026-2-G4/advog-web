@@ -379,4 +379,168 @@ describe('CalendarioClient', () => {
       );
     });
   });
+
+  it('determina o mês inicial a partir de uma data ISO quando initialDate não é informado', () => {
+    render(
+      <CalendarioClient
+        initialData={[
+          {
+            id: 50,
+            titulo: 'Lançamento Outubro',
+            tipo: 'entrada',
+            valor: 1000,
+            status: 'pendente',
+            data_vencimento: '2026-10-15T12:00:00',
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Outubro 2026')).toBeInTheDocument();
+  });
+
+  it('determina o mês inicial a partir de uma data brasileira quando initialDate não é informado', () => {
+    render(
+      <CalendarioClient
+        initialData={[
+          {
+            id: 51,
+            titulo: 'Lançamento Setembro',
+            tipo: 'entrada',
+            valor: 1000,
+            status: 'pendente',
+            dataVencimento: '15/09/2026',
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Setembro 2026')).toBeInTheDocument();
+  });
+
+  it('converte datas brasileiras para o formato ISO ao filtrar lançamentos do dia', () => {
+    render(
+      <CalendarioClient
+        initialData={[
+          {
+            id: 52,
+            titulo: 'Lançamento em formato brasileiro',
+            descricao: 'Pagamento em setembro',
+            tipo: 'entrada',
+            valor: 1800,
+            status: 'pendente',
+            dataVencimento: '15/09/2026',
+          },
+        ]}
+        initialDate={new Date(2026, 8, 1)}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('day-15'));
+
+    expect(screen.getByText('15/09/2026')).toBeInTheDocument();
+    expect(
+      screen.getByText('Lançamento em formato brasileiro')
+    ).toBeInTheDocument();
+    expect(screen.getByText('+ R$ 1.800,00')).toBeInTheDocument();
+  });
+
+  it('exibe corretamente um lançamento atrasado no painel de detalhes', () => {
+    render(
+      <CalendarioClient
+        initialData={[
+          {
+            id: 53,
+            titulo: 'Honorários em atraso',
+            descricao: 'Pagamento vencido',
+            categoria: 'Honorários',
+            tipo: 'entrada',
+            valor: 2500,
+            status: 'atrasado',
+            dataVencimentoIso: '2026-08-25',
+          },
+        ]}
+        initialDate={new Date(2026, 7, 1)}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('day-25'));
+
+    expect(screen.getByText('25/08/2026')).toBeInTheDocument();
+    expect(screen.getAllByText('Atrasado').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('+ R$ 2.500,00')).toBeInTheDocument();
+    expect(screen.getByText('Pagamento vencido')).toBeInTheDocument();
+  });
+
+  it('exibe a descrição quando ela é diferente do título', () => {
+    render(
+      <CalendarioClient
+        initialData={[
+          {
+            id: 54,
+            titulo: 'Pagamento de honorários',
+            descricao: 'Parcela referente ao contrato mensal',
+            categoria: 'Honorários',
+            tipo: 'entrada',
+            valor: 3000,
+            status: 'pendente',
+            dataVencimentoIso: '2026-08-12',
+          },
+        ]}
+        initialDate={new Date(2026, 7, 1)}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('day-12'));
+
+    expect(screen.getByText('Pagamento de honorários')).toBeInTheDocument();
+    expect(
+      screen.getByText('Parcela referente ao contrato mensal')
+    ).toBeInTheDocument();
+  });
+
+  it('usa a descrição como título quando o lançamento não possui título', () => {
+    render(
+      <CalendarioClient
+        initialData={[
+          {
+            id: 55,
+            descricao: 'Pagamento sem título',
+            tipo: 'saida',
+            valor: 800,
+            status: 'pendente',
+            dataVencimentoIso: '2026-08-13',
+          },
+        ]}
+        initialDate={new Date(2026, 7, 1)}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('day-13'));
+
+    expect(screen.getByText('Pagamento sem título')).toBeInTheDocument();
+    expect(screen.getByText('− R$ 800,00')).toBeInTheDocument();
+  });
+
+  it('usa "Sem título" quando o lançamento não possui título nem descrição', () => {
+    render(
+      <CalendarioClient
+        initialData={[
+          {
+            id: 56,
+            tipo: 'saida',
+            valor: 500,
+            status: 'pendente',
+            dataVencimentoIso: '2026-08-14',
+          },
+        ]}
+        initialDate={new Date(2026, 7, 1)}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('day-14'));
+
+    expect(screen.getByText('Sem título')).toBeInTheDocument();
+    expect(screen.getByText('− R$ 500,00')).toBeInTheDocument();
+  });
 });
