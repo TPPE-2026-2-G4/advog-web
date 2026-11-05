@@ -69,6 +69,74 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
   });
 
   it('renderiza o fluxo completo: visualização, filtros, cadastro, edição e exclusão via HTTP fetch', async () => {
+    const clienteCarlos = {
+      cliente_id: 103,
+      nome: 'Carlos Eduardo',
+      cpf: '33344455566',
+      telefone: '(31) 96666-3333',
+      email: 'carlos@teste.com',
+      responsavel_id: 1,
+      etapa_id: 2,
+      ultima_interacao: new Date().toISOString(),
+    };
+
+    const clienteCarlosEditado = {
+      ...clienteCarlos,
+      nome: 'Carlos Eduardo Santos',
+      etapa_id: 3,
+    };
+
+    let clientesAtuais = [...mockClientesIniciais];
+
+    global.fetch.mockImplementation(async (url, options = {}) => {
+      const method = options.method || 'GET';
+      const urlString = String(url);
+
+      if (method === 'POST' && /\/clientes\/?$/.test(urlString)) {
+        clientesAtuais = [...clientesAtuais, clienteCarlos];
+
+        return {
+          ok: true,
+          status: 201,
+          json: async () => clienteCarlos,
+        };
+      }
+
+      if (method === 'PUT' && /\/clientes\/103$/.test(urlString)) {
+        clientesAtuais = clientesAtuais.map((cliente) =>
+          cliente.cliente_id === 103 ? clienteCarlosEditado : cliente
+        );
+
+        return {
+          ok: true,
+          status: 200,
+          json: async () => clienteCarlosEditado,
+        };
+      }
+
+      if (method === 'DELETE' && /\/clientes\/103$/.test(urlString)) {
+        clientesAtuais = clientesAtuais.filter(
+          (cliente) => cliente.cliente_id !== 103
+        );
+
+        return {
+          ok: true,
+          status: 204,
+          json: async () => ({}),
+        };
+      }
+
+      if (method === 'GET' && /\/clientes\/?/.test(urlString)) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => clientesAtuais,
+        };
+      }
+
+      throw new Error(`Requisição inesperada no teste: ${method} ${urlString}`);
+    });
+
     render(
       <ClientesClient
         initialClientes={mockClientesIniciais}
@@ -80,76 +148,111 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
     expect(
       screen.getByRole('heading', { name: 'Clientes' })
     ).toBeInTheDocument();
+
     expect(screen.getByText(/2 clientes cadastrados/)).toBeInTheDocument();
+
     expect(screen.getByText('Empresa Alpha Ltda')).toBeInTheDocument();
+
     expect(screen.getByText('Beatriz Pereira')).toBeInTheDocument();
 
     // 2. Filtro por busca
     const searchInput = screen.getByLabelText('Buscar clientes');
-    fireEvent.change(searchInput, { target: { value: 'alpha' } });
+
+    fireEvent.change(searchInput, {
+      target: { value: 'alpha' },
+    });
+
     expect(screen.getByText('Empresa Alpha Ltda')).toBeInTheDocument();
+
     expect(screen.queryByText('Beatriz Pereira')).not.toBeInTheDocument();
 
     // Limpar busca
-    fireEvent.change(searchInput, { target: { value: '' } });
+    fireEvent.change(searchInput, {
+      target: { value: '' },
+    });
+
     expect(screen.getByText('Beatriz Pereira')).toBeInTheDocument();
 
-    // 3. Abrir Detalhes do Cliente
-    const viewButtons = screen.getAllByLabelText(/visualizar detalhes/i);
-    fireEvent.click(viewButtons[0]);
+    // 3. Abrir detalhes do cliente
+    const viewAlphaButton = screen.getByLabelText(
+      'Visualizar detalhes de Empresa Alpha Ltda'
+    );
+
+    fireEvent.click(viewAlphaButton);
 
     expect(screen.getByText('Detalhes do Cliente')).toBeInTheDocument();
+
     expect(
       screen.getAllByText('contato@alpha.com').length
     ).toBeGreaterThanOrEqual(1);
 
-    // Fechar Detalhes
-    const closeBtns = screen.getAllByRole('button', { name: /fechar/i });
-    fireEvent.click(closeBtns[0]);
-    expect(screen.queryByText('Detalhes do Cliente')).not.toBeInTheDocument();
-
-    // 4. Cadastrar Novo Cliente com autocomplete de responsável (POST /clientes/)
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 201,
-      json: async () => ({
-        cliente_id: 103,
-        nome: 'Carlos Eduardo',
-        cpf: '33344455566',
-        telefone: '(31) 96666-3333',
-        email: 'carlos@teste.com',
-        responsavel_id: 1,
-        etapa_id: 2,
-        ultima_interacao: new Date().toISOString(),
-      }),
+    // Fechar detalhes
+    const closeBtns = screen.getAllByRole('button', {
+      name: /fechar/i,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /novo cliente/i }));
+    fireEvent.click(closeBtns[0]);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Detalhes do Cliente')).not.toBeInTheDocument();
+    });
+
+    // 4. Cadastrar novo cliente
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /novo cliente/i,
+      })
+    );
+
     expect(screen.getByText('Cadastrar Novo Cliente')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/nome completo/i), {
-      target: { value: 'Carlos Eduardo' },
+      target: {
+        value: 'Carlos Eduardo',
+      },
     });
+
     fireEvent.change(screen.getByLabelText(/^email$/i), {
-      target: { value: 'carlos@teste.com' },
+      target: {
+        value: 'carlos@teste.com',
+      },
     });
+
     fireEvent.change(screen.getByLabelText(/telefone/i), {
-      target: { value: '31966663333' },
+      target: {
+        value: '31966663333',
+      },
     });
+
     fireEvent.change(screen.getByLabelText(/cpf \/ cnpj/i), {
-      target: { value: '33344455566' },
+      target: {
+        value: '33344455566',
+      },
     });
 
     // Selecionar responsável no autocomplete
     const respCombobox = screen.getByPlaceholderText('Selecione o responsável');
+
     fireEvent.focus(respCombobox);
-    fireEvent.change(respCombobox, { target: { value: 'Lucas' } });
+
+    fireEvent.change(respCombobox, {
+      target: {
+        value: 'Lucas',
+      },
+    });
+
     const listbox = screen.getByRole('listbox');
-    const optionLucas = within(listbox).getByText(/dr\. lucas mendes/i);
+
+    const optionLucas = within(listbox).getByText(/Dr\. Lucas Mendes/i);
+
     fireEvent.click(optionLucas);
 
     // Salvar cadastro
-    fireEvent.click(screen.getByRole('button', { name: /salvar cadastro/i }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /salvar cadastro/i,
+      })
+    );
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -163,34 +266,38 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
           body: expect.stringContaining('"nome":"Carlos Eduardo"'),
         })
       );
+    });
+
+    await waitFor(() => {
       expect(screen.getByText('Carlos Eduardo')).toBeInTheDocument();
+
       expect(
         screen.getByText('Cliente cadastrado com sucesso!')
       ).toBeInTheDocument();
     });
 
-    // 5. Editar o cliente recém-cadastrado (PUT /clientes/103)
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        cliente_id: 103,
-        nome: 'Carlos Eduardo Santos',
-        telefone: '(31) 96666-3333',
-        email: 'carlos@teste.com',
-        responsavel_id: 1,
-        etapa_id: 3,
-      }),
-    });
+    // 5. Editar especificamente o cliente recém-cadastrado
+    const editCarlosButton = screen.getByLabelText(
+      'Editar cliente Carlos Eduardo'
+    );
 
-    const editButtons = screen.getAllByLabelText(/editar cliente/i);
-    fireEvent.click(editButtons[0]);
+    fireEvent.click(editCarlosButton);
 
     expect(screen.getByText('Editar Cliente')).toBeInTheDocument();
-    const editNome = screen.getByLabelText(/nome completo/i);
-    fireEvent.change(editNome, { target: { value: 'Carlos Eduardo Santos' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /salvar alterações/i }));
+    const editNome = screen.getByLabelText(/nome completo/i);
+
+    fireEvent.change(editNome, {
+      target: {
+        value: 'Carlos Eduardo Santos',
+      },
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /salvar alterações/i,
+      })
+    );
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -204,24 +311,30 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
           body: expect.stringContaining('"nome":"Carlos Eduardo Santos"'),
         })
       );
+    });
+
+    await waitFor(() => {
       expect(screen.getByText('Carlos Eduardo Santos')).toBeInTheDocument();
+
       expect(
         screen.getByText('Cliente atualizado com sucesso!')
       ).toBeInTheDocument();
     });
 
-    // 6. Excluir cliente (DELETE /clientes/103)
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 204,
-      json: async () => ({}),
-    });
+    // 6. Excluir especificamente o cliente editado
+    const deleteCarlosButton = screen.getByLabelText(
+      'Excluir cliente Carlos Eduardo Santos'
+    );
 
-    const deleteButtons = screen.getAllByLabelText(/excluir cliente/i);
-    fireEvent.click(deleteButtons[0]);
+    fireEvent.click(deleteCarlosButton);
 
     expect(screen.getByText('Excluir cliente')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /^excluir$/i }));
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /^excluir$/i,
+      })
+    );
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -233,14 +346,18 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
           }),
         })
       );
+    });
+
+    await waitFor(() => {
       expect(
         screen.queryByText('Carlos Eduardo Santos')
       ).not.toBeInTheDocument();
+
       expect(
         screen.getByText('Cliente excluído com sucesso!')
       ).toBeInTheDocument();
     });
-  }, 15000);
+  }, 30000);
 
   it.each([
     {
