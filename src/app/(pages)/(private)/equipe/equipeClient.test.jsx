@@ -210,6 +210,17 @@ vi.mock('@/components/features/equipe/DeleteRoleModal/DeleteRoleModal', () => ({
   ),
 }));
 
+vi.mock(
+  '@/components/features/equipe/TeamProductivity/TeamProductivity',
+  () => ({
+    default: ({ canView }) => (
+      <div data-testid="team-productivity">
+        {canView ? 'produtividade visível' : 'produtividade oculta'}
+      </div>
+    ),
+  })
+);
+
 const member = {
   funcionario_id: 1,
   nome_func: 'Maria Silva',
@@ -471,6 +482,31 @@ describe('EquipeClient', () => {
           expect(html).toContain('Gestão de Usuários e Permissões');
         }
       }
+    );
+  });
+
+  it('renderiza a produtividade da equipe para quem pode gerenciar a equipe', () => {
+    useEquipe.mockReturnValue(createHookState());
+
+    render(<EquipeClient initialData={[]} initialRoles={[]} />);
+
+    expect(screen.getByTestId('team-productivity')).toHaveTextContent(
+      'produtividade visível'
+    );
+  });
+
+  it('oculta a produtividade da equipe para quem não pode gerenciar a equipe', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({ cargo: { permissao: { gerenciar_equipe: false } } })
+    );
+
+    useEquipe.mockReturnValue(createHookState());
+
+    render(<EquipeClient initialData={[]} initialRoles={[]} />);
+
+    expect(screen.getByTestId('team-productivity')).toHaveTextContent(
+      'produtividade oculta'
     );
   });
 });
