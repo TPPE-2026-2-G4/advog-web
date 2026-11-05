@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DashboardClient from './dashboardClient';
+import { obterKanbanAtividades } from '@/services/atividades';
+import { obterResumoAtividades } from '@/services/dashboard';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 import {
@@ -11,6 +13,14 @@ import {
   uploadDocumento,
 } from '@/services/processos';
 import { getCurrentUser } from '@/utils/authSession';
+
+vi.mock('@/services/atividades', () => ({
+  obterKanbanAtividades: vi.fn(),
+}));
+
+vi.mock('@/services/dashboard', () => ({
+  obterResumoAtividades: vi.fn(),
+}));
 
 vi.mock('@/services/clientes', () => ({
   listarClientes: vi.fn(),
@@ -46,6 +56,34 @@ const process = {
   funcionario_id: 2,
 };
 
+const mockSummary = {
+  escopo: 'escritorio',
+  pendentes: 3,
+  em_execucao: 7,
+  concluidas: 4,
+  atrasadas: 2,
+};
+
+const mockKanban = {
+  escopo: 'escritorio',
+  etapas: [
+    {
+      etapa_id: 1,
+      nome: 'Backlog',
+      ordem: 1,
+      atividades: [
+        {
+          atividade_id: 10,
+          titulo: 'Redigir petição inicial',
+          data_prazo: '2999-09-02T18:00:00',
+          processo_id: null,
+          responsaveis: [{ funcionario_id: 1, nome: 'Ana Paula' }],
+        },
+      ],
+    },
+  ],
+};
+
 describe('DashboardClient integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -56,6 +94,8 @@ describe('DashboardClient integration', () => {
       },
     });
 
+    obterResumoAtividades.mockResolvedValue(mockSummary);
+    obterKanbanAtividades.mockResolvedValue(mockKanban);
     listarClientes.mockResolvedValue([
       { cliente_id: 1, nome: 'Empresa Alpha Ltda' },
     ]);
