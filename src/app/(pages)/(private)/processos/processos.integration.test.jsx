@@ -7,9 +7,15 @@ import {
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { listarProcessos } from '@/services/processos';
+import { downloadBlob } from '@/utils/exportacao';
 import { toProcessPage } from '@/utils/processo';
 import ProcessosPage from './page';
 import ProcessosClient from './processosClient';
+
+vi.mock('@/utils/exportacao', async (importOriginal) => ({
+  ...(await importOriginal()),
+  downloadBlob: vi.fn(),
+}));
 
 const API_BASE = 'http://localhost:8000';
 
@@ -446,7 +452,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
           screen.getByRole('combobox', { name: /filtrar por responsável/i }),
           { target: { value: '5' } }
         ),
-      'responsavel_id=5&page=1&page_size=5',
+      'funcionario_id=5&page=1&page_size=5',
     ],
     [
       'prazo inicial',
@@ -1029,5 +1035,89 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       await screen.findByRole('button', { name: 'Processo Arquivado Teste' })
     ).toBeInTheDocument();
     expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
+  });
+
+  describe('exportação de relatórios', () => {
+    const exportCalls = () =>
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).startsWith(`${API_BASE}/processos/exportar`)
+      );
+
+    const mockExportResponse = (response) => {
+      const defaultFetch = fetchMock.getMockImplementation();
+      fetchMock.mockImplementation((url, options) =>
+        String(url).startsWith(`${API_BASE}/processos/exportar`)
+          ? Promise.resolve(response)
+          : defaultFetch(url, options)
+      );
+    };
+
+    it('exporta em Excel os processos filtrados na tela e baixa o arquivo', async () => {
+      const blob = new Blob(['xlsx']);
+      mockExportResponse({ ok: true, status: 200, blob: async () => blob });
+      renderIntegration();
+
+      await screen.findByRole('option', { name: /Carlos Eduardo/ });
+      fireEvent.change(
+        screen.getByRole('combobox', { name: /filtrar por responsável/i }),
+        { target: { value: '5' } }
+      );
+      fireEvent.change(
+        screen.getByRole('combobox', { name: /filtrar por status/i }),
+        { target: { value: 'Arquivado' } }
+      );
+      await waitFor(() =>
+        expect(
+          fetchMock.mock.calls.some(([url]) =>
+            String(url).includes('status=Arquivado&funcionario_id=5')
+          )
+        ).toBe(true)
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /Exportar/ }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Excel (.xlsx)' }));
+
+      await waitFor(() => expect(downloadBlob).toHaveBeenCalledOnce());
+      expect(downloadBlob).toHaveBeenCalledWith(
+        blob,
+        expect.stringMatching(/^processos_\d{8}\.xlsx$/)
+      );
+
+      const [[url, options]] = exportCalls();
+      expect(url).toBe(
+        `${API_BASE}/processos/exportar?status=Arquivado&funcionario_id=5&formato=xlsx`
+      );
+      expect(options.headers).toEqual({
+        Authorization: `Bearer ${accessToken}`,
+      });
+    });
+
+    it('exibe o motivo devolvido pela API quando a exportação é recusada', async () => {
+      mockExportResponse(
+        jsonResponse({ detail: 'A exportação excede 10000 processos' }, 422)
+      );
+      renderIntegration();
+
+      fireEvent.click(screen.getByRole('button', { name: /Exportar/ }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
+
+      expect(
+        await screen.findByText('A exportação excede 10000 processos')
+      ).toBeInTheDocument();
+      expect(downloadBlob).not.toHaveBeenCalled();
+    });
+
+    it('desabilita a exportação enquanto o intervalo de datas é inválido', () => {
+      renderIntegration();
+
+      fireEvent.change(screen.getByLabelText('De:'), {
+        target: { value: '2026-09-30' },
+      });
+      fireEvent.change(screen.getByLabelText('Até:'), {
+        target: { value: '2026-09-01' },
+      });
+
+      expect(screen.getByRole('button', { name: /Exportar/ })).toBeDisabled();
+    });
   });
 });

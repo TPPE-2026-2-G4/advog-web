@@ -712,7 +712,6 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       );
     };
 
-    const onExportReport = vi.fn();
     render(
       <FinancasClient
         initialData={[
@@ -728,7 +727,6 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
             status: 'realizado',
           },
         ]}
-        onExportReport={onExportReport}
       />
     );
 
@@ -739,7 +737,8 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Relatório/i }));
-    expect(onExportReport).toHaveBeenCalledOnce();
+    expect(screen.getByRole('menuitem', { name: 'PDF' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Relatório/i }));
 
     const nextBtn = screen.getByRole('button', { name: 'Próxima página' });
     expect(nextBtn).not.toBeDisabled();

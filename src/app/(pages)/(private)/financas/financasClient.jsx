@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import ExportMenu from '@/components/ui/ExportMenu/ExportMenu';
 import LancamentosTable from '@/components/features/financas/LancamentosTable/LancamentosTable';
 import LancamentoModal from '@/components/features/financas/LancamentoModal/LancamentoModal';
 import DeleteLancamentoModal from '@/components/features/financas/DeleteLancamentoModal/DeleteLancamentoModal';
@@ -10,7 +11,6 @@ import styles from './financas.module.css';
 
 export default function FinancasClient({
   initialData,
-  onExportReport,
   onNewEntry,
   onEditLancamento,
   onDeleteLancamento,
@@ -31,6 +31,9 @@ export default function FinancasClient({
     handleUpdateLancamento,
     handleToggleStatus,
     handleFilterLancamentos,
+    isExporting,
+    exportError,
+    exportReport,
     isDeleting,
     deleteError,
     statusError,
@@ -98,14 +101,12 @@ export default function FinancasClient({
         </div>
 
         <div className={styles.actions}>
-          <button
-            type="button"
+          <ExportMenu
+            label="Relatório"
             className={styles.reportButton}
-            onClick={onExportReport}
-          >
-            <Download size={18} />
-            Relatório
-          </button>
+            isExporting={isExporting}
+            onExport={exportReport}
+          />
 
           <button
             type="button"
@@ -118,9 +119,9 @@ export default function FinancasClient({
         </div>
       </div>
 
-      {(deleteError || statusError) && (
+      {(deleteError || statusError || exportError) && (
         <div role="alert" className={styles.errorMessage}>
-          {deleteError || statusError}
+          {deleteError || statusError || exportError}
         </div>
       )}
 

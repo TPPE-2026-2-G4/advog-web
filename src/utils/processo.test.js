@@ -309,7 +309,7 @@ describe('filtros e listagem de processos', () => {
         pageSize: 5,
       },
       expected:
-        'busca=0061234&status=Ativo&responsavel_id=7&prazo_inicio=2026-09-01&page=2&page_size=5',
+        'busca=0061234&status=Ativo&funcionario_id=7&prazo_inicio=2026-09-01&page=2&page_size=5',
     },
     {
       cenario: 'data em formato brasileiro e busca em branco',
