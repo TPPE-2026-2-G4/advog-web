@@ -119,4 +119,37 @@ describe('useLogin', () => {
       expect(pushMock).not.toHaveBeenCalled();
     }
   );
+
+  it('ignora uma segunda submissão enquanto o login está em andamento', async () => {
+    let resolveLogin;
+
+    loginMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveLogin = resolve;
+      })
+    );
+
+    render(createElement(LoginConsumer));
+
+    const submitButton = screen.getByRole('button', { name: 'Entrar' });
+
+    fireEvent.submit(submitButton);
+
+    await waitFor(() => {
+      expect(loginMock).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.submit(submitButton);
+
+    expect(loginMock).toHaveBeenCalledTimes(1);
+    expect(pushMock).not.toHaveBeenCalled();
+
+    resolveLogin({ token: 'token' });
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith('/dashboard');
+    });
+
+    expect(loginMock).toHaveBeenCalledTimes(1);
+  });
 });
