@@ -872,6 +872,12 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
           )
         );
       }
+      if (
+        urlString ===
+        `${API_BASE}/processos/${processWithoutMovement.processo_id}/movimentacoes`
+      ) {
+        return Promise.resolve(jsonResponse([]));
+      }
       if (urlString.startsWith(`${API_BASE}/processos/`)) {
         return Promise.resolve(
           jsonResponse(makePageResponse([processWithoutMovement]))
@@ -897,7 +903,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       within(detailsModal).getByRole('tab', { name: 'Movimentações' })
     );
     expect(
-      within(detailsModal).getByText(
+      await within(detailsModal).findByText(
         'Nenhuma movimentação registrada para este processo.'
       )
     ).toBeInTheDocument();

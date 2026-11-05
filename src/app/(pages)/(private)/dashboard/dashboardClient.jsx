@@ -20,6 +20,7 @@ export default function DashboardClient() {
   );
   const permissions = JSON.parse(permissionsJson);
   const canView = permissions.visualizar_processos === true;
+  const canEdit = permissions.editar_processos === true;
 
   const [clientes, setClientes] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
@@ -133,6 +134,7 @@ export default function DashboardClient() {
           error={detailError}
           onRetry={retryDetail}
           onClose={closeDetail}
+          canEdit={canEdit}
         />
       )}
     </div>
