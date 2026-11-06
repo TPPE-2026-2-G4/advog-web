@@ -5,6 +5,7 @@ import {
   criarProcesso,
   excluirDocumento,
   excluirProcesso,
+  exportarProcessos,
   getProcessosData,
   listarDocumentos,
   listarProcessos,
@@ -79,7 +80,7 @@ describe('serviço de processos', () => {
     });
 
     expect(fetch).toHaveBeenCalledWith(
-      'http://localhost:8000/processos/?busca=0061234&status=Ativo&responsavel_id=3&prazo_inicio=2026-09-01&prazo_fim=2026-09-30&page=2&page_size=5',
+      'http://localhost:8000/processos/?busca=0061234&status=Ativo&funcionario_id=3&prazo_inicio=2026-09-01&prazo_fim=2026-09-30&page=2&page_size=5',
       { cache: 'no-store', headers: authorization }
     );
   });
@@ -368,5 +369,99 @@ describe('serviço de processos', () => {
         { cache: 'no-store', headers: authorization }
       );
     });
+  });
+});
+
+describe('exportarProcessos', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.stubGlobal('fetch', vi.fn());
+    sessionStorage.clear();
+    localStorage.clear();
+    sessionStorage.setItem('access_token', 'token-jwt');
+  });
+
+  it('baixa o relatório com os filtros ativos e sem paginação', async () => {
+    const blob = new Blob(['pdf']);
+    fetch.mockResolvedValue({ ok: true, status: 200, blob: async () => blob });
+
+    await expect(
+      exportarProcessos(
+        {
+          busca: '0061234',
+          status: 'Ativo',
+          responsavelId: '3',
+          prazoInicio: '2026-09-01',
+          prazoFim: '2026-09-30',
+          page: 2,
+          pageSize: 5,
+        },
+        'xlsx'
+      )
+    ).resolves.toBe(blob);
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/processos/exportar?busca=0061234&status=Ativo&funcionario_id=3&prazo_inicio=2026-09-01&prazo_fim=2026-09-30&formato=xlsx',
+      { cache: 'no-store', headers: authorization }
+    );
+  });
+
+  it('exporta em PDF sem filtros por padrão', async () => {
+    fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => new Blob([]),
+    });
+
+    await exportarProcessos();
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/processos/exportar?formato=pdf',
+      { cache: 'no-store', headers: authorization }
+    );
+  });
+
+  it('lança erro e não consulta a API quando não há token', async () => {
+    sessionStorage.clear();
+
+    await expect(exportarProcessos({}, 'csv')).rejects.toThrow(
+      'Sessão expirada. Faça login novamente.'
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [401, 'Sessão expirada. Faça login novamente.'],
+    [403, 'Você não possui permissão para realizar esta ação.'],
+  ])('traduz o status %i em mensagem amigável', async (status, message) => {
+    fetch.mockResolvedValue(errorResponse('negado', status));
+
+    await expect(exportarProcessos({}, 'pdf')).rejects.toThrow(message);
+  });
+
+  it('informa o motivo devolvido pela API, como o limite de linhas', async () => {
+    fetch.mockResolvedValue(
+      errorResponse('A exportação excede 10000 processos', 422)
+    );
+
+    await expect(exportarProcessos({}, 'pdf')).rejects.toThrow(
+      'A exportação excede 10000 processos'
+    );
+  });
+
+  it('usa mensagem padrão para falhas de rede ou respostas sem detalhe', async () => {
+    fetch.mockRejectedValueOnce(new Error('offline'));
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: vi.fn().mockRejectedValue(new Error('sem json')),
+    });
+
+    await expect(exportarProcessos({}, 'pdf')).rejects.toThrow(
+      'Não foi possível exportar os processos.'
+    );
+    await expect(exportarProcessos({}, 'pdf')).rejects.toThrow(
+      'Não foi possível exportar os processos.'
+    );
   });
 });

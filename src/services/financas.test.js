@@ -8,6 +8,7 @@ import {
   excluirCategoria,
   excluirFinancas,
   excluirLancamento,
+  exportarFinancas,
   listarCategorias,
   listarFinancas,
   listarLancamentos,
@@ -23,8 +24,9 @@ const respostaJson = (dados, configuracao = {}) => ({
   ...configuracao,
 });
 
-const respostaComErro = (detail) => ({
+const respostaComErro = (detail, status = 400) => ({
   ok: false,
+  status,
   json: vi.fn().mockResolvedValue({ detail }),
 });
 
@@ -1354,5 +1356,99 @@ describe('serviço de finanças', () => {
         exportarCalendarioIcs({ inicio: '2026-08-01', fim: '2026-08-31' })
       ).rejects.toThrow('Falha na exportação');
     });
+  });
+});
+
+describe('exportarFinancas', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.stubGlobal('fetch', vi.fn());
+    localStorage.clear();
+    sessionStorage.clear();
+    sessionStorage.setItem('access_token', 'token-jwt');
+  });
+
+  it('baixa o relatório com os filtros ativos e o formato escolhido', async () => {
+    const blob = new Blob(['csv']);
+    fetch.mockResolvedValue({ ok: true, status: 200, blob: async () => blob });
+
+    await expect(
+      exportarFinancas(
+        {
+          inicio: '2026-08-01',
+          fim: '2026-08-31',
+          tipo: 'e',
+          situacao: 'Pendente',
+          categoria_id: 10,
+          cliente_id: 4,
+          page: 3,
+          page_size: 5,
+        },
+        'csv'
+      )
+    ).resolves.toBe(blob);
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/lancamentos/exportar?formato=csv&inicio=2026-08-01&fim=2026-08-31&tipo=e&status=Pendente&categoria_id=10&cliente_id=4',
+      { cache: 'no-store', headers: { Authorization: 'Bearer token-jwt' } }
+    );
+  });
+
+  it('exporta em PDF sem filtros por padrão', async () => {
+    fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => new Blob([]),
+    });
+
+    await exportarFinancas();
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/lancamentos/exportar?formato=pdf',
+      expect.any(Object)
+    );
+  });
+
+  it('lança erro e não consulta a API quando não há token', async () => {
+    sessionStorage.clear();
+
+    await expect(exportarFinancas({}, 'pdf')).rejects.toThrow(
+      'Sessão expirada. Faça login novamente.'
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [401, 'Sessão expirada. Faça login novamente.'],
+    [403, 'Você não possui permissão para exportar os dados financeiros.'],
+  ])('traduz o status %i em mensagem amigável', async (status, message) => {
+    fetch.mockResolvedValue(respostaComErro('negado', status));
+
+    await expect(exportarFinancas({}, 'pdf')).rejects.toThrow(message);
+  });
+
+  it('informa o motivo devolvido pela API, como o limite de linhas', async () => {
+    fetch.mockResolvedValue(
+      respostaComErro('A exportação excede 10000 lançamentos', 422)
+    );
+
+    await expect(exportarFinancas({}, 'pdf')).rejects.toThrow(
+      'A exportação excede 10000 lançamentos'
+    );
+  });
+
+  it('usa mensagem padrão para falhas de rede ou respostas sem detalhe', async () => {
+    fetch.mockRejectedValueOnce(new Error('offline'));
+    fetch.mockResolvedValueOnce({
+      ...respostaComErroSemJson(),
+      status: 500,
+    });
+
+    await expect(exportarFinancas({}, 'pdf')).rejects.toThrow(
+      'Não foi possível exportar os lançamentos.'
+    );
+    await expect(exportarFinancas({}, 'pdf')).rejects.toThrow(
+      'Não foi possível exportar os lançamentos.'
+    );
   });
 });
