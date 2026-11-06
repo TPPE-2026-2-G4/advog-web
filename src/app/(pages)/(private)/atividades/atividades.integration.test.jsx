@@ -2,6 +2,7 @@ import {
   act,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from '@testing-library/react';
@@ -12,15 +13,6 @@ import {
   listarProdutividadeEquipe,
   obterKanbanAtividades,
 } from '@/services/atividades';
-  fireEvent,
-  render,
-  renderHook,
-  screen,
-  waitFor,
-} from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import AtividadesClient from './atividadesClient';
-import { obterKanbanAtividades } from '@/services/atividades';
 import { obterResumoAtividades } from '@/services/dashboard';
 import { useKanbanAtividades } from '@/hooks/useKanbanAtividades';
 import { useResumoAtividades } from '@/hooks/useResumoAtividades';
