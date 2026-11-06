@@ -57,11 +57,12 @@ export function listarProdutividadeEquipe() {
   );
 }
 
-export function obterKanban() {
+export function obterKanbanAtividades() {
   return request(
     '/atividades/kanban',
     { method: 'GET', cache: 'no-store' },
-    'Não foi possível carregar o quadro de atividades.'
+    'Não foi possível carregar as atividades.',
+    'Você não possui permissão para visualizar as atividades.'
   );
 }
 

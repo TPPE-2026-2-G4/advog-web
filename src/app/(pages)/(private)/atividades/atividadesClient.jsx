@@ -10,16 +10,18 @@ import {
   Trash2,
   User,
 } from 'lucide-react';
+import ActivityStageSummary from '@/components/features/atividades/ActivityStageSummary/ActivityStageSummary';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
+import { useKanbanAtividades } from '@/hooks/useKanbanAtividades';
 import {
   atualizarAtividade,
   buscarAtividade,
   criarAtividade,
   excluirAtividade,
-  obterKanban,
 } from '@/services/atividades';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { listarProcessos } from '@/services/processos';
+import { countActivitiesByStage } from '@/utils/atividade';
 import { getCurrentUser } from '@/utils/authSession';
 import styles from './atividades.module.css';
 
@@ -45,11 +47,21 @@ export default function AtividadesClient() {
   const canEdit = perms.editar_atividades !== false;
   const canDelete = perms.excluir_atividades !== false;
 
-  const [etapas, setEtapas] = useState([]);
-  const [escopo, setEscopo] = useState('escritorio');
+  const {
+    stages: etapas,
+    isLoading,
+    error,
+    reload: recarregar,
+  } = useKanbanAtividades();
+
+  const { total, stages: stageCounts } = useMemo(
+    () => countActivitiesByStage(etapas),
+    [etapas]
+  );
+
   const [funcionarios, setFuncionarios] = useState([]);
   const [processos, setProcessos] = useState([]);
-  const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [feedback, setFeedback] = useState('');
   const [viewing, setViewing] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -57,33 +69,22 @@ export default function AtividadesClient() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [draggedId, setDraggedId] = useState(null);
-  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     Promise.all([
-      obterKanban(),
-      listarFuncionarios(),
-      listarProcessos().catch(() => ({ itens: [] })),
-    ])
-      .then(([kanban, funcs, procs]) => {
-        setEtapas(kanban.etapas);
-        setEscopo(kanban.escopo);
-        setFuncionarios(funcs);
-        setProcessos(procs.itens);
-        setError('');
-      })
-      .catch((err) => {
-        setError(err.message);
-      });
-  }, [reloadKey]);
+      Promise.resolve(listarFuncionarios?.()).catch(() => []),
+      Promise.resolve(listarProcessos?.()).catch(() => ({ itens: [] })),
+    ]).then(([funcs, procs]) => {
+      setFuncionarios(Array.isArray(funcs) ? funcs : []);
+      setProcessos(Array.isArray(procs?.itens) ? procs.itens : []);
+    });
+  }, []);
 
   useEffect(() => {
     if (!feedback) return undefined;
     const timer = setTimeout(() => setFeedback(''), 15000);
     return () => clearTimeout(timer);
   }, [feedback]);
-
-  const recarregar = () => setReloadKey((k) => k + 1);
 
   const etapasMap = useMemo(
     () => new Map(etapas.map((e) => [e.etapa_id, e.nome])),
@@ -106,7 +107,7 @@ export default function AtividadesClient() {
       const detail = await buscarAtividade(card.atividade_id);
       setViewing(detail);
     } catch (err) {
-      setError(err.message);
+      setActionError(err.message);
     }
   };
 
@@ -128,7 +129,7 @@ export default function AtividadesClient() {
       setFormError('');
       setModalOpen(true);
     } catch (err) {
-      setError(err.message);
+      setActionError(err.message);
     }
   };
 
@@ -189,7 +190,7 @@ export default function AtividadesClient() {
       setFeedback('Atividade excluída.');
       recarregar();
     } catch (err) {
-      setError(err.message);
+      setActionError(err.message);
     }
   };
 
@@ -198,19 +199,17 @@ export default function AtividadesClient() {
       await atualizarAtividade(atividadeId, { etapa_id: Number(novaEtapaId) });
       recarregar();
     } catch (err) {
-      setError(err.message);
+      setActionError(err.message);
     }
   };
 
   return (
     <div className={styles.container}>
-      <div className={styles.headerRow}>
+      <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Quadro de Atividades</h1>
           <p className={styles.subtitle}>
-            {escopo === 'usuario'
-              ? 'Minhas atividades atribuídas'
-              : 'Gerencie as tarefas do escritório por status'}
+            Gerencie as tarefas do escritório por status
           </p>
         </div>
         {canCreate && (
@@ -222,31 +221,24 @@ export default function AtividadesClient() {
             <Plus size={18} /> Nova Atividade
           </button>
         )}
-      </div>
+      </header>
 
-      <div className={styles.statsBar} aria-label="Resumo de atividades">
-        <div className={styles.statBox}>
-          <span className={styles.statLabel}>Total</span>
-          <span className={styles.statValue}>
-            {etapas.reduce((acc, col) => acc + col.atividades.length, 0)}
-          </span>
-        </div>
-        {etapas.map((col, idx) => (
-          <div key={col.etapa_id} className={styles.statBox} data-stage={idx}>
-            <span className={styles.statLabel}>{col.nome}</span>
-            <span className={styles.statValue}>{col.atividades.length}</span>
-          </div>
-        ))}
-      </div>
+      <ActivityStageSummary
+        total={total}
+        stages={stageCounts}
+        isLoading={isLoading}
+        error={error}
+        onRetry={recarregar}
+      />
 
       {feedback && (
         <div role="status" className={styles.alertSuccess}>
           {feedback}
         </div>
       )}
-      {error && (
+      {actionError && (
         <div role="alert" className={styles.alertError}>
-          {error}
+          {actionError}
         </div>
       )}
 
@@ -265,7 +257,10 @@ export default function AtividadesClient() {
             }}
           >
             <div className={styles.columnHeader}>
-              <h2 className={styles.columnTitle}>{col.nome}</h2>
+              <span className={styles.columnTitle}>
+                <span>{col.nome.slice(0, 1)}</span>
+                {col.nome.slice(1)}
+              </span>
               <span className={styles.badge}>{col.atividades.length}</span>
             </div>
 
@@ -275,10 +270,10 @@ export default function AtividadesClient() {
                 const respNomes = a.responsaveis.length
                   ? a.responsaveis.map((r) => r.nome).join(', ')
                   : 'Não atribuído';
+
                 return (
                   <div
                     key={a.atividade_id}
-                    className={styles.card}
                     draggable={canEdit}
                     onDragStart={() =>
                       setDraggedId({
@@ -286,6 +281,7 @@ export default function AtividadesClient() {
                         etapaId: col.etapa_id,
                       })
                     }
+                    className={styles.card}
                     onClick={() => openDetails(a)}
                   >
                     <div className={styles.cardTop}>

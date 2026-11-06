@@ -12,14 +12,14 @@ import {
   buscarAtividade,
   criarAtividade,
   excluirAtividade,
-  obterKanban,
+  obterKanbanAtividades,
 } from '@/services/atividades';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { listarProcessos } from '@/services/processos';
 import { getCurrentUser } from '@/utils/authSession';
 
 vi.mock('@/services/atividades', () => ({
-  obterKanban: vi.fn(),
+  obterKanbanAtividades: vi.fn(),
   buscarAtividade: vi.fn(),
   criarAtividade: vi.fn(),
   atualizarAtividade: vi.fn(),
@@ -64,6 +64,28 @@ const mockKanban = {
   ],
 };
 
+describe('AtividadesPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    obterKanbanAtividades.mockResolvedValue({ escopo: 'usuario', etapas: [] });
+    listarFuncionarios.mockResolvedValue([]);
+    listarProcessos.mockResolvedValue({ itens: [] });
+  });
+
+  it('renderiza o título e o subtítulo do quadro de atividades', async () => {
+    render(<AtividadesPage />);
+
+    expect(
+      screen.getByRole('heading', { name: 'Quadro de Atividades' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Gerencie as tarefas do escritório por status')
+    ).toBeInTheDocument();
+
+    await waitFor(() => expect(obterKanbanAtividades).toHaveBeenCalledOnce());
+  });
+});
+
 describe('AtividadesPage e AtividadesClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -76,7 +98,7 @@ describe('AtividadesPage e AtividadesClient', () => {
         },
       },
     });
-    obterKanban.mockResolvedValue(mockKanban);
+    obterKanbanAtividades.mockResolvedValue(mockKanban);
     listarFuncionarios.mockResolvedValue([
       { funcionario_id: 1, nome: 'Dr. Alexandre' },
       { funcionario_id: 2, nome: 'Dra. Ana' },
@@ -236,7 +258,7 @@ describe('AtividadesPage e AtividadesClient', () => {
     });
   });
 
-  it('trata escopo de usuário, permissões restritas e erros de API', async () => {
+  it('trata permissões restritas e erros de API', async () => {
     buscarAtividade.mockRejectedValueOnce(new Error('Erro ao abrir detalhes'));
     atualizarAtividade.mockRejectedValueOnce(new Error('Erro ao mover'));
     excluirAtividade.mockRejectedValueOnce(new Error('Erro ao excluir'));
@@ -308,7 +330,9 @@ describe('AtividadesPage e AtividadesClient', () => {
         },
       },
     });
-    obterKanban.mockRejectedValueOnce(new Error('Falha ao carregar kanban'));
+    obterKanbanAtividades.mockRejectedValueOnce(
+      new Error('Falha ao carregar kanban')
+    );
 
     render(<AtividadesPage />);
     await waitFor(() => {

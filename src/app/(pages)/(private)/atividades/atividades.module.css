@@ -1,73 +1,35 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
 }
 
-.headerRow {
+.header {
   display: flex;
+  align-items: flex-end;
   justify-content: space-between;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
 }
 
 .title {
-  font-size: 30px;
-  font-weight: 600;
-  color: #172133;
   margin: 0;
+  color: #162238;
+  font-family:
+    var(--font-cormorant),
+    Cormorant Garamond,
+    serif;
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 600;
 }
 
 .subtitle {
+  margin: 6px 0 0;
+  color: #6b7280;
   font-size: 14px;
-  color: #6b7280;
-  margin: 4px 0 0;
-}
-
-.statsBar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.statBox {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 10px 16px;
-}
-
-.statLabel {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.statValue {
-  font-family: var(--font-cormorant), serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: #172133;
-}
-
-.statBox[data-stage='0'] .statValue {
-  color: #374151;
-}
-
-.statBox[data-stage='1'] .statValue {
-  color: #2563eb;
-}
-
-.statBox[data-stage='2'] .statValue {
-  color: #d97706;
-}
-
-.statBox[data-stage='3'] .statValue {
-  color: #059669;
 }
 
 .addButton {
@@ -149,18 +111,19 @@
 }
 
 .badge {
-  background: #e2e8f0;
-  color: #1e293b;
   font-size: 12px;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
+  background: #e2e8f0;
+  color: #1e293b;
 }
 
 .cardList {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 120px;
 }
 
 .card {
@@ -259,13 +222,12 @@
 
 .requiredHint span,
 .requiredLabel::after {
-  color: #b91c1c;
+  color: #dc2626;
   font-weight: 700;
 }
 
 .requiredLabel::after {
-  margin-left: 3px;
-  content: '*';
+  content: ' *';
 }
 
 .modalBody {
@@ -297,25 +259,26 @@
 
 .detailGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
+  padding-top: 8px;
 }
 
 .detailItem {
   display: flex;
-  gap: 8px;
   align-items: flex-start;
+  gap: 8px;
   color: #6b7280;
 }
 
 .detailLabel {
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
 }
 
 .detailValue {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: #172133;
   margin: 2px 0 0;
 }
@@ -323,39 +286,41 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   font-size: 13px;
   font-weight: 500;
   color: #374151;
 }
 
 .field input,
-.field select,
-.field textarea {
-  padding: 8px 10px;
+.field textarea,
+.field select {
+  padding: 9px 12px;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
 }
 
 .gridTwo {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
 .checkList {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
 }
 
 .checkItem {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 400;
+  gap: 8px;
+  font-size: 13px;
 }
