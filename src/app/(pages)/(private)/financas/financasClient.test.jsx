@@ -165,6 +165,7 @@ vi.mock('@/services/financas', () => ({
     .mockResolvedValue({ categoria_id: 2, nome: 'Nova Categoria' }),
   excluirCategoria: vi.fn().mockResolvedValue(true),
   obterResumoFinancas: vi.fn(),
+  obterGraficoFinancas: vi.fn().mockResolvedValue({ itens: [] }),
 }));
 
 describe('FinancasClient', () => {
@@ -216,6 +217,16 @@ describe('FinancasClient', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText('Gestão de receitas e despesas')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Receita do Mês')).toBeInTheDocument();
+    expect(screen.getByText('Despesas do Mês')).toBeInTheDocument();
+    expect(screen.getByText('Saldo Líquido')).toBeInTheDocument();
+    expect(screen.getByText('A Receber')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Fluxo de Caixa' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Despesas por Categoria' })
     ).toBeInTheDocument();
   });
 

@@ -8,11 +8,18 @@ import {
 } from '@testing-library/react';
 import FinancasPage from './page';
 import FinancasClient from './financasClient';
+import FinancialDashboard, {
+  buildSmoothAreaPath,
+  buildSmoothLinePath,
+} from '@/components/features/financas/FinancialDashboard/FinancialDashboard';
 import LancamentosTable from '@/components/features/financas/LancamentosTable/LancamentosTable';
 import LancamentoModal from '@/components/features/financas/LancamentoModal/LancamentoModal';
 import {
   listarFinancas,
   obterResumoFinancas,
+  obterGraficoFinancas,
+  obterCalendario,
+  exportarCalendarioIcs,
   criarFinancas,
   atualizarFinancas,
   excluirFinancas,
@@ -23,10 +30,15 @@ import {
 } from '@/services/financas';
 import {
   formatCurrency,
+  formatCurrencyNumber,
+  formatCompactCurrency,
   formatDateToBr,
   formatDateToIso,
   verificarStatusPorVencimento,
   calcularResumoFinanceiro,
+  calcularIndicadoresFinanceiros,
+  agruparFluxoCaixaPorMes,
+  agruparDespesasPorCategoria,
   parseApiError,
   toLancamento,
   toApiLancamento,
@@ -129,6 +141,48 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
 
       if (method === 'GET' && url.includes('/lancamentos/resumo')) {
         return createJsonResponse(initialResumoResponse, 200);
+      }
+
+      if (method === 'GET' && url.includes('/lancamentos/grafico')) {
+        const parsedUrl = new URL(url);
+        const minStr = parsedUrl.searchParams.get('valor_min');
+        const maxStr = parsedUrl.searchParams.get('valor_max');
+        const minVal = minStr !== null ? Number(minStr) : null;
+        const maxVal = maxStr !== null ? Number(maxStr) : null;
+
+        const itensFiltrados = dbLancamentos.filter((l) => {
+          const val = Number(l.valor) || 0;
+          if (minVal !== null && !isNaN(minVal) && val < minVal) return false;
+          if (maxVal !== null && !isNaN(maxVal) && val > maxVal) return false;
+          return true;
+        });
+
+        const itensGrafico = itensFiltrados.map((l) => {
+          const isSaida = String(l.tipo || '')
+            .toLowerCase()
+            .startsWith('s');
+          const valor = Number(l.valor) || 0;
+          return {
+            data: l.data_vencimento || '2026-08-10',
+            entradas: isSaida ? 0 : valor,
+            saidas: isSaida ? valor : 0,
+            saldo_dia: isSaida ? -valor : valor,
+          };
+        });
+
+        return createJsonResponse(
+          {
+            inicio: '2026-03-01',
+            fim: '2026-08-31',
+            valor_min: minVal,
+            valor_max: maxVal,
+            total_entradas: 5000,
+            total_saidas: 3200,
+            saldo: 1800,
+            itens: itensGrafico,
+          },
+          200
+        );
       }
 
       if (method === 'GET' && url.includes('/lancamentos/paginado')) {
@@ -1605,5 +1659,228 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       throw new Error('Network fail');
     };
     expect(await obterResumoFinancas()).toBeNull();
+  });
+
+  it('integra o Dashboard Financeiro (US06) consumindo GET /lancamentos/grafico com filtros de período e valores e atualizando os gráficos', async () => {
+    render(<FinancasClient initialData={[]} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('kpi-receita-mes')).toHaveTextContent(
+        '5.000,00'
+      );
+      expect(screen.getByTestId('kpi-despesas-mes')).toHaveTextContent(
+        '3.200,00'
+      );
+      expect(screen.getByTestId('kpi-saldo-liquido')).toHaveTextContent(
+        '1.800,00'
+      );
+      expect(screen.getByTestId('kpi-a-receber')).toHaveTextContent('0,00');
+    });
+
+    const graficoInitialCall = fetchMock.mock.calls.find(
+      ([url, init]) =>
+        String(url).includes('/lancamentos/grafico?dias=180') &&
+        (!init?.method || init.method === 'GET')
+    );
+    expect(graficoInitialCall).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: '3m' }));
+    await waitFor(() => {
+      const call3m = fetchMock.mock.calls.find(([url]) =>
+        String(url).includes('/lancamentos/grafico?dias=90')
+      );
+      expect(call3m).toBeDefined();
+    });
+
+    fireEvent.change(screen.getByLabelText('Valor mínimo do gráfico'), {
+      target: { value: '1000' },
+    });
+    fireEvent.change(screen.getByLabelText('Valor máximo do gráfico'), {
+      target: { value: '6000' },
+    });
+
+    await waitFor(() => {
+      const callValores = fetchMock.mock.calls.find(([url]) =>
+        String(url).includes(
+          '/lancamentos/grafico?dias=90&valor_min=1000&valor_max=6000'
+        )
+      );
+      expect(callValores).toBeDefined();
+    });
+
+    const faixaJul = screen.getByTestId('ponto-entrada-Jul');
+    fireEvent.mouseEnter(faixaJul);
+    expect(screen.getByTestId('fluxo-crosshair')).toBeInTheDocument();
+    expect(screen.getByTestId('fluxo-tooltip')).toBeInTheDocument();
+
+    const faixaAgo = screen.getByTestId('ponto-entrada-Ago');
+    fireEvent.mouseMove(faixaAgo);
+    fireEvent.click(faixaAgo);
+    expect(screen.queryByTestId('fluxo-tooltip')).not.toBeInTheDocument();
+    fireEvent.click(faixaAgo);
+    expect(screen.getByTestId('fluxo-tooltip')).toBeInTheDocument();
+    fireEvent.mouseLeave(faixaAgo.closest('div'));
+    expect(screen.queryByTestId('fluxo-tooltip')).not.toBeInTheDocument();
+
+    const segDespesas = screen.getByTestId(
+      'donut-segment-Despesas Operacionais'
+    );
+    fireEvent.mouseEnter(segDespesas);
+    expect(screen.getByTestId('donut-center-tooltip')).toBeInTheDocument();
+    fireEvent.click(segDespesas);
+    expect(
+      screen.queryByTestId('donut-center-tooltip')
+    ).not.toBeInTheDocument();
+    fireEvent.click(segDespesas);
+    expect(screen.getByTestId('donut-center-tooltip')).toBeInTheDocument();
+    fireEvent.mouseLeave(segDespesas.closest('div'));
+
+    const legendaDespesas = screen.getAllByText('Despesas Operacionais')[0];
+    fireEvent.mouseEnter(legendaDespesas.parentElement);
+    expect(screen.getByTestId('donut-center-tooltip')).toBeInTheDocument();
+    fireEvent.mouseLeave(legendaDespesas.parentElement);
+
+    // Exercita helpers SVG, indicadores negativos, estado vazio e utilitários/serviços de gráfico e calendário
+    expect(buildSmoothLinePath([])).toBe('');
+    expect(buildSmoothLinePath([{ x: 5, y: 10 }])).toBe('M 5.0 10.0');
+    expect(buildSmoothAreaPath([])).toBe('');
+    expect(buildSmoothAreaPath([{ x: 5, y: 10 }], 200)).toContain(
+      'L 5.0 200.0'
+    );
+
+    expect(formatCurrencyNumber(undefined)).toBe('0,00');
+    expect(formatCompactCurrency(undefined)).toBe('R$ 0k');
+    expect(formatCompactCurrency(0)).toBe('R$ 0k');
+    expect(formatCompactCurrency(450)).toBe('R$ 450');
+    expect(formatCompactCurrency(5500)).toBe('R$ 5.5k');
+    expect(formatCompactCurrency(11000)).toBe('R$ 11k');
+
+    expect(calcularIndicadoresFinanceiros(null)).toEqual({
+      receitaMes: 0,
+      despesasMes: 0,
+      saldoLiquido: 0,
+      aReceber: 0,
+    });
+    expect(
+      calcularIndicadoresFinanceiros([
+        { tipo: 'entrada', valor: 1000, status: 'realizado' },
+        { tipo: 'entrada', valor: 500, status: 'pendente' },
+        { tipo: 'saida', valor: 300, status: 'realizado' },
+      ])
+    ).toEqual({
+      receitaMes: 1000,
+      despesasMes: 300,
+      saldoLiquido: 700,
+      aReceber: 500,
+    });
+
+    expect(
+      agruparFluxoCaixaPorMes(
+        [{ data: '2026-08-10', total_entradas: 1000, total_saidas: 200 }],
+        [],
+        2,
+        new Date('2026-08-15T12:00:00Z')
+      )
+    ).toHaveLength(2);
+    expect(
+      agruparFluxoCaixaPorMes(
+        [],
+        [{ dataIso: '2026-08-10', tipo: 'entrada', valor: 500 }],
+        2
+      )
+    ).toHaveLength(2);
+    expect(agruparDespesasPorCategoria(null)).toEqual([]);
+
+    const graficoCompleto = await obterGraficoFinancas({
+      inicio: '2026-01-01',
+      fim: '2026-08-31',
+      dias: 180,
+      valor_min: 100,
+      valor_max: 9000,
+      status: 'Realizado',
+      tipo: 'e',
+      categoria_id: 10,
+      cliente_id: 1,
+    });
+    expect(graficoCompleto.itens).toBeDefined();
+
+    routeOverrides['GET /lancamentos/grafico'] = async () =>
+      createJsonResponse({ itens: null }, 200);
+    expect((await obterGraficoFinancas()).itens).toEqual([]);
+
+    routeOverrides['GET /lancamentos/grafico'] = async () =>
+      createJsonResponse([], 200);
+    expect(await obterGraficoFinancas()).toBeNull();
+
+    routeOverrides['GET /lancamentos/grafico'] = async () =>
+      createJsonResponse({}, 500);
+    expect(await obterGraficoFinancas()).toBeNull();
+
+    routeOverrides['GET /lancamentos/grafico'] = async () => {
+      throw new Error('Falha grafico');
+    };
+    expect(await obterGraficoFinancas()).toBeNull();
+
+    routeOverrides['GET /lancamentos/calendario'] = async () =>
+      createJsonResponse(dbLancamentos, 200);
+    const cal = await obterCalendario({
+      inicio: '2026-08-01',
+      fim: '2026-08-31',
+      status: 'Realizado',
+      tipo: 'e',
+      categoria_id: 10,
+      cliente_id: 1,
+    });
+    expect(cal.length).toBeGreaterThan(0);
+
+    routeOverrides['GET /lancamentos/calendario'] = async () =>
+      createJsonResponse({}, 500);
+    expect(await obterCalendario()).toEqual([]);
+
+    routeOverrides['GET /lancamentos/calendario'] = async () => {
+      throw new Error('Cal error');
+    };
+    expect(await obterCalendario()).toEqual([]);
+    delete routeOverrides['GET /lancamentos/calendario'];
+
+    routeOverrides['GET /lancamentos/calendario/exportar'] = async () => ({
+      ok: true,
+      status: 200,
+      blob: async () =>
+        new Blob(['BEGIN:VCALENDAR'], { type: 'text/calendar' }),
+    });
+    if (!window.URL.createObjectURL) {
+      window.URL.createObjectURL = vi.fn(() => 'blob:test');
+    } else {
+      vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('blob:test');
+    }
+    if (!window.URL.revokeObjectURL) {
+      window.URL.revokeObjectURL = vi.fn();
+    } else {
+      vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {});
+    }
+    const blob = await exportarCalendarioIcs({
+      inicio: '2026-08-01',
+      fim: '2026-08-31',
+      status: 'Realizado',
+      tipo: 'e',
+      categoria_id: 10,
+      cliente_id: 1,
+    });
+    expect(blob).toBeDefined();
+
+    render(
+      <FinancialDashboard
+        lancamentos={[]}
+        indicadores={{
+          receitaMes: 100,
+          despesasMes: 500,
+          saldoLiquido: -400,
+          aReceber: 0,
+        }}
+      />
+    );
+    expect(screen.getByLabelText('Tendência negativa')).toBeInTheDocument();
+    expect(screen.getByText('Nenhuma despesa registrada')).toBeInTheDocument();
   });
 });

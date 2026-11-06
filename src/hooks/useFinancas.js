@@ -389,6 +389,7 @@ export function useFinancas(initialData, options = {}) {
     setLancamentos,
     pagination,
     resumo,
+    resumoBackend,
     totalLancamentos: pagination.total || lancamentos.length,
     isNewModalOpen,
     setIsNewModalOpen,
