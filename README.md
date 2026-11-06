@@ -25,8 +25,8 @@ A aplicação publicada (versão mais recente da branch `main`) está disponíve
 - **Layout Privado e Controle de Rotas (`proxy.js`)**: Redirecionamento automático de rotas protegidas, menu lateral (`Sidebar`), barra superior (`Navbar`), menu do usuário (`UserMenu`) e confirmação de encerramento de sessão (`LogoutConfirmModal`).
 - **Clientes / CRM (`/clientes`)**: Listagem com indicadores, filtros combinados (busca textual por nome/CPF/CNPJ/e-mail, etapa/status e autocomplete de responsável), cadastro, visualização de detalhes, edição e exclusão.
 - **Equipe e Permissões (`/equipe`)**: Gestão de funcionários e cargos, controle de status de acesso, atribuição granular de permissões (`PermissionChecklist`) e indicadores da equipe.
-- **Controle Financeiro (`/financas`)**: Cards de resumo financeiro (entradas, saídas, saldo realizado e pendente), tabela paginada com filtros por período/categoria/tipo/status, alternância rápida de status e modal de lançamentos com autocomplete e criação/exclusão de categorias.
-- **Casos e Processos (`/processos`)**: Gerenciamento de processos jurídicos com formatação e validação do número CNJ, controle de prazos (dias restantes/atraso), filtros avançados e paginação.
+- **Controle Financeiro (`/financas`)**: Cards de resumo financeiro (entradas, saídas, saldo realizado e pendente), tabela paginada com filtros por período/categoria/tipo/status, alternância rápida de status modal de lançamentos com autocomplete e criação/exclusão de categorias e **exportação de relatórios** (PDF, Excel ou CSV) respeitando os filtros aplicados.
+- **Casos e Processos (`/processos`)**: Gerenciamento de processos jurídicos com formatação e validação do número CNJ, controle de prazos (dias restantes/atraso), filtros avançados, paginação e **exportação de relatórios** (PDF, Excel ou CSV) respeitando os filtros aplicados.
 - **Customização do Site Institucional (`/site`)**: Painel administrativo dividido em 5 abas (**Identidade Visual**, **Conteúdo**, **Áreas de Atuação**, **Equipe** e **Cores**) com upload de imagens (logotipo, banner hero e seção sobre) e **Modal de Pré-visualização (`PreviewModal`)** em tempo real.
 
 ---
