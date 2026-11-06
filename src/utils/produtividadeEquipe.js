@@ -17,5 +17,5 @@ export const formatarSumarioEquipe = (summary) => ({
 });
 
 export const obterProgressoEquipe = (summary) => {
-  return Math.max(0, Math.min(100, Number(summary.progresso || 0)));
+  return Math.max(0, Math.min(100, Number(summary?.progresso || 0)));
 };

@@ -2,10 +2,20 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DashboardPage from './page';
 import DashboardClient from './dashboardClient';
+import { obterKanbanAtividades } from '@/services/atividades';
+import { obterResumoAtividades } from '@/services/dashboard';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { listarProcessosCriticos, obterProcesso } from '@/services/processos';
 import { getCurrentUser } from '@/utils/authSession';
+
+vi.mock('@/services/atividades', () => ({
+  obterKanbanAtividades: vi.fn(),
+}));
+
+vi.mock('@/services/dashboard', () => ({
+  obterResumoAtividades: vi.fn(),
+}));
 
 vi.mock('@/services/clientes', () => ({
   listarClientes: vi.fn(),
@@ -40,6 +50,34 @@ const mockProcesses = [
   },
 ];
 
+const mockSummary = {
+  escopo: 'escritorio',
+  pendentes: 3,
+  em_execucao: 7,
+  concluidas: 4,
+  atrasadas: 2,
+};
+
+const mockKanban = {
+  escopo: 'escritorio',
+  etapas: [
+    {
+      etapa_id: 1,
+      nome: 'Backlog',
+      ordem: 1,
+      atividades: [
+        {
+          atividade_id: 10,
+          titulo: 'Redigir petição inicial',
+          data_prazo: '2999-09-02T18:00:00',
+          processo_id: null,
+          responsaveis: [{ funcionario_id: 1, nome: 'Ana Paula' }],
+        },
+      ],
+    },
+  ],
+};
+
 describe('DashboardPage e DashboardClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -50,6 +88,8 @@ describe('DashboardPage e DashboardClient', () => {
         },
       },
     });
+    obterResumoAtividades.mockResolvedValue(mockSummary);
+    obterKanbanAtividades.mockResolvedValue(mockKanban);
     listarClientes.mockResolvedValue([
       { cliente_id: 1, nome: 'Empresa Alpha Ltda' },
     ]);
@@ -132,6 +172,66 @@ describe('DashboardPage e DashboardClient', () => {
       expect(screen.getByRole('status')).toHaveTextContent(
         'Falha ao listar clientes'
       );
+    });
+  });
+
+  it('exibe o card de atividades pendentes, o resumo e a atividade recente', async () => {
+    render(<DashboardClient />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Atividades Pendentes')).toBeInTheDocument();
+      expect(screen.getByText('Resumo de Atividades')).toBeInTheDocument();
+      expect(screen.getByText('Redigir petição inicial')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Atividades do escritório')).toBeInTheDocument();
+    expect(screen.getByText('Em execução').previousSibling).toHaveTextContent(
+      '7'
+    );
+    expect(screen.getByText('Atrasadas').previousSibling).toHaveTextContent(
+      '2'
+    );
+    expect(screen.getByText('Ana Paula', { exact: false })).toBeInTheDocument();
+  });
+
+  it('mantém as atividades visíveis quando o usuário não pode visualizar processos', async () => {
+    getCurrentUser.mockReturnValue({
+      cargo: { permissao: { visualizar_processos: false } },
+    });
+
+    render(<DashboardClient />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Resumo de Atividades')).toBeInTheDocument();
+      expect(screen.getByText('Redigir petição inicial')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Acesso negado')).toBeInTheDocument();
+  });
+
+  it('permite recarregar o resumo e as atividades recentes após uma falha', async () => {
+    obterResumoAtividades
+      .mockRejectedValueOnce(new Error('Falha no resumo'))
+      .mockResolvedValueOnce(mockSummary);
+    obterKanbanAtividades
+      .mockRejectedValueOnce(new Error('Falha no kanban'))
+      .mockResolvedValueOnce(mockKanban);
+
+    render(<DashboardClient />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Falha no resumo')).toBeInTheDocument();
+      expect(screen.getByText('Falha no kanban')).toBeInTheDocument();
+    });
+
+    const retryButtons = screen.getAllByRole('button', {
+      name: 'Tentar novamente',
+    });
+    retryButtons.forEach((button) => fireEvent.click(button));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Falha no resumo')).not.toBeInTheDocument();
+      expect(screen.queryByText('Falha no kanban')).not.toBeInTheDocument();
+      expect(screen.getByText('Redigir petição inicial')).toBeInTheDocument();
     });
   });
 });

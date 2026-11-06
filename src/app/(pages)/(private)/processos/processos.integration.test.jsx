@@ -98,17 +98,21 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
     fetchMock = vi.fn((url) => {
       const urlString = String(url);
+
       if (urlString.startsWith(`${API_BASE}/clientes/`)) {
         return Promise.resolve(jsonResponse(mockClientes));
       }
+
       if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
         return Promise.resolve(jsonResponse(mockFuncionarios));
       }
+
       if (urlString.startsWith(`${API_BASE}/processos/`)) {
         return Promise.resolve(
           jsonResponse(makePageResponse([initialApiProcess]))
         );
       }
+
       return Promise.resolve(jsonResponse({}, 404));
     });
 
@@ -138,14 +142,19 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     expect(
       screen.getByRole('heading', { name: 'Gestão de Processos' })
     ).toBeInTheDocument();
+
     expect(screen.getByText('1 processo encontrado')).toBeInTheDocument();
 
     const table = screen.getByRole('table');
+
     expect(await within(table).findByText('Maria Silva')).toBeInTheDocument();
+
     expect(within(table).getByText('Ana Paula Ribeiro')).toBeInTheDocument();
+
     expect(
       within(table).getByText('0061234-56.2026.8.26.0100')
     ).toBeInTheDocument();
+
     expect(within(table).getByText('05/10/2026')).toBeInTheDocument();
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -157,9 +166,12 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         }),
       })
     );
+
     expect(fetchMock).toHaveBeenCalledWith(
       `${API_BASE}/funcionarios`,
-      expect.objectContaining({ cache: 'no-store' })
+      expect.objectContaining({
+        cache: 'no-store',
+      })
     );
 
     fireEvent.click(
@@ -171,23 +183,35 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     const detailsModal = screen.getByRole('dialog', {
       name: initialApiProcess.titulo_proc,
     });
+
     expect(detailsModal).toBeInTheDocument();
+
     expect(
       within(detailsModal).getByText(initialApiProcess.descricao_proc)
     ).toBeInTheDocument();
+
     expect(within(detailsModal).getByText('Maria Silva')).toBeInTheDocument();
+
     expect(
       within(detailsModal).getByText('Ana Paula Ribeiro')
     ).toBeInTheDocument();
+
     expect(within(detailsModal).getByText('15/01/2026')).toBeInTheDocument();
+
     expect(within(detailsModal).getByText('10/02/2026')).toBeInTheDocument();
+
     expect(within(detailsModal).getByText('05/10/2026')).toBeInTheDocument();
 
     fireEvent.click(
-      within(detailsModal).getByRole('button', { name: 'Fechar' })
+      within(detailsModal).getByRole('button', {
+        name: 'Fechar',
+      })
     );
+
     expect(
-      screen.queryByRole('dialog', { name: initialApiProcess.titulo_proc })
+      screen.queryByRole('dialog', {
+        name: initialApiProcess.titulo_proc,
+      })
     ).not.toBeInTheDocument();
   });
 
@@ -209,15 +233,19 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
     fetchMock.mockImplementation((url, options = {}) => {
       const urlString = String(url);
+
       if (urlString.startsWith(`${API_BASE}/clientes/`)) {
         return Promise.resolve(jsonResponse(mockClientes));
       }
+
       if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
         return Promise.resolve(jsonResponse(mockFuncionarios));
       }
+
       if (urlString === `${API_BASE}/processos/` && options.method === 'POST') {
         return Promise.resolve(jsonResponse(createdProcess, 201));
       }
+
       if (urlString.startsWith(`${API_BASE}/processos/?`)) {
         return Promise.resolve(
           jsonResponse(
@@ -225,46 +253,66 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
           )
         );
       }
+
       return Promise.resolve(jsonResponse({}, 404));
     });
 
     renderIntegration();
+
     await within(screen.getByRole('table')).findByText('Maria Silva');
 
     fireEvent.click(screen.getByRole('button', { name: 'Novo Processo' }));
 
-    const dialog = screen.getByRole('dialog', { name: 'Novo Processo' });
+    const dialog = screen.getByRole('dialog', {
+      name: 'Novo Processo',
+    });
+
     const cnjInput = within(dialog).getByLabelText('Número do Processo');
 
     fireEvent.change(cnjInput, {
-      target: { value: '12345678920268070001' },
+      target: {
+        value: '12345678920268070001',
+      },
     });
+
     expect(cnjInput).toHaveValue('1234567-89.2026.8.07.0001');
 
     fireEvent.change(within(dialog).getByLabelText('Tribunal'), {
       target: { value: '  TJSP  ' },
     });
+
     fireEvent.change(within(dialog).getByLabelText('Título do Caso'), {
-      target: { value: '  Execução de Título Extrajudicial  ' },
+      target: {
+        value: '  Execução de Título Extrajudicial  ',
+      },
     });
+
     fireEvent.change(within(dialog).getByLabelText('Descrição'), {
-      target: { value: '  Cobrança de contrato empresarial.  ' },
+      target: {
+        value: '  Cobrança de contrato empresarial.  ',
+      },
     });
+
     fireEvent.change(within(dialog).getByLabelText('Cliente'), {
       target: { value: '7' },
     });
+
     fireEvent.change(within(dialog).getByLabelText('Área de Atuação'), {
       target: { value: '  Empresarial  ' },
     });
+
     fireEvent.change(within(dialog).getByLabelText('Responsável'), {
       target: { value: '5' },
     });
+
     fireEvent.change(within(dialog).getByLabelText('Status Inicial'), {
       target: { value: 'Em Análise' },
     });
+
     fireEvent.change(within(dialog).getByLabelText('Data de Início'), {
       target: { value: '2026-03-01' },
     });
+
     fireEvent.change(within(dialog).getByLabelText('Próximo Prazo'), {
       target: { value: '2026-11-20' },
     });
@@ -273,7 +321,9 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
     await waitFor(() => {
       expect(
-        screen.queryByRole('dialog', { name: 'Novo Processo' })
+        screen.queryByRole('dialog', {
+          name: 'Novo Processo',
+        })
       ).not.toBeInTheDocument();
     });
 
@@ -281,11 +331,14 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       ([url, opts]) =>
         url === `${API_BASE}/processos/` && opts?.method === 'POST'
     );
+
     expect(postCall).toBeDefined();
+
     expect(postCall[1].headers).toEqual({
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     });
+
     expect(JSON.parse(postCall[1].body)).toEqual({
       cnj: '1234567-89.2026.8.07.0001',
       titulo: 'Execução de Título Extrajudicial',
@@ -303,11 +356,13 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     expect(
       await screen.findByText('2 processos encontrados')
     ).toBeInTheDocument();
+
     expect(
       screen.getByRole('button', {
         name: 'Execução de Título Extrajudicial',
       })
     ).toBeInTheDocument();
+
     expect(screen.getByText('Empresa Horizonte Ltda')).toBeInTheDocument();
   });
 
@@ -318,48 +373,71 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       status: 'Concluído',
     };
 
-    let getCount = 0;
+    let processoAtual = initialApiProcess;
+    let processoExcluido = false;
+
     fetchMock.mockImplementation((url, options = {}) => {
       const urlString = String(url);
+
       if (urlString.startsWith(`${API_BASE}/clientes/`)) {
         return Promise.resolve(jsonResponse(mockClientes));
       }
+
       if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
         return Promise.resolve(jsonResponse(mockFuncionarios));
       }
+
       if (
         urlString ===
           `${API_BASE}/processos/${initialApiProcess.processo_id}` &&
         options.method === 'PATCH'
       ) {
+        processoAtual = updatedApiProcess;
+
         return Promise.resolve(jsonResponse(updatedApiProcess));
       }
+
       if (
         urlString ===
           `${API_BASE}/processos/${initialApiProcess.processo_id}` &&
         options.method === 'DELETE'
       ) {
+        processoExcluido = true;
+
         return Promise.resolve({
           ok: true,
           status: 204,
           json: vi.fn().mockResolvedValue(undefined),
         });
       }
+
       if (urlString.startsWith(`${API_BASE}/processos/?`)) {
-        getCount += 1;
-        if (getCount === 1) {
-          return Promise.resolve(
-            jsonResponse(makePageResponse([updatedApiProcess], { total: 1 }))
-          );
-        }
+        const processo = processoExcluido ? [] : [processoAtual];
+
         return Promise.resolve(
-          jsonResponse(makePageResponse([], { total: 0 }))
+          jsonResponse(
+            makePageResponse(processo, {
+              total: processo.length,
+            })
+          )
         );
       }
+
+      if (urlString.startsWith(`${API_BASE}/processos/`)) {
+        return Promise.resolve(
+          jsonResponse(
+            makePageResponse(processoExcluido ? [] : [processoAtual], {
+              total: processoExcluido ? 0 : 1,
+            })
+          )
+        );
+      }
+
       return Promise.resolve(jsonResponse({}, 404));
     });
 
     renderIntegration();
+
     await within(screen.getByRole('table')).findByText('Maria Silva');
 
     fireEvent.click(
@@ -368,39 +446,60 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       })
     );
 
-    const editDialog = screen.getByRole('dialog', { name: 'Editar Processo' });
+    const editDialog = screen.getByRole('dialog', {
+      name: 'Editar Processo',
+    });
+
     expect(
       within(editDialog).getByLabelText('Número do Processo')
     ).toHaveAttribute('readOnly');
 
     fireEvent.change(within(editDialog).getByLabelText('Título do Caso'), {
-      target: { value: 'Ação Indenizatória Revisada' },
+      target: {
+        value: 'Ação Indenizatória Revisada',
+      },
     });
+
     fireEvent.change(within(editDialog).getByLabelText('Status'), {
-      target: { value: 'Concluído' },
+      target: {
+        value: 'Concluído',
+      },
     });
 
     fireEvent.submit(editDialog);
 
-    expect(
-      await screen.findByRole('button', {
-        name: 'Ação Indenizatória Revisada',
-      })
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      const patchCall = fetchMock.mock.calls.find(
+        ([url, opts]) =>
+          url === `${API_BASE}/processos/${initialApiProcess.processo_id}` &&
+          opts?.method === 'PATCH'
+      );
+
+      expect(patchCall).toBeDefined();
+    });
 
     const patchCall = fetchMock.mock.calls.find(
       ([url, opts]) =>
         url === `${API_BASE}/processos/${initialApiProcess.processo_id}` &&
         opts?.method === 'PATCH'
     );
-    expect(patchCall).toBeDefined();
+
     expect(patchCall[1].headers).toEqual({
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     });
+
     expect(JSON.parse(patchCall[1].body)).toEqual({
       titulo: 'Ação Indenizatória Revisada',
       status: 'Concluído',
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', {
+          name: 'Ação Indenizatória Revisada',
+        })
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(
@@ -412,24 +511,31 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     const deleteDialog = screen.getByRole('dialog', {
       name: 'Excluir processo?',
     });
+
     expect(
       within(deleteDialog).getByText('Ação Indenizatória Revisada')
     ).toBeInTheDocument();
 
     fireEvent.click(
-      within(deleteDialog).getByRole('button', { name: 'Excluir processo' })
+      within(deleteDialog).getByRole('button', {
+        name: 'Excluir processo',
+      })
     );
 
-    expect(
-      await screen.findByText('Nenhum processo cadastrado')
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText('Nenhum processo cadastrado')
+      ).toBeInTheDocument();
+    });
 
     const deleteCall = fetchMock.mock.calls.find(
       ([url, opts]) =>
         url === `${API_BASE}/processos/${initialApiProcess.processo_id}` &&
         opts?.method === 'DELETE'
     );
+
     expect(deleteCall).toBeDefined();
+
     expect(deleteCall[1].headers).toEqual({
       Authorization: `Bearer ${accessToken}`,
     });
@@ -440,8 +546,12 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       'status',
       () =>
         fireEvent.change(
-          screen.getByRole('combobox', { name: /filtrar por status/i }),
-          { target: { value: 'Arquivado' } }
+          screen.getByRole('combobox', {
+            name: /filtrar por status/i,
+          }),
+          {
+            target: { value: 'Arquivado' },
+          }
         ),
       'status=Arquivado&page=1&page_size=5',
     ],
@@ -449,8 +559,12 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       'responsável',
       () =>
         fireEvent.change(
-          screen.getByRole('combobox', { name: /filtrar por responsável/i }),
-          { target: { value: '5' } }
+          screen.getByRole('combobox', {
+            name: /filtrar por responsável/i,
+          }),
+          {
+            target: { value: '5' },
+          }
         ),
       'funcionario_id=5&page=1&page_size=5',
     ],
@@ -467,7 +581,11 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       () =>
         fireEvent.change(
           screen.getByPlaceholderText(/buscar por número, cliente ou título/i),
-          { target: { value: '  Indenização  ' } }
+          {
+            target: {
+              value: '  Indenização  ',
+            },
+          }
         ),
       'busca=Indeniza%C3%A7%C3%A3o&page=1&page_size=5',
     ],
@@ -476,26 +594,36 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     async (_label, triggerFilter, expectedQuery) => {
       fetchMock.mockImplementation((url) => {
         const urlString = String(url);
+
         if (urlString.startsWith(`${API_BASE}/clientes/`)) {
           return Promise.resolve(jsonResponse(mockClientes));
         }
+
         if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
           return Promise.resolve(jsonResponse(mockFuncionarios));
         }
+
         if (urlString.startsWith(`${API_BASE}/processos/?`)) {
           return Promise.resolve(jsonResponse(makePageResponse([])));
         }
+
         return Promise.resolve(jsonResponse({}, 404));
       });
 
       renderIntegration();
+
       await within(screen.getByRole('table')).findByText('Maria Silva');
 
       triggerFilter();
 
       await waitFor(() => {
-        expect(fetchMock).toHaveBeenCalledWith(
-          `${API_BASE}/processos/?${expectedQuery}`,
+        const processoCall = fetchMock.mock.calls.find(
+          ([url]) => String(url) === `${API_BASE}/processos/?${expectedQuery}`
+        );
+
+        expect(processoCall).toBeDefined();
+
+        expect(processoCall[1]).toEqual(
           expect.objectContaining({
             cache: 'no-store',
             headers: expect.objectContaining({
@@ -514,7 +642,9 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
   it.each([
     [
       400,
-      { detail: 'Já existe um processo cadastrado com este CNJ.' },
+      {
+        detail: 'Já existe um processo cadastrado com este CNJ.',
+      },
       'Já existe um processo cadastrado com este CNJ.',
     ],
     [
@@ -531,7 +661,11 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
             msg: 'formato CNJ inválido',
             type: 'value_error',
           },
-          { loc: ['body', 'tribunal'], msg: 'Field required', type: 'missing' },
+          {
+            loc: ['body', 'tribunal'],
+            msg: 'Field required',
+            type: 'missing',
+          },
         ],
       },
       'Número do processo: formato CNJ inválido Tribunal: campo obrigatório.',
@@ -546,41 +680,59 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     async (status, errorPayload, expectedMessage) => {
       fetchMock.mockImplementation((url, options = {}) => {
         const urlString = String(url);
+
         if (urlString.startsWith(`${API_BASE}/clientes/`)) {
           return Promise.resolve(jsonResponse(mockClientes));
         }
+
         if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
           return Promise.resolve(jsonResponse(mockFuncionarios));
         }
+
         if (
           urlString === `${API_BASE}/processos/` &&
           options.method === 'POST'
         ) {
           return Promise.resolve(jsonResponse(errorPayload, status));
         }
+
         return Promise.resolve(
           jsonResponse(makePageResponse([initialApiProcess]))
         );
       });
 
       renderIntegration();
+
       await within(screen.getByRole('table')).findByText('Maria Silva');
 
-      fireEvent.click(screen.getByRole('button', { name: 'Novo Processo' }));
-      const dialog = screen.getByRole('dialog', { name: 'Novo Processo' });
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: 'Novo Processo',
+        })
+      );
+
+      const dialog = screen.getByRole('dialog', {
+        name: 'Novo Processo',
+      });
 
       fireEvent.change(within(dialog).getByLabelText('Número do Processo'), {
-        target: { value: '0061235-56.2026.8.26.0100' },
+        target: {
+          value: '0061235-56.2026.8.26.0100',
+        },
       });
+
       fireEvent.change(within(dialog).getByLabelText('Tribunal'), {
         target: { value: 'TJDFT' },
       });
+
       fireEvent.change(within(dialog).getByLabelText('Título do Caso'), {
         target: { value: 'Novo Caso' },
       });
+
       fireEvent.change(within(dialog).getByLabelText('Cliente'), {
         target: { value: '4' },
       });
+
       fireEvent.change(within(dialog).getByLabelText('Área de Atuação'), {
         target: { value: 'Civil' },
       });
@@ -590,8 +742,11 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       expect(await within(dialog).findByRole('alert')).toHaveTextContent(
         expectedMessage
       );
+
       expect(
-        screen.getByRole('dialog', { name: 'Novo Processo' })
+        screen.getByRole('dialog', {
+          name: 'Novo Processo',
+        })
       ).toBeInTheDocument();
     }
   );
@@ -623,23 +778,35 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     'bloqueia submissão no ProcessFormModal e mostra erro de validação para %s',
     async (_scenario, values, expectedAlert) => {
       renderIntegration();
+
       await within(screen.getByRole('table')).findByText('Maria Silva');
 
-      fireEvent.click(screen.getByRole('button', { name: 'Novo Processo' }));
-      const dialog = screen.getByRole('dialog', { name: 'Novo Processo' });
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: 'Novo Processo',
+        })
+      );
+
+      const dialog = screen.getByRole('dialog', {
+        name: 'Novo Processo',
+      });
 
       fireEvent.change(within(dialog).getByLabelText('Número do Processo'), {
         target: { value: values.cnj },
       });
+
       fireEvent.change(within(dialog).getByLabelText('Tribunal'), {
         target: { value: values.tribunal },
       });
+
       fireEvent.change(within(dialog).getByLabelText('Título do Caso'), {
         target: { value: values.titulo },
       });
+
       fireEvent.change(within(dialog).getByLabelText('Cliente'), {
         target: { value: values.cliente_id },
       });
+
       fireEvent.change(within(dialog).getByLabelText('Área de Atuação'), {
         target: { value: values.area },
       });
@@ -649,6 +816,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       expect(within(dialog).getByRole('alert')).toHaveTextContent(
         expectedAlert
       );
+
       expect(
         fetchMock.mock.calls.filter(([, opts]) => opts?.method === 'POST')
       ).toHaveLength(0);
@@ -658,12 +826,15 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
   it('exibe erro na exclusão quando DELETE /processos/:id falha e permite recuperar na listagem', async () => {
     fetchMock.mockImplementation((url, options = {}) => {
       const urlString = String(url);
+
       if (urlString.startsWith(`${API_BASE}/clientes/`)) {
         return Promise.resolve(jsonResponse(mockClientes));
       }
+
       if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
         return Promise.resolve(jsonResponse(mockFuncionarios));
       }
+
       if (
         urlString ===
           `${API_BASE}/processos/${initialApiProcess.processo_id}` &&
@@ -671,17 +842,21 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       ) {
         return Promise.resolve(
           jsonResponse(
-            { detail: 'Processo possui movimentações vinculadas.' },
+            {
+              detail: 'Processo possui movimentações vinculadas.',
+            },
             400
           )
         );
       }
+
       return Promise.resolve(
         jsonResponse(makePageResponse([initialApiProcess]))
       );
     });
 
     renderIntegration();
+
     await within(screen.getByRole('table')).findByText('Maria Silva');
 
     fireEvent.click(
@@ -693,8 +868,11 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     const deleteDialog = screen.getByRole('dialog', {
       name: 'Excluir processo?',
     });
+
     fireEvent.click(
-      within(deleteDialog).getByRole('button', { name: 'Excluir processo' })
+      within(deleteDialog).getByRole('button', {
+        name: 'Excluir processo',
+      })
     );
 
     expect(await within(deleteDialog).findByRole('alert')).toHaveTextContent(
@@ -704,25 +882,33 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
   it('carrega ProcessosPage via getProcessosData com sucesso e trata erros de carregamento e recuperação', async () => {
     const successElement = await ProcessosPage();
+
     const { unmount } = render(successElement);
 
     expect(
-      screen.getByRole('heading', { name: 'Gestão de Processos' })
+      screen.getByRole('heading', {
+        name: 'Gestão de Processos',
+      })
     ).toBeInTheDocument();
+
     expect(
       await within(screen.getByRole('table')).findByText('Maria Silva')
     ).toBeInTheDocument();
+
     unmount();
 
     fetchMock.mockImplementation((url) => {
       const urlString = String(url);
+
       if (urlString.startsWith(`${API_BASE}/processos/`)) {
         return Promise.reject(new Error('Network down'));
       }
+
       return Promise.resolve(jsonResponse([]));
     });
 
     const errorElement = await ProcessosPage();
+
     render(errorElement);
 
     expect(
@@ -730,12 +916,14 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         name: 'Não foi possível exibir os processos',
       })
     ).toBeInTheDocument();
+
     expect(
       screen.getByText('Não foi possível carregar os processos.')
     ).toBeInTheDocument();
 
     fetchMock.mockImplementation((url) => {
       const urlString = String(url);
+
       if (urlString.startsWith(`${API_BASE}/processos/`)) {
         return Promise.resolve({
           ok: true,
@@ -743,18 +931,22 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
           json: vi.fn().mockRejectedValue(new Error('Invalid JSON')),
         });
       }
+
       return Promise.resolve(jsonResponse([]));
     });
+
     await expect(listarProcessos()).rejects.toThrow(
       'Não foi possível carregar os processos.'
     );
 
     fetchMock.mockResolvedValueOnce(jsonResponse({ detail: 'Exp' }, 401));
+
     await expect(listarProcessos()).rejects.toThrow(
       'Sessão expirada. Faça login novamente.'
     );
 
     sessionStorage.removeItem('access_token');
+
     await expect(listarProcessos()).rejects.toThrow(
       'Sessão expirada. Faça login novamente.'
     );
@@ -762,14 +954,18 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
   it('permite carregar documentos vazios, realizar upload e abrir o link de visualização no ProcessDetailsModal', async () => {
     let documents = [];
+
     fetchMock.mockImplementation((url, options = {}) => {
       const urlString = String(url);
+
       if (urlString.startsWith(`${API_BASE}/clientes/`)) {
         return Promise.resolve(jsonResponse(mockClientes));
       }
+
       if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
         return Promise.resolve(jsonResponse(mockFuncionarios));
       }
+
       if (
         urlString ===
           `${API_BASE}/processos/${initialApiProcess.processo_id}/documentos` &&
@@ -783,32 +979,41 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
             data_upload: '2026-03-05T00:00:00',
           },
         ];
+
         return Promise.resolve(jsonResponse({ documento_id: 1 }, 201));
       }
+
       if (
         urlString ===
         `${API_BASE}/processos/${initialApiProcess.processo_id}/documentos`
       ) {
         return Promise.resolve(jsonResponse(documents));
       }
+
       if (
         urlString ===
         `${API_BASE}/processos/${initialApiProcess.processo_id}/documentos/1/url`
       ) {
         return Promise.resolve(
-          jsonResponse({ url: 'https://example.com/documento.pdf' })
+          jsonResponse({
+            url: 'https://example.com/documento.pdf',
+          })
         );
       }
+
       if (urlString.startsWith(`${API_BASE}/processos/`)) {
         return Promise.resolve(
           jsonResponse(makePageResponse([initialApiProcess]))
         );
       }
+
       return Promise.resolve(jsonResponse({}, 404));
     });
 
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
     renderIntegration();
+
     await within(screen.getByRole('table')).findByText('Maria Silva');
 
     fireEvent.click(
@@ -816,24 +1021,37 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         name: `Visualizar processo ${initialApiProcess.cnj}`,
       })
     );
+
     const detailsModal = screen.getByRole('dialog', {
       name: initialApiProcess.titulo_proc,
     });
+
     fireEvent.click(
-      within(detailsModal).getByRole('tab', { name: 'Documentos' })
+      within(detailsModal).getByRole('tab', {
+        name: 'Documentos',
+      })
     );
 
     await within(detailsModal).findByText('Nenhum documento anexado.');
+
     const fileInput = within(detailsModal).getByTestId('file-upload-input');
+
     const file = new File(['conteudo pdf'], 'peticao-inicial.pdf', {
       type: 'application/pdf',
     });
-    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    fireEvent.change(fileInput, {
+      target: { files: [file] },
+    });
+
     await within(detailsModal).findByText('peticao-inicial.pdf');
 
     fireEvent.click(
-      within(detailsModal).getByRole('button', { name: 'Visualizar' })
+      within(detailsModal).getByRole('button', {
+        name: 'Visualizar',
+      })
     );
+
     await waitFor(() =>
       expect(openSpy).toHaveBeenCalledWith(
         'https://example.com/documento.pdf',
@@ -850,45 +1068,60 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       data_inicio: null,
       data_realizado: null,
     };
+
     fetchMock.mockImplementation((url, options = {}) => {
       const urlString = String(url);
+
       if (urlString.startsWith(`${API_BASE}/clientes/`)) {
         return Promise.resolve(jsonResponse(mockClientes));
       }
+
       if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
         return Promise.resolve(jsonResponse(mockFuncionarios));
       }
+
       if (
         urlString ===
           `${API_BASE}/processos/${processWithoutMovement.processo_id}/documentos` &&
         options.method === 'POST'
       ) {
         return Promise.resolve(
-          jsonResponse({ detail: 'Não foi possível enviar o documento.' }, 500)
+          jsonResponse(
+            {
+              detail: 'Não foi possível enviar o documento.',
+            },
+            500
+          )
         );
       }
+
       if (
         urlString ===
         `${API_BASE}/processos/${processWithoutMovement.processo_id}/documentos`
       ) {
         return Promise.resolve(
           jsonResponse(
-            { detail: 'Não foi possível carregar os documentos.' },
+            {
+              detail: 'Não foi possível carregar os documentos.',
+            },
             500
           )
         );
       }
+
       if (urlString.startsWith(`${API_BASE}/processos/`)) {
         return Promise.resolve(
           jsonResponse(makePageResponse([processWithoutMovement]))
         );
       }
+
       return Promise.resolve(jsonResponse({}, 404));
     });
 
     renderIntegration({
       initialPage: toProcessPage(makePageResponse([processWithoutMovement])),
     });
+
     await within(screen.getByRole('table')).findByText('Maria Silva');
 
     fireEvent.click(
@@ -896,12 +1129,17 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         name: `Visualizar processo ${processWithoutMovement.cnj}`,
       })
     );
+
     const detailsModal = screen.getByRole('dialog', {
       name: processWithoutMovement.titulo_proc,
     });
+
     fireEvent.click(
-      within(detailsModal).getByRole('tab', { name: 'Movimentações' })
+      within(detailsModal).getByRole('tab', {
+        name: 'Movimentações',
+      })
     );
+
     expect(
       within(detailsModal).getByText(
         'Nenhuma movimentação registrada para este processo.'
@@ -909,18 +1147,27 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     ).toBeInTheDocument();
 
     fireEvent.click(
-      within(detailsModal).getByRole('tab', { name: 'Documentos' })
+      within(detailsModal).getByRole('tab', {
+        name: 'Documentos',
+      })
     );
+
     await within(detailsModal).findByRole('alert');
+
     expect(
       within(detailsModal).getByText('Nenhum documento anexado.')
     ).toBeInTheDocument();
 
     const fileInput = within(detailsModal).getByTestId('file-upload-input');
+
     const file = new File(['conteudo pdf'], 'peticao-inicial.pdf', {
       type: 'application/pdf',
     });
-    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    fireEvent.change(fileInput, {
+      target: { files: [file] },
+    });
+
     await within(detailsModal).findByText(
       'Não foi possível enviar o documento.'
     );
@@ -928,7 +1175,11 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
   it('valida intervalo de datas inválido, limpa filtros e navega entre páginas e status no ProcessTable/ProcessDetailsModal', async () => {
     const page1Processes = [
-      { ...initialApiProcess, processo_id: 10, status: 'Concluído' },
+      {
+        ...initialApiProcess,
+        processo_id: 10,
+        status: 'Concluído',
+      },
       {
         ...initialApiProcess,
         processo_id: 11,
@@ -945,6 +1196,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         status: 'Em Análise',
       },
     ];
+
     const page2Processes = [
       {
         ...initialApiProcess,
@@ -957,12 +1209,15 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
     fetchMock.mockImplementation((url) => {
       const urlString = String(url);
+
       if (urlString.startsWith(`${API_BASE}/clientes/`)) {
         return Promise.resolve(jsonResponse(mockClientes));
       }
+
       if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
         return Promise.resolve(jsonResponse(mockFuncionarios));
       }
+
       if (urlString.includes('page=2')) {
         return Promise.resolve(
           jsonResponse(
@@ -974,6 +1229,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
           )
         );
       }
+
       return Promise.resolve(
         jsonResponse(
           makePageResponse(page1Processes, {
@@ -1002,38 +1258,79 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       'Processo Arquivado Teste',
       'Processo Em Análise Teste',
     ]) {
-      fireEvent.click(screen.getByRole('button', { name: title }));
-      const modal = screen.getByRole('dialog', { name: title });
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: title,
+        })
+      );
+
+      const modal = screen.getByRole('dialog', {
+        name: title,
+      });
+
       expect(modal).toBeInTheDocument();
-      fireEvent.click(within(modal).getByRole('button', { name: 'Fechar' }));
+
+      fireEvent.click(
+        within(modal).getByRole('button', {
+          name: 'Fechar',
+        })
+      );
     }
 
     fireEvent.change(screen.getByLabelText('De:'), {
-      target: { value: '2026-10-10' },
+      target: {
+        value: '2026-10-10',
+      },
     });
+
     fireEvent.change(screen.getByLabelText('Até:'), {
-      target: { value: '2026-05-01' },
+      target: {
+        value: '2026-05-01',
+      },
     });
 
     expect(screen.getByRole('alert')).toHaveTextContent(
       'A data inicial não pode ser posterior à data final.'
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Limpar filtros',
+      })
+    );
+
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
     expect(screen.getByLabelText('De:')).toHaveValue('');
+
     expect(screen.getByLabelText('Até:')).toHaveValue('');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Próxima página',
+      })
+    );
+
     expect(
-      await screen.findByRole('button', { name: 'Processo Página Dois' })
+      await screen.findByRole('button', {
+        name: 'Processo Página Dois',
+      })
     ).toBeInTheDocument();
+
     expect(screen.getByText('Página 2 de 2')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Página anterior' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Página anterior',
+      })
+    );
+
     expect(
-      await screen.findByRole('button', { name: 'Processo Arquivado Teste' })
+      await screen.findByRole('button', {
+        name: 'Processo Arquivado Teste',
+      })
     ).toBeInTheDocument();
+
     expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
   });
 

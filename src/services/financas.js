@@ -403,3 +403,81 @@ export async function excluirCategoria(categoriaId) {
     );
   }
 }
+
+export async function obterCalendario(filters = {}) {
+  try {
+    const token = getAccessToken();
+    const queryParams = new URLSearchParams();
+
+    if (filters.inicio) queryParams.append('inicio', filters.inicio);
+    if (filters.fim) queryParams.append('fim', filters.fim);
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.tipo) queryParams.append('tipo', filters.tipo);
+    if (filters.categoria_id)
+      queryParams.append('categoria_id', filters.categoria_id);
+    if (filters.cliente_id)
+      queryParams.append('cliente_id', filters.cliente_id);
+
+    const queryString = queryParams.toString()
+      ? `?${queryParams.toString()}`
+      : '';
+    const response = await fetch(
+      `${API_URL}/lancamentos/calendario${queryString}`,
+      {
+        cache: 'no-store',
+        ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+      }
+    );
+
+    if (!response.ok) return [];
+    const dados = await response.json();
+    return Array.isArray(dados) ? dados.map(toLancamento) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function exportarCalendarioIcs(filters = {}) {
+  const token = getAccessToken();
+  const queryParams = new URLSearchParams();
+
+  if (filters.inicio) queryParams.append('inicio', filters.inicio);
+  if (filters.fim) queryParams.append('fim', filters.fim);
+  if (filters.status) queryParams.append('status', filters.status);
+  if (filters.tipo) queryParams.append('tipo', filters.tipo);
+  if (filters.categoria_id)
+    queryParams.append('categoria_id', filters.categoria_id);
+  if (filters.cliente_id) queryParams.append('cliente_id', filters.cliente_id);
+
+  const queryString = queryParams.toString()
+    ? `?${queryParams.toString()}`
+    : '';
+  const response = await fetch(
+    `${API_URL}/lancamentos/calendario/exportar${queryString}`,
+    {
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(
+      parseApiError(error, 'Não foi possível exportar o calendário.')
+    );
+  }
+
+  const blob = await response.blob();
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'calendario_financeiro.ics';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
+  return blob;
+}

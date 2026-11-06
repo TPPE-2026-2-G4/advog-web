@@ -13,6 +13,8 @@ import {
   listarFinancas,
   listarLancamentos,
   mudarStatusLancamento,
+  obterCalendario,
+  exportarCalendarioIcs,
   obterResumoFinancas,
 } from './financas';
 
@@ -1268,6 +1270,92 @@ describe('serviço de finanças', () => {
         );
       }
     );
+  });
+
+  describe('obterCalendario', () => {
+    it('retorna os lançamentos do calendário mapeados com URLs externas', async () => {
+      const mockEventos = [
+        {
+          lancamento_id: 1,
+          titulo: 'Honorários Iniciais',
+          descricao: 'Entrada de honorários',
+          tipo: 'e',
+          status: 'Realizado',
+          valor: 5000,
+          data_vencimento: '2026-08-01T00:00:00',
+          data_pagamento: '2026-08-01T00:00:00',
+          categoria_id: 1,
+          google_calendar_url: 'https://calendar.google.com/render?test=1',
+          outlook_calendar_url: 'https://outlook.office.com/render?test=1',
+        },
+      ];
+      fetch.mockResolvedValueOnce(respostaJson(mockEventos));
+
+      const resultado = await obterCalendario({
+        inicio: '2026-08-01',
+        fim: '2026-08-31',
+      });
+
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/lancamentos/calendario?inicio=2026-08-01&fim=2026-08-31',
+        { cache: 'no-store' }
+      );
+      expect(resultado).toHaveLength(1);
+      expect(resultado[0].id).toBe(1);
+      expect(resultado[0].tipo).toBe('entrada');
+      expect(resultado[0].status).toBe('realizado');
+      expect(resultado[0].google_calendar_url).toBe(
+        'https://calendar.google.com/render?test=1'
+      );
+      expect(resultado[0].outlook_calendar_url).toBe(
+        'https://outlook.office.com/render?test=1'
+      );
+    });
+
+    it('retorna lista vazia em caso de erro na requisição', async () => {
+      fetch.mockResolvedValueOnce(respostaComErro('Erro no calendário'));
+
+      const resultado = await obterCalendario({
+        inicio: '2026-08-01',
+        fim: '2026-08-31',
+      });
+
+      expect(resultado).toEqual([]);
+    });
+  });
+
+  describe('exportarCalendarioIcs', () => {
+    it('dispara requisição para exportar .ics e retorna blob', async () => {
+      const mockBlob = new Blob(['BEGIN:VCALENDAR...'], {
+        type: 'text/calendar',
+      });
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        blob: vi.fn().mockResolvedValue(mockBlob),
+      });
+
+      const blob = await exportarCalendarioIcs({
+        inicio: '2026-08-01',
+        fim: '2026-08-31',
+      });
+
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/lancamentos/calendario/exportar?inicio=2026-08-01&fim=2026-08-31',
+        { headers: {} }
+      );
+      expect(blob).toBeDefined();
+    });
+
+    it('lança erro caso a exportação falhe', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        json: vi.fn().mockResolvedValue({ detail: 'Falha na exportação' }),
+      });
+
+      await expect(
+        exportarCalendarioIcs({ inicio: '2026-08-01', fim: '2026-08-31' })
+      ).rejects.toThrow('Falha na exportação');
+    });
   });
 });
 
