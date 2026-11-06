@@ -1,11 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { Clock } from 'lucide-react';
+import ActivitySummary from '@/components/features/atividades/ActivitySummary/ActivitySummary';
+import RecentActivities from '@/components/features/atividades/RecentActivities/RecentActivities';
+import StatCard from '@/components/ui/StatCard/StatCard';
 import CriticalProcessesCard from '@/components/features/processos/CriticalProcessesCard/CriticalProcessesCard';
 import ProcessDetailsModal from '@/components/features/processos/ProcessDetailsModal/ProcessDetailsModal';
+import { useKanbanAtividades } from '@/hooks/useKanbanAtividades';
 import { useProcessosCriticos } from '@/hooks/useProcessosCriticos';
+import { useResumoAtividades } from '@/hooks/useResumoAtividades';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
+import { getRecentActivities } from '@/utils/atividade';
 import { getCurrentUser } from '@/utils/authSession';
 import { enrichProcess } from '@/utils/processo';
 import styles from './dashboard.module.css';
@@ -21,6 +28,25 @@ export default function DashboardClient() {
   const permissions = JSON.parse(permissionsJson);
   const canView = permissions.visualizar_processos === true;
   const canEdit = permissions.editar_processos === true;
+
+  const {
+    summary: activitySummary,
+    isLoading: isSummaryLoading,
+    error: summaryError,
+    reload: reloadSummary,
+  } = useResumoAtividades();
+
+  const {
+    stages: activityStages,
+    isLoading: isActivitiesLoading,
+    error: activitiesError,
+    reload: reloadActivities,
+  } = useKanbanAtividades();
+
+  const recentActivities = useMemo(
+    () => getRecentActivities(activityStages),
+    [activityStages]
+  );
 
   const [clientes, setClientes] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
@@ -85,19 +111,6 @@ export default function DashboardClient() {
     [detailProcess, clientNames, employeeNames]
   );
 
-  if (!canView) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.errorState} role="alert">
-          <div>
-            <h1>Acesso negado</h1>
-            <p>Você não possui permissão para visualizar processos.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -116,15 +129,50 @@ export default function DashboardClient() {
       )}
 
       <main className={styles.main}>
-        <CriticalProcessesCard
-          processes={enrichedProcesses}
-          isLoading={isLoading}
-          isReloading={isReloading}
-          error={error}
-          onRetry={reload}
-          onAnalyze={openDetail}
-          thresholdDays={15}
-        />
+        <div className={styles.statsGrid}>
+          <StatCard
+            title="Atividades Pendentes"
+            value={
+              isSummaryLoading || summaryError ? '—' : activitySummary.pendentes
+            }
+            icon={Clock}
+            iconColor="#C1A077"
+          />
+        </div>
+
+        <div className={styles.activitiesGrid}>
+          <ActivitySummary
+            summary={activitySummary}
+            isLoading={isSummaryLoading}
+            error={summaryError}
+            onRetry={reloadSummary}
+          />
+          <RecentActivities
+            activities={recentActivities}
+            isLoading={isActivitiesLoading}
+            error={activitiesError}
+            onRetry={reloadActivities}
+          />
+        </div>
+
+        {canView ? (
+          <CriticalProcessesCard
+            processes={enrichedProcesses}
+            isLoading={isLoading}
+            isReloading={isReloading}
+            error={error}
+            onRetry={reload}
+            onAnalyze={openDetail}
+            thresholdDays={15}
+          />
+        ) : (
+          <div className={styles.errorState} role="alert">
+            <div>
+              <h2>Acesso negado</h2>
+              <p>Você não possui permissão para visualizar processos.</p>
+            </div>
+          </div>
+        )}
       </main>
 
       {enrichedDetail && (

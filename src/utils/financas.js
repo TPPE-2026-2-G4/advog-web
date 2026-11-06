@@ -180,6 +180,8 @@ export function toLancamento(apiItem) {
     cliente_id: apiItem.cliente_id || null,
     status,
     recorrente: Boolean(apiItem.recorrente),
+    google_calendar_url: apiItem.google_calendar_url || '',
+    outlook_calendar_url: apiItem.outlook_calendar_url || '',
   };
 }
 

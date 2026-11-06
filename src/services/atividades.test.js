@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAccessToken } from '@/utils/authSession';
 import { API_URL } from './api';
-import { listarProdutividadeEquipe } from './atividades';
+import { listarProdutividadeEquipe, obterKanbanAtividades } from './atividades';
 
 vi.mock('@/utils/authSession', () => ({
   getAccessToken: vi.fn(),
@@ -90,6 +90,69 @@ describe('serviço de atividades', () => {
 
     await expect(listarProdutividadeEquipe()).rejects.toThrow(
       'Não foi possível carregar a produtividade da equipe.'
+    );
+  });
+});
+
+describe('obterKanbanAtividades', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.stubGlobal('fetch', vi.fn());
+    getAccessToken.mockReturnValue('token-admin');
+  });
+
+  it('busca o kanban com token e sem cache', async () => {
+    const kanban = { escopo: 'usuario', etapas: [] };
+    fetch.mockResolvedValue(respostaJson(kanban));
+
+    await expect(obterKanbanAtividades()).resolves.toEqual(kanban);
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/atividades/kanban`,
+      expect.objectContaining({
+        method: 'GET',
+        headers: {
+          Authorization: expect.stringContaining('token-admin'),
+        },
+        cache: 'no-store',
+      })
+    );
+  });
+
+  it('lança erro e não consulta a API quando não há token', async () => {
+    getAccessToken.mockReturnValue(null);
+
+    await expect(obterKanbanAtividades()).rejects.toThrow(
+      'Sessão expirada. Faça login novamente.'
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [401, 'Sessão expirada. Faça login novamente.'],
+    [403, 'Você não possui permissão para visualizar as atividades.'],
+    [500, 'Falha interna'],
+  ])('lança a mensagem adequada para status %i', async (status, mensagem) => {
+    fetch.mockResolvedValue(
+      respostaJson({ detail: 'Falha interna' }, { ok: false, status })
+    );
+
+    await expect(obterKanbanAtividades()).rejects.toThrow(mensagem);
+  });
+
+  it('usa mensagem padrão se a resposta de erro não contém detail', async () => {
+    fetch.mockResolvedValue(respostaJson({}, { ok: false, status: 500 }));
+
+    await expect(obterKanbanAtividades()).rejects.toThrow(
+      'Não foi possível carregar as atividades.'
+    );
+  });
+
+  it('converte falha de rede em erro com mensagem padrão', async () => {
+    fetch.mockRejectedValue(new Error('Network error'));
+
+    await expect(obterKanbanAtividades()).rejects.toThrow(
+      'Não foi possível carregar as atividades.'
     );
   });
 });

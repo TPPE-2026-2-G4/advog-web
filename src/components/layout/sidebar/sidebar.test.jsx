@@ -14,10 +14,10 @@ const menuItems = [
   ['/processos', 'Casos/Processos'],
   ['/atividades', 'Atividades'],
   ['/financas', 'Finanças'],
+  ['/calendario', 'Calendário'],
   ['/clientes', 'Clientes/CRM'],
   ['/pesquisa', 'Pesquisa'],
   ['/equipe', 'Equipe'],
-  ['/calendario', 'Calendário'],
   ['/site', 'Site'],
   ['/ajustes', 'Ajustes'],
 ];
