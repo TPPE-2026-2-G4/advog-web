@@ -48,6 +48,13 @@
   align-items: start;
 }
 
+.summariesColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
 .warningBanner {
   background-color: #fffbeb;
   border: 1px solid #fde68a;
