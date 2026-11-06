@@ -22,10 +22,10 @@ const menuItems = [
   { path: '/processos', icon: Briefcase, label: 'Casos/Processos' },
   { path: '/atividades', icon: CheckSquare, label: 'Atividades' },
   { path: '/financas', icon: DollarSign, label: 'Finanças' },
+  { path: '/calendario', icon: Calendar, label: 'Calendário' },
   { path: '/clientes', icon: Users, label: 'Clientes/CRM' },
   { path: '/pesquisa', icon: Search, label: 'Pesquisa' },
   { path: '/equipe', icon: UsersRound, label: 'Equipe' },
-  { path: '/calendario', icon: Calendar, label: 'Calendário' },
   { path: '/site', icon: Palette, label: 'Site' },
   { path: '/ajustes', icon: Settings, label: 'Ajustes' },
 ];

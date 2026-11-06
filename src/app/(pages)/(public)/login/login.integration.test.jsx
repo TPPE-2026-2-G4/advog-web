@@ -118,6 +118,57 @@ describe('Integração: Fluxo de Login (LoginPage + useLogin + AuthProvider + se
     expect(submitButton).not.toBeDisabled();
   });
 
+  it('ignora uma segunda submissão enquanto o login está em andamento', async () => {
+    let resolveFetch;
+
+    fetch.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFetch = resolve;
+      })
+    );
+
+    renderLoginIntegration();
+
+    fireEvent.change(screen.getByLabelText('Email empresarial'), {
+      target: { value: 'usuario@carreiro.adv.br' },
+    });
+
+    fireEvent.change(screen.getByLabelText('Senha'), {
+      target: { value: 'senha-segura' },
+    });
+
+    const submitButton = screen.getByRole('button', { name: 'Entrar' });
+
+    fireEvent.click(submitButton);
+    fireEvent.click(submitButton);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    expect(submitButton).toBeDisabled();
+
+    await act(async () => {
+      resolveFetch({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          access_token: 'jwt-token-duplicado',
+          funcionario: {
+            funcionario_id: 8,
+            nome: 'Usuário Teste',
+            email: 'usuario@carreiro.adv.br',
+            permissoes: [],
+          },
+        }),
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    });
+
+    expect(mockPush).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     {
       cenario: 'erro 401 com campo detail da API',
