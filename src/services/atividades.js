@@ -1,7 +1,11 @@
 import { getAccessToken } from '@/utils/authSession';
 import { API_URL } from './api';
 
-const getErrorMessage = async (response) => {
+const getErrorMessage = async (
+  response,
+  fallbackMessage,
+  forbiddenMessage = 'Você não possui permissão para realizar esta ação.'
+) => {
   const error = await response.json().catch(() => null);
 
   if (response.status === 401) {
@@ -9,35 +13,94 @@ const getErrorMessage = async (response) => {
   }
 
   if (response.status === 403) {
-    return 'Você não possui permissão para visualizar a produtividade da equipe.';
+    return forbiddenMessage;
   }
 
-  return (
-    error?.detail || 'Não foi possível carregar a produtividade da equipe.'
-  );
+  return (typeof error?.detail === 'string' && error.detail) || fallbackMessage;
 };
 
-export async function listarProdutividadeEquipe() {
+const request = async (path, options, fallbackMessage, forbiddenMessage) => {
   const token = getAccessToken();
   if (!token) throw new Error('Sessão expirada. Faça login novamente.');
 
   let response;
 
   try {
-    response = await fetch(`${API_URL}/atividades/produtividade`, {
-      method: 'GET',
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
       headers: {
+        ...options?.headers,
         Authorization: `Bearer ${token}`,
       },
-      cache: 'no-store',
     });
   } catch {
-    throw new Error('Não foi possível carregar a produtividade da equipe.');
+    throw new Error(fallbackMessage);
   }
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
+    throw new Error(
+      await getErrorMessage(response, fallbackMessage, forbiddenMessage)
+    );
   }
 
+  if (response.status === 204) return undefined;
+
   return response.json();
+};
+
+export function listarProdutividadeEquipe() {
+  return request(
+    '/atividades/produtividade',
+    { method: 'GET', cache: 'no-store' },
+    'Não foi possível carregar a produtividade da equipe.',
+    'Você não possui permissão para visualizar a produtividade da equipe.'
+  );
+}
+
+export function obterKanban() {
+  return request(
+    '/atividades/kanban',
+    { method: 'GET', cache: 'no-store' },
+    'Não foi possível carregar o quadro de atividades.'
+  );
+}
+
+export function buscarAtividade(atividadeId) {
+  return request(
+    `/atividades/${encodeURIComponent(atividadeId)}`,
+    { method: 'GET', cache: 'no-store' },
+    'Não foi possível carregar os detalhes da atividade.'
+  );
+}
+
+export function criarAtividade(dados) {
+  return request(
+    '/atividades',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    },
+    'Não foi possível criar a atividade.'
+  );
+}
+
+export function atualizarAtividade(atividadeId, dados) {
+  return request(
+    `/atividades/${encodeURIComponent(atividadeId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    },
+    'Não foi possível atualizar a atividade.'
+  );
+}
+
+export function excluirAtividade(atividadeId) {
+  return request(
+    `/atividades/${encodeURIComponent(atividadeId)}`,
+    { method: 'DELETE' },
+    'Não foi possível excluir a atividade.'
+  );
 }
