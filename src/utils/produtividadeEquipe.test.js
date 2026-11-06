@@ -45,6 +45,42 @@ describe('utilitários de produtividade da equipe', () => {
         progresso: 0,
       });
     });
+
+    it('usa zero para valores falsy dos campos numéricos', () => {
+      expect(
+        formatarSumarioEquipe({
+          finalizadas: 0,
+          em_andamento: null,
+          a_fazer: undefined,
+          atrasadas: '',
+          progresso: 0,
+        })
+      ).toEqual({
+        finalizadas: 0,
+        em_andamento: 0,
+        a_fazer: 0,
+        atrasadas: 0,
+        progresso: 0,
+      });
+    });
+
+    it('converte valores numéricos representados como texto', () => {
+      expect(
+        formatarSumarioEquipe({
+          finalizadas: '10',
+          em_andamento: '3',
+          a_fazer: '2',
+          atrasadas: '1',
+          progresso: '85',
+        })
+      ).toEqual({
+        finalizadas: 10,
+        em_andamento: 3,
+        a_fazer: 2,
+        atrasadas: 1,
+        progresso: 85,
+      });
+    });
   });
 
   describe('obterProgressoEquipe', () => {
@@ -57,6 +93,24 @@ describe('utilitários de produtividade da equipe', () => {
       [{}, 0],
     ])('retorna %i para o resumo %j', (summary, expected) => {
       expect(obterProgressoEquipe(summary)).toBe(expected);
+    });
+
+    it.each([
+      [null, 0],
+      [undefined, 0],
+      [{ progresso: null }, 0],
+      [{ progresso: undefined }, 0],
+      [{ progresso: '' }, 0],
+    ])(
+      'retorna 0 quando o progresso está ausente ou é falsy: %j',
+      (summary, expected) => {
+        expect(obterProgressoEquipe(summary)).toBe(expected);
+      }
+    );
+
+    it('mantém valores exatamente nos limites permitidos', () => {
+      expect(obterProgressoEquipe({ progresso: 0 })).toBe(0);
+      expect(obterProgressoEquipe({ progresso: 100 })).toBe(100);
     });
   });
 });

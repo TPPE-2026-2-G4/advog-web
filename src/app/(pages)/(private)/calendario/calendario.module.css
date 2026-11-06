@@ -1,0 +1,542 @@
+body {
+  background-color: #f5f3ef;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-size: clamp(26px, 4vw, 32px);
+  color: #172133;
+  font-family: var(--font-cormorant), serif;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.subtitle {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.exportButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: transparent;
+  color: #172133;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #172133;
+  border-radius: 6px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.exportButton:hover {
+  background-color: rgba(23, 33, 51, 0.05);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+.statCard {
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.statIconWrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconSuccess {
+  background-color: rgba(34, 197, 94, 0.12);
+  color: #0f6b31;
+}
+
+.iconDanger {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.iconWarning {
+  background-color: rgba(234, 179, 8, 0.15);
+  color: #ca8a04;
+}
+
+.iconOrange {
+  background-color: rgba(249, 115, 22, 0.12);
+  color: #ea580c;
+}
+
+.statInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.statValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: #172133;
+  font-family: var(--font-cormorant), serif;
+  margin: 0;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.calendarCard {
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.calendarNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.navButton {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.navButton:hover {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.monthTitle {
+  font-family: var(--font-cormorant), serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: #172133;
+  margin: 0;
+}
+
+.weekdaysRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 8px;
+}
+
+.weekdayHeader {
+  font-family: var(--font-cormorant), serif;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 500;
+  color: #374151;
+  padding: 8px 0;
+}
+
+.daysGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.emptyDay {
+  min-height: 52px;
+}
+
+.dayButton {
+  position: relative;
+  min-height: 52px;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: all 0.15s ease;
+}
+
+.dayButton:hover:not(.daySelected) {
+  background-color: #f9fafb;
+}
+
+.daySelected,
+.daySelected:hover {
+  background-color: rgba(193, 160, 119, 0.15) !important;
+  border-color: #c1a077 !important;
+}
+
+.dayToday:not(.daySelected) {
+  border-color: rgba(23, 33, 51, 0.2);
+}
+
+.dayNumber {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  margin-bottom: 6px;
+  color: #000000;
+}
+
+.dayNumberToday {
+  color: #c1a077;
+  font-weight: 700;
+}
+
+.dotsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  width: 100%;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dotSuccess {
+  background-color: #0f6b31;
+}
+
+.dotWarning {
+  background-color: #ca8a04;
+}
+
+.dotOrange {
+  background-color: #f97316;
+}
+
+.dotDanger {
+  background-color: #dc2626;
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.detailsCard {
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.detailsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.detailsDateTitle {
+  font-family: var(--font-cormorant), serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #172133;
+  margin: 0;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background-color: #f3f4f6;
+  color: #172133;
+}
+
+.emptyDetails {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px 16px;
+  margin: auto 0;
+  flex: 1;
+}
+
+.emptyIconWrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: rgba(23, 33, 51, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: #9ca3af;
+}
+
+.emptyText {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  max-width: 420px;
+  line-height: 1.5;
+}
+
+.noItemsText {
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+  padding: 24px 0;
+  margin: auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.itemCard {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.itemCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badgeSuccess {
+  background-color: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.badgeDanger {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.badgeWarning {
+  background-color: rgba(234, 179, 8, 0.15);
+  color: #a16207;
+}
+
+.badgeOrange {
+  background-color: rgba(249, 115, 22, 0.12);
+  color: #c2410c;
+}
+
+.itemAmount {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.amountPositive {
+  color: #16a34a;
+}
+
+.amountNegative {
+  color: #dc2626;
+}
+
+.itemTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #172133;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.itemDescricao {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.itemFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: none;
+}
+
+.itemTipo {
+  width: 100%;
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+  text-align: right;
+}
+
+.errorMessage {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  border: 1px solid #fecaca;
+}
+
+@media (max-width: 1024px) {
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .headerRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .exportButton {
+    flex: 1;
+    justify-content: center;
+  }
+}

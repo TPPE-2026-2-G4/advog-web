@@ -20,6 +20,7 @@ export function proxy(request) {
 export const config = {
   matcher: [
     '/dashboard/:path*',
+    '/atividades/:path*',
     '/equipe/:path*',
     '/financas/:path*',
     '/processos/:path*',
