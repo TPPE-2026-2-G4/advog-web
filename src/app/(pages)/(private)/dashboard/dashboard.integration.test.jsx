@@ -1,6 +1,14 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DashboardClient from './dashboardClient';
+import ProcessSummary from '@/components/features/processos/ProcessSummary/ProcessSummary';
+import { useResumoProcessos } from '@/hooks/useResumoProcessos';
 import { obterKanbanAtividades } from '@/services/atividades';
 import { obterResumoAtividades } from '@/services/dashboard';
 import { listarClientes } from '@/services/clientes';
@@ -9,6 +17,7 @@ import {
   listarDocumentos,
   listarProcessosCriticos,
   obterProcesso,
+  obterResumoProcessos,
   obterUrlDocumento,
   uploadDocumento,
 } from '@/services/processos';
@@ -33,6 +42,7 @@ vi.mock('@/services/funcionarios', () => ({
 vi.mock('@/services/processos', () => ({
   listarProcessosCriticos: vi.fn(),
   obterProcesso: vi.fn(),
+  obterResumoProcessos: vi.fn(),
   listarDocumentos: vi.fn(),
   obterUrlDocumento: vi.fn(),
   uploadDocumento: vi.fn(),
@@ -54,6 +64,15 @@ const process = {
   data_prazo: '2026-11-10T18:00:00',
   cliente_id: 1,
   funcionario_id: 2,
+};
+
+const mockProcessSummary = {
+  total: 7,
+  em_andamento: 4,
+  em_analise: 2,
+  finalizados: 1,
+  proximos_do_prazo: 2,
+  atrasados: 1,
 };
 
 const mockSummary = {
@@ -94,6 +113,7 @@ describe('DashboardClient integration', () => {
       },
     });
 
+    obterResumoProcessos.mockResolvedValue(mockProcessSummary);
     obterResumoAtividades.mockResolvedValue(mockSummary);
     obterKanbanAtividades.mockResolvedValue(mockKanban);
     listarClientes.mockResolvedValue([
@@ -123,6 +143,7 @@ describe('DashboardClient integration', () => {
 
     expect(screen.getByText('Acesso negado')).toBeInTheDocument();
     expect(listarProcessosCriticos).not.toHaveBeenCalled();
+    expect(obterResumoProcessos).not.toHaveBeenCalled();
   });
 
   it('lista processos críticos, enriquece nomes e abre detalhes para análise', async () => {
@@ -185,5 +206,42 @@ describe('DashboardClient integration', () => {
         )
       ).toBeInTheDocument();
     });
+  });
+
+  it('trata erros no Resumo de Processos (Error e não-Error), permite tentar novamente e exercita opções do hook', async () => {
+    obterResumoProcessos
+      .mockRejectedValueOnce(new Error('Falha no resumo de processos'))
+      .mockRejectedValueOnce('erro desconhecido no resumo')
+      .mockResolvedValueOnce({});
+
+    render(<DashboardClient />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Falha no resumo de processos')
+      ).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Não foi possível carregar o resumo de processos.')
+      ).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText('Não foi possível carregar o resumo de processos.')
+      ).not.toBeInTheDocument();
+    });
+
+    render(<ProcessSummary summary={null} />);
+    render(<ProcessSummary summary={null} error="Erro sem retry" />);
+
+    const { unmount } = renderHook(() => useResumoProcessos());
+    unmount();
   });
 });
