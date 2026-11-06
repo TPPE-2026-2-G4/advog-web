@@ -1,9 +1,52 @@
-export function formatCurrency(val) {
-  if (val === undefined || val === null || isNaN(Number(val))) return 'R$ 0,00';
-  return `R$ ${Number(val).toLocaleString('pt-BR', {
+export const MESES_ABREV = [
+  'Jan',
+  'Fev',
+  'Mar',
+  'Abr',
+  'Mai',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Set',
+  'Out',
+  'Nov',
+  'Dez',
+];
+
+export const CORES_DESPESAS_CATEGORIA = [
+  '#9e2a3b',
+  '#d4a017',
+  '#2f6f55',
+  '#5a82ae',
+  '#c1a077',
+  '#6b7280',
+];
+
+export function formatCurrencyNumber(val) {
+  if (val === undefined || val === null || isNaN(Number(val))) return '0,00';
+  return Number(val).toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`;
+  });
+}
+
+export function formatCurrency(val) {
+  if (val === undefined || val === null || isNaN(Number(val))) return 'R$ 0,00';
+  return `R$ ${formatCurrencyNumber(val)}`;
+}
+
+export function formatCompactCurrency(val) {
+  if (val === undefined || val === null || isNaN(Number(val))) return 'R$ 0k';
+  const num = Number(val);
+  if (num === 0) return 'R$ 0k';
+  if (Math.abs(num) >= 1000) {
+    const k = num / 1000;
+    const formatted = Number.isInteger(k)
+      ? String(k)
+      : k.toFixed(1).replace(/\.0$/, '');
+    return `R$ ${formatted}k`;
+  }
+  return `R$ ${Math.round(num)}`;
 }
 
 export function formatDateToBr(isoDate) {
@@ -93,6 +136,191 @@ export function calcularResumoFinanceiro(lancamentos = []) {
     },
     { totalEntradas: 0, totalSaidas: 0, saldo: 0 }
   );
+}
+
+export function calcularIndicadoresFinanceiros(
+  lancamentos = [],
+  resumoBackend = null
+) {
+  if (resumoBackend && resumoBackend.realizado) {
+    const receitaMes = Number(resumoBackend.realizado.total_entradas) || 0;
+    const despesasMes =
+      (Number(resumoBackend.realizado.total_saidas) || 0) +
+      (Number(resumoBackend.pendente?.total_saidas) || 0) +
+      (Number(resumoBackend.atrasado?.total_saidas) || 0);
+    const aReceber =
+      (Number(resumoBackend.pendente?.total_entradas) || 0) +
+      (Number(resumoBackend.atrasado?.total_entradas) || 0);
+    return {
+      receitaMes,
+      despesasMes,
+      saldoLiquido: receitaMes - despesasMes,
+      aReceber,
+    };
+  }
+
+  const lista = Array.isArray(lancamentos) ? lancamentos : [];
+  return lista.reduce(
+    (acc, item) => {
+      const valor = Number(item?.valor) || 0;
+      const tipo = item?.tipo?.toLowerCase();
+      const concluido = isStatusConcluido(item?.status);
+
+      if (tipo === 'entrada') {
+        if (concluido) {
+          acc.receitaMes += valor;
+          acc.saldoLiquido += valor;
+        } else {
+          acc.aReceber += valor;
+        }
+      } else if (tipo === 'saida') {
+        acc.despesasMes += valor;
+        acc.saldoLiquido -= valor;
+      }
+
+      return acc;
+    },
+    { receitaMes: 0, despesasMes: 0, saldoLiquido: 0, aReceber: 0 }
+  );
+}
+
+export function agruparFluxoCaixaPorMes(
+  pontosGrafico = [],
+  lancamentos = [],
+  periodoMeses = 6,
+  dataReferencia = null
+) {
+  const totalMeses = Math.max(1, Number(periodoMeses) || 6);
+  const mapaMeses = new Map();
+  let maiorDataIso = '';
+
+  const pontosValidos = Array.isArray(pontosGrafico) ? pontosGrafico : [];
+  const usarPontosGrafico = pontosValidos.length > 0;
+
+  if (usarPontosGrafico) {
+    pontosValidos.forEach((ponto) => {
+      const iso = formatDateToIso(ponto?.data || '');
+      const chaveMes = iso.slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(chaveMes)) return;
+      if (iso > maiorDataIso) maiorDataIso = iso;
+
+      const atual = mapaMeses.get(chaveMes) || { entradas: 0, saidas: 0 };
+      const valorEntrada = ponto.total_entradas ?? ponto.entradas ?? 0;
+      const valorSaida = ponto.total_saidas ?? ponto.saidas ?? 0;
+      atual.entradas += Number(valorEntrada) || 0;
+      atual.saidas += Number(valorSaida) || 0;
+      mapaMeses.set(chaveMes, atual);
+    });
+  } else if (Array.isArray(lancamentos)) {
+    lancamentos.forEach((item) => {
+      const rawData =
+        item?.dataIso ||
+        item?.dataVencimentoIso ||
+        item?.data_vencimento ||
+        item?.data ||
+        '';
+      const iso = formatDateToIso(rawData);
+      const chaveMes = iso.slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(chaveMes)) return;
+      if (iso > maiorDataIso) maiorDataIso = iso;
+
+      const valor = Number(item?.valor) || 0;
+      const tipo = item?.tipo?.toLowerCase();
+      const atual = mapaMeses.get(chaveMes) || { entradas: 0, saidas: 0 };
+
+      if (tipo === 'entrada') {
+        atual.entradas += valor;
+      } else if (tipo === 'saida') {
+        atual.saidas += valor;
+      }
+      mapaMeses.set(chaveMes, atual);
+    });
+  }
+
+  let refYear;
+  let refMonth;
+
+  if (dataReferencia) {
+    const isoRef =
+      dataReferencia instanceof Date
+        ? dataReferencia.toISOString().split('T')[0]
+        : formatDateToIso(String(dataReferencia));
+    const [y, m] = isoRef.split('-');
+    refYear = Number(y);
+    refMonth = Number(m) - 1;
+  } else if (maiorDataIso) {
+    const [y, m] = maiorDataIso.split('-');
+    refYear = Number(y);
+    refMonth = Number(m) - 1;
+  } else {
+    const agora = new Date();
+    refYear = agora.getFullYear();
+    refMonth = agora.getMonth();
+  }
+
+  const resultado = [];
+  for (let i = totalMeses - 1; i >= 0; i -= 1) {
+    const d = new Date(refYear, refMonth - i, 1);
+    const ano = d.getFullYear();
+    const mesIdx = d.getMonth();
+    const chave = `${ano}-${String(mesIdx + 1).padStart(2, '0')}`;
+    const acumulado = mapaMeses.get(chave) || { entradas: 0, saidas: 0 };
+
+    resultado.push({
+      key: chave,
+      label: MESES_ABREV[mesIdx],
+      entradas: acumulado.entradas,
+      saidas: acumulado.saidas,
+      saldo: acumulado.entradas - acumulado.saidas,
+    });
+  }
+
+  return resultado;
+}
+
+export function agruparDespesasPorCategoria(lancamentos = [], filtros = {}) {
+  const lista = Array.isArray(lancamentos) ? lancamentos : [];
+  const temMin =
+    filtros?.valorMin !== undefined &&
+    filtros?.valorMin !== null &&
+    String(filtros.valorMin).trim() !== '';
+  const temMax =
+    filtros?.valorMax !== undefined &&
+    filtros?.valorMax !== null &&
+    String(filtros.valorMax).trim() !== '';
+  const minVal = temMin ? Number(filtros.valorMin) : null;
+  const maxVal = temMax ? Number(filtros.valorMax) : null;
+
+  const totaisPorCategoria = new Map();
+
+  lista.forEach((item) => {
+    const tipo = item?.tipo?.toLowerCase();
+    if (tipo !== 'saida') return;
+
+    const valor = Number(item?.valor) || 0;
+    if (valor <= 0) return;
+    if (minVal !== null && !isNaN(minVal) && valor < minVal) return;
+    if (maxVal !== null && !isNaN(maxVal) && valor > maxVal) return;
+
+    const categoria = (item?.categoria || 'Outros').trim() || 'Outros';
+    totaisPorCategoria.set(
+      categoria,
+      (totaisPorCategoria.get(categoria) || 0) + valor
+    );
+  });
+
+  const ordenado = Array.from(totaisPorCategoria.entries())
+    .map(([categoria, valor]) => ({ categoria, valor }))
+    .sort((a, b) => b.valor - a.valor);
+
+  const totalGeral = ordenado.reduce((acc, item) => acc + item.valor, 0);
+
+  return ordenado.map((item, idx) => ({
+    categoria: item.categoria,
+    valor: item.valor,
+    percentual: Number(((item.valor / totalGeral) * 100).toFixed(1)),
+    cor: CORES_DESPESAS_CATEGORIA[idx % CORES_DESPESAS_CATEGORIA.length],
+  }));
 }
 
 export function parseApiError(

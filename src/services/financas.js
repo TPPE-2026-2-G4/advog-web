@@ -228,6 +228,66 @@ export async function obterResumoFinancas(filters = {}) {
   }
 }
 
+export async function obterGraficoFinancas(filters = {}) {
+  try {
+    const token = getAccessToken();
+    const queryParams = new URLSearchParams();
+
+    if (filters.inicio) queryParams.append('inicio', filters.inicio);
+    if (filters.fim) queryParams.append('fim', filters.fim);
+    if (
+      filters.dias !== undefined &&
+      filters.dias !== null &&
+      String(filters.dias).trim() !== ''
+    ) {
+      queryParams.append('dias', String(filters.dias));
+    }
+    if (
+      filters.valor_min !== undefined &&
+      filters.valor_min !== null &&
+      String(filters.valor_min).trim() !== ''
+    ) {
+      queryParams.append('valor_min', String(filters.valor_min));
+    }
+    if (
+      filters.valor_max !== undefined &&
+      filters.valor_max !== null &&
+      String(filters.valor_max).trim() !== ''
+    ) {
+      queryParams.append('valor_max', String(filters.valor_max));
+    }
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.tipo) queryParams.append('tipo', filters.tipo);
+    if (filters.categoria_id)
+      queryParams.append('categoria_id', filters.categoria_id);
+    if (filters.cliente_id)
+      queryParams.append('cliente_id', filters.cliente_id);
+
+    const queryString = queryParams.toString()
+      ? `?${queryParams.toString()}`
+      : '';
+    const response = await fetch(
+      `${API_URL}/lancamentos/grafico${queryString}`,
+      {
+        cache: 'no-store',
+        ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+      }
+    );
+
+    if (!response.ok) return null;
+    const dados = await response.json();
+    if (!dados || typeof dados !== 'object' || Array.isArray(dados)) {
+      return null;
+    }
+    return {
+      ...dados,
+      itens: Array.isArray(dados.itens) ? dados.itens : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function criarFinancas(dados) {
   const payload = toApiLancamento(dados);
   const token = getAccessToken();
