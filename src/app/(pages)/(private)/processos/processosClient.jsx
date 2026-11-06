@@ -7,6 +7,7 @@ import { listarFuncionarios } from '@/services/funcionarios';
 import { getCurrentUser } from '@/utils/authSession';
 const emptySubscribe = () => () => {};
 const EMPTY_RESPONSAVEIS = [];
+import ExportMenu from '@/components/ui/ExportMenu/ExportMenu';
 import DeleteProcessModal from '@/components/features/processos/DeleteProcessModal/DeleteProcessModal';
 import ProcessDetailsModal from '@/components/features/processos/ProcessDetailsModal/ProcessDetailsModal';
 import ProcessFilters from '@/components/features/processos/ProcessFilters/ProcessFilters';
@@ -58,6 +59,9 @@ export default function ProcessosClient({
     syncError,
     syncMessage,
     syncProcesses,
+    isExporting,
+    exportError,
+    exportReport,
     setFilter,
     setCurrentPage,
     setDetailProcess,
@@ -167,6 +171,13 @@ export default function ProcessosClient({
         </div>
 
         <div className={styles.headerActions}>
+          <ExportMenu
+            label="Exportar"
+            className={styles.retryButton}
+            isExporting={isExporting}
+            disabled={Boolean(dateRangeError)}
+            onExport={exportReport}
+          />
           {canEdit && (
             <button
               type="button"
@@ -211,6 +222,11 @@ export default function ProcessosClient({
       {syncError && (
         <p role="alert" className={styles.syncError}>
           {syncError}
+        </p>
+      )}
+      {exportError && (
+        <p role="alert" className={styles.syncError}>
+          {exportError}
         </p>
       )}
       {referenceError && (

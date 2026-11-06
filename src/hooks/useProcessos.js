@@ -3,6 +3,7 @@ import {
   atualizarProcesso,
   criarProcesso,
   excluirProcesso,
+  exportarProcessos,
   listarProcessos,
   obterProcesso,
   sincronizarProcessos,
@@ -13,6 +14,8 @@ import {
   toProcessPage,
   toResponsavelNames,
 } from '@/utils/processo';
+
+import { useExportarRelatorio } from '@/hooks/useExportarRelatorio';
 
 const SEARCH_DEBOUNCE_MS = 300;
 export const PROCESS_REFRESH_MS = 60_000;
@@ -81,6 +84,10 @@ export function useProcessos({
     () => ({ ...filters, busca: debouncedBusca }),
     [filters, debouncedBusca]
   );
+  const { isExporting, exportError, exportReport } = useExportarRelatorio({
+    baseName: 'processos',
+    request: (format) => exportarProcessos(activeFilters, format),
+  });
   const requestKey = JSON.stringify([activeFilters, currentPage, reloadKey]);
   const [settledKey, setSettledKey] = useState(
     initialPage || initialError ? requestKey : ''
@@ -313,6 +320,9 @@ export function useProcessos({
     syncError,
     syncMessage,
     syncProcesses,
+    isExporting,
+    exportError,
+    exportReport,
     setFilter,
     setCurrentPage,
     setDetailProcess,

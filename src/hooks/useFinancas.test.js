@@ -11,7 +11,9 @@ import {
   obterResumoFinancas,
   listarFinancas,
   mudarStatusLancamento,
+  exportarFinancas,
 } from '@/services/financas';
+import { downloadBlob } from '@/utils/exportacao';
 
 vi.mock('@/services/financas', () => ({
   criarFinancas: vi.fn(),
@@ -27,6 +29,12 @@ vi.mock('@/services/financas', () => ({
   excluirCategoria: vi.fn().mockResolvedValue(true),
   obterResumoFinancas: vi.fn(),
   listarFinancas: vi.fn(),
+  exportarFinancas: vi.fn(),
+}));
+
+vi.mock('@/utils/exportacao', async (importOriginal) => ({
+  ...(await importOriginal()),
+  downloadBlob: vi.fn(),
 }));
 
 const mockData = [
@@ -566,5 +574,112 @@ describe('useFinancas', () => {
 
       expect(excluirCategoria).toHaveBeenCalledWith(50);
     });
+  });
+});
+
+describe('useFinancas - exportação de relatórios', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    listarCategorias.mockResolvedValue([
+      { categoria_id: 1, nome_categoria: 'Honorários' },
+    ]);
+    listarFinancas.mockResolvedValue({ itens: [], total: 0 });
+    obterResumoFinancas.mockResolvedValue(null);
+  });
+
+  const renderComFiltros = async (filters) => {
+    const hook = renderHook(() => useFinancas(mockData));
+    await act(async () => {
+      await hook.result.current.handleFilterLancamentos(filters);
+    });
+    return hook;
+  };
+
+  it('exporta com os filtros aplicados, convertendo a categoria em id', async () => {
+    const blob = new Blob(['csv']);
+    exportarFinancas.mockResolvedValue(blob);
+    const { result } = await renderComFiltros({
+      inicio: '2026-08-01',
+      fim: '2026-08-31',
+      categoria: 'honorários',
+      situacao: 'Pendente',
+      page: 2,
+      page_size: 5,
+    });
+
+    await act(() => result.current.exportReport('csv'));
+
+    expect(exportarFinancas).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inicio: '2026-08-01',
+        fim: '2026-08-31',
+        situacao: 'Pendente',
+        categoria_id: 1,
+      }),
+      'csv'
+    );
+    expect(downloadBlob).toHaveBeenCalledWith(
+      blob,
+      expect.stringMatching(/^lancamentos_\d{8}\.csv$/)
+    );
+    expect(result.current.exportError).toBe('');
+  });
+
+  it('exporta sem categoria quando não há filtro de categoria', async () => {
+    exportarFinancas.mockResolvedValue(new Blob([]));
+    const { result } = await renderComFiltros({ page: 1, page_size: 5 });
+
+    await act(() => result.current.exportReport('pdf'));
+
+    expect(exportarFinancas).toHaveBeenCalledWith(
+      expect.objectContaining({ categoria_id: undefined }),
+      'pdf'
+    );
+  });
+
+  it('exporta sem filtros quando a listagem ainda não foi filtrada', async () => {
+    exportarFinancas.mockResolvedValue(new Blob([]));
+    const { result } = renderHook(() => useFinancas(mockData));
+
+    await act(() => result.current.exportReport('pdf'));
+
+    expect(exportarFinancas).toHaveBeenCalledWith(
+      { categoria_id: undefined },
+      'pdf'
+    );
+  });
+
+  it('aceita categorias identificadas por id e nome alternativos', async () => {
+    listarCategorias.mockResolvedValue([{ id: 7, nome: 'Custas' }]);
+    exportarFinancas.mockResolvedValue(new Blob([]));
+    const { result } = await renderComFiltros({ categoria: 'Custas' });
+
+    await act(() => result.current.exportReport('pdf'));
+
+    expect(exportarFinancas).toHaveBeenCalledWith(
+      expect.objectContaining({ categoria_id: 7 }),
+      'pdf'
+    );
+  });
+
+  it('não exporta e informa o erro quando a categoria filtrada não existe', async () => {
+    const { result } = await renderComFiltros({ categoria: 'Inexistente' });
+
+    await act(() => result.current.exportReport('pdf'));
+
+    expect(exportarFinancas).not.toHaveBeenCalled();
+    expect(downloadBlob).not.toHaveBeenCalled();
+    expect(result.current.exportError).toBe(
+      'A categoria selecionada não foi encontrada. Atualize a página e tente novamente.'
+    );
+  });
+
+  it('informa o erro quando a exportação falha', async () => {
+    exportarFinancas.mockRejectedValue(new Error('Falha ao exportar'));
+    const { result } = await renderComFiltros({});
+
+    await act(() => result.current.exportReport('pdf'));
+
+    expect(result.current.exportError).toBe('Falha ao exportar');
   });
 });
