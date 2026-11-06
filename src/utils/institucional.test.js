@@ -1,5 +1,9 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { formatParagraphs, getImageUrl } from './institucional';
+import {
+  formatParagraphs,
+  getImageUrl,
+  getContrastTextColor,
+} from './institucional';
 
 describe('formatParagraphs', () => {
   it.each([
@@ -96,4 +100,47 @@ describe('getImageUrl', () => {
       expect(getImageUrl(input)).toEqual(expected);
     }
   );
+});
+
+describe('getContrastTextColor', () => {
+  it.each([
+    ['fundo escuro azul marinho (#1B2A4A)', '#1B2A4A', '#ffffff'],
+    ['fundo escuro preto (#000000)', '#000000', '#ffffff'],
+    ['fundo escuro azul profundo (#0F172A)', '#0F172A', '#ffffff'],
+    ['fundo escuro azul marinho (#000080)', '#000080', '#ffffff'],
+    ['fundo escuro shorthand (#000)', '#000', '#ffffff'],
+    ['fundo claro branco (#FFFFFF)', '#FFFFFF', '#172133'],
+    ['fundo claro shorthand (#FFF)', '#FFF', '#172133'],
+    ['fundo dourado padrão (#B79A63)', '#B79A63', '#172133'],
+    ['fundo dourado claro (#C1A077)', '#C1A077', '#172133'],
+    ['fundo amarelo (#FFFF00)', '#FFFF00', '#172133'],
+    ['fundo cinza claro (#F3F4F6)', '#F3F4F6', '#172133'],
+    ['hex sem hashtag (000000)', '000000', '#ffffff'],
+    ['hex sem hashtag claro (FFFFFF)', 'FFFFFF', '#172133'],
+  ])(
+    'deve retornar a cor de texto contrastante correta para %s',
+    (_, hex, expected) => {
+      expect(getContrastTextColor(hex)).toBe(expected);
+    }
+  );
+
+  it('deve usar darkColor e lightColor personalizados quando fornecidos', () => {
+    expect(getContrastTextColor('#000000', '#111111', '#eeeeee')).toBe(
+      '#eeeeee'
+    );
+    expect(getContrastTextColor('#ffffff', '#111111', '#eeeeee')).toBe(
+      '#111111'
+    );
+  });
+
+  it.each([
+    ['cor nula', null],
+    ['cor indefinida', undefined],
+    ['string vazia', ''],
+    ['hex inválido', '#xyz123'],
+    ['hex incompleto', '#12'],
+    ['tipo não-string', 12345],
+  ])('deve retornar darkColor padrão como fallback para %s', (_, input) => {
+    expect(getContrastTextColor(input)).toBe('#172133');
+  });
 });

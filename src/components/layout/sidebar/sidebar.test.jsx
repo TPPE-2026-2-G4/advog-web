@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { usePathname } from 'next/navigation';
+import { InstitucionalContext } from '@/contexts/InstitucionalContext';
 import Sidebar from './sidebar';
 import styles from './sidebar.module.css';
 
@@ -68,5 +69,42 @@ describe('Sidebar', () => {
 
     expect(screen.getByText('Carreiro Advogados')).toBeInTheDocument();
     expect(screen.getAllByRole('link')).toHaveLength(menuItems.length);
+  });
+
+  it('adapta a cor, o nome do escritório e o logotipo a partir do contexto institucional', () => {
+    usePathname.mockReturnValue('/dashboard');
+    const customInstitucional = {
+      nomeEscritorio: 'Martins & Oliveira Advogados',
+      corPrimaria: '#0F172A',
+      corSecundaria: '#E2B857',
+      logotipo: 'https://exemplo.com/sidebar-logo.png',
+    };
+
+    render(
+      <InstitucionalContext.Provider
+        value={{ institucional: customInstitucional }}
+      >
+        <Sidebar />
+      </InstitucionalContext.Provider>
+    );
+
+    expect(
+      screen.getByText('Martins & Oliveira Advogados')
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('sidebar')).toHaveStyle({
+      backgroundColor: '#0F172A',
+    });
+
+    const logoImg = screen.getByAltText(
+      'Logotipo Martins & Oliveira Advogados'
+    );
+    expect(logoImg).toBeInTheDocument();
+    expect(logoImg).toHaveAttribute(
+      'src',
+      'https://exemplo.com/sidebar-logo.png'
+    );
+
+    const activeLink = screen.getByRole('link', { name: 'Início' });
+    expect(activeLink).toHaveStyle({ color: '#E2B857' });
   });
 });

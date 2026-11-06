@@ -677,6 +677,36 @@ describe('Componentes UI do Módulo Site', () => {
       const swatchPrimaria = screen.getByTestId('swatch-primaria');
       expect(swatchPrimaria).toHaveStyle({ backgroundColor: '#1B2A4A' });
     });
+
+    it('contrasta a cor do texto do botão na prévia da navbar para branco quando cor secundária for escura', () => {
+      render(
+        <ColorsTab
+          formData={{ corSecundaria: '#0F172A' }}
+          onInputChange={vi.fn()}
+        />
+      );
+
+      const btn = screen.getByRole('button', { name: 'Acessar Painel' });
+      expect(btn).toHaveStyle({
+        backgroundColor: '#0F172A',
+        color: '#ffffff',
+      });
+    });
+
+    it('contrasta a cor do texto do botão na prévia da navbar para escuro quando cor secundária for clara', () => {
+      render(
+        <ColorsTab
+          formData={{ corSecundaria: '#B79A63' }}
+          onInputChange={vi.fn()}
+        />
+      );
+
+      const btn = screen.getByRole('button', { name: 'Acessar Painel' });
+      expect(btn).toHaveStyle({
+        backgroundColor: '#B79A63',
+        color: '#172133',
+      });
+    });
   });
 
   describe('PreviewModal', () => {
@@ -710,6 +740,52 @@ describe('Componentes UI do Módulo Site', () => {
       expect(screen.getByText('(61) 98765-4321')).toBeInTheDocument();
       expect(screen.getByText('contato@carreiro.adv.br')).toBeInTheDocument();
       expect(screen.getByText('Brasília, DF')).toBeInTheDocument();
+    });
+
+    it('contrasta a cor do texto dos botões da prévia para branco quando cor secundária for escura', () => {
+      render(
+        <PreviewModal
+          isOpen={true}
+          onClose={vi.fn()}
+          formData={{ corSecundaria: '#0F172A' }}
+        />
+      );
+
+      const navBtn = screen.getByRole('button', { name: 'Acessar Painel' });
+      const heroBtn = screen.getByRole('button', {
+        name: 'Solicitar Atendimento',
+      });
+      expect(navBtn).toHaveStyle({
+        backgroundColor: '#0F172A',
+        color: '#ffffff',
+      });
+      expect(heroBtn).toHaveStyle({
+        backgroundColor: '#0F172A',
+        color: '#ffffff',
+      });
+    });
+
+    it('contrasta a cor do texto dos botões da prévia para escuro quando cor secundária for clara', () => {
+      render(
+        <PreviewModal
+          isOpen={true}
+          onClose={vi.fn()}
+          formData={{ corSecundaria: '#B79A63' }}
+        />
+      );
+
+      const navBtn = screen.getByRole('button', { name: 'Acessar Painel' });
+      const heroBtn = screen.getByRole('button', {
+        name: 'Solicitar Atendimento',
+      });
+      expect(navBtn).toHaveStyle({
+        backgroundColor: '#B79A63',
+        color: '#172133',
+      });
+      expect(heroBtn).toHaveStyle({
+        backgroundColor: '#B79A63',
+        color: '#172133',
+      });
     });
 
     it('chama onClose ao clicar no botão fechar ou pressionar Escape', () => {

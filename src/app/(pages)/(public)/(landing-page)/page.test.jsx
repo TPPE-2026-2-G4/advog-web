@@ -40,6 +40,77 @@ describe('Landing Page', () => {
     ).toBeEnabled();
   });
 
+  it('não renderiza o link de Equipe na navbar quando não houver membros de equipe visíveis', async () => {
+    listarFuncionarios.mockResolvedValue([]);
+    render(await Home());
+    expect(
+      screen.queryByRole('link', { name: 'Equipe' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('renderiza o link de Equipe na navbar quando houver membros de equipe visíveis', async () => {
+    listarFuncionarios.mockResolvedValue([
+      {
+        funcionario_id: 1,
+        nome: 'Dr. Pedro Lima',
+        exibicaoInstitucional: true,
+      },
+    ]);
+    render(await Home());
+    expect(screen.getByRole('link', { name: 'Equipe' })).toBeInTheDocument();
+  });
+
+  describe('Hero Section (Início)', () => {
+    it('renderiza o título da advocacia, subtítulo/slogan e botões com as cores configuradas', async () => {
+      buscarDadosInstitucionais.mockResolvedValue({
+        nomeEscritorio: 'Carreiro & Associados',
+        descricao: 'Defendendo seus direitos com excelência',
+        corPrimaria: '#0F172A',
+        corSecundaria: '#E2B857',
+        bannerHero: 'http://mock.com/banner.jpg',
+      });
+
+      render(await Home());
+
+      const hero = screen.getByTestId('hero-section');
+      expect(hero).toBeInTheDocument();
+      expect(hero).toHaveStyle({
+        backgroundColor: '#0F172A',
+        backgroundImage: 'url(http://mock.com/banner.jpg)',
+      });
+
+      expect(
+        within(hero).getByRole('heading', { name: 'Carreiro & Associados' })
+      ).toBeInTheDocument();
+      expect(
+        within(hero).getByText('Defendendo seus direitos com excelência')
+      ).toBeInTheDocument();
+
+      const btnAtendimento = within(hero).getByRole('link', {
+        name: 'Solicitar Atendimento',
+      });
+      expect(btnAtendimento).toHaveAttribute('href', '#contato');
+      expect(btnAtendimento).toHaveStyle({
+        backgroundColor: '#E2B857',
+      });
+    });
+
+    it('renderiza o Hero com dados padrão quando não configurados', async () => {
+      buscarDadosInstitucionais.mockResolvedValue({});
+
+      render(await Home());
+
+      const hero = screen.getByTestId('hero-section');
+      expect(hero).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: 'Carreiro Advogados' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Tradição e excelência na defesa dos seus direitos')
+      ).toBeInTheDocument();
+    });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     listarFuncionarios.mockResolvedValue([]);
@@ -427,6 +498,39 @@ describe('Landing Page', () => {
       expect(sobreSection).not.toBe(equipeSection);
       expect(areasSection).not.toBe(equipeSection);
       expect(sobreSection).not.toBe(areasSection);
+    });
+
+    it('contrasta a cor do texto do botão do hero conforme a luminância da cor secundária', async () => {
+      buscarDadosInstitucionais.mockResolvedValue({
+        corSecundaria: '#0F172A', // escuro
+      });
+      const jsxEscuro = await Home();
+      const { unmount } = render(jsxEscuro);
+
+      const heroEscuro = screen.getByTestId('hero-section');
+      const btnEscuro = within(heroEscuro).getByRole('link', {
+        name: 'Solicitar Atendimento',
+      });
+      expect(btnEscuro).toHaveStyle({
+        backgroundColor: '#0F172A',
+        color: '#ffffff',
+      });
+      unmount();
+
+      buscarDadosInstitucionais.mockResolvedValue({
+        corSecundaria: '#B79A63', // claro
+      });
+      const jsxClaro = await Home();
+      render(jsxClaro);
+
+      const heroClaro = screen.getByTestId('hero-section');
+      const btnClaro = within(heroClaro).getByRole('link', {
+        name: 'Solicitar Atendimento',
+      });
+      expect(btnClaro).toHaveStyle({
+        backgroundColor: '#B79A63',
+        color: '#172133',
+      });
     });
   });
 });

@@ -1,4 +1,5 @@
 import { AuthProvider } from '@/contexts/AuthContext';
+import { InstitucionalProvider } from '@/contexts/InstitucionalContext';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import './globals.css';
 
@@ -17,9 +18,15 @@ const cormorant = Cormorant_Garamond({
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${cormorant.variable}`}>
+    <html
+      lang="pt-BR"
+      data-scroll-behavior="smooth"
+      className={`${inter.variable} ${cormorant.variable}`}
+    >
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <InstitucionalProvider>{children}</InstitucionalProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -143,7 +143,9 @@ describe('Integração: Landing Page Institucional e Solicitação Pública de A
       'src',
       'http://localhost:9000/bucket/sobre.jpg'
     );
-    expect(screen.getByText('Áreas de Atuação')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('Áreas de Atuação').length
+    ).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Direito Civil')).toBeInTheDocument();
     expect(screen.getByText('Direito Societário')).toBeInTheDocument();
     expect(screen.queryByText('Área Oculta')).not.toBeInTheDocument();

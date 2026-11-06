@@ -62,19 +62,21 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #c1a077;
-  color: #172133;
+  background-color: var(--cor-secundaria, #c1a077);
+  color: var(--cor-secundaria-texto, #172133);
   border: none;
   border-radius: 6px;
   padding: 10px 22px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition:
+    filter 0.2s ease,
+    transform 0.2s ease;
 }
 
 .saveButton:hover:not(:disabled) {
-  background-color: #b08d60;
+  filter: brightness(0.85);
 }
 
 .saveButton:disabled {
@@ -380,6 +382,7 @@
   padding: 6px 14px;
   font-size: 13px;
   font-weight: 600;
+  color: var(--cor-secundaria-texto, #172133);
   cursor: default;
 }
 
@@ -524,6 +527,7 @@
   padding: 8px 18px;
   font-size: 13px;
   font-weight: 600;
+  color: var(--cor-secundaria-texto, #172133);
   cursor: pointer;
 }
 
@@ -574,6 +578,7 @@
   padding: 12px 28px;
   font-size: 14px;
   font-weight: 600;
+  color: var(--cor-secundaria-texto, #172133);
   cursor: pointer;
   transition: transform 0.2s ease;
 }
@@ -743,7 +748,7 @@
 }
 
 .toggleSwitchActive {
-  background-color: #b79a63;
+  background-color: var(--cor-secundaria, #b79a63);
 }
 
 .toggleThumb {
@@ -974,14 +979,19 @@
 }
 
 .areaSaveBtn {
-  background-color: #b79a63;
-  color: #172133;
+  background-color: var(--cor-secundaria, #b79a63);
+  color: var(--cor-secundaria-texto, #172133);
   border: none;
   border-radius: 6px;
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: filter 0.2s ease;
+}
+
+.areaSaveBtn:hover {
+  filter: brightness(0.92);
 }
 
 .areaActions {

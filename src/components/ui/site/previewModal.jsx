@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { Scale, X, Phone, Mail, MapPin } from 'lucide-react';
 import { getLawyerInitials } from '@/utils/funcionario';
 import styles from './site.module.css';
-import { getImageUrl } from '@/utils/institucional';
+import { getImageUrl, getContrastTextColor } from '@/utils/institucional';
 
 export default function PreviewModal({
   isOpen,
@@ -34,6 +34,7 @@ export default function PreviewModal({
 
   const corPrimaria = formData.corPrimaria || '#1B2A4A';
   const corSecundaria = formData.corSecundaria || '#B79A63';
+  const corSecundariaTexto = getContrastTextColor(corSecundaria);
   const nomeEscritorio = formData.nomeEscritorio || 'Carreiro Advogados';
   const slogan =
     formData.descricao || 'Tradição e excelência na defesa dos seus direitos';
@@ -103,7 +104,7 @@ export default function PreviewModal({
               className={styles.previewNavBtn}
               style={{
                 backgroundColor: corSecundaria,
-                color: '#172133',
+                color: corSecundariaTexto,
               }}
             >
               Acessar Painel
@@ -131,7 +132,7 @@ export default function PreviewModal({
                 className={styles.previewHeroBtn}
                 style={{
                   backgroundColor: corSecundaria,
-                  color: '#172133',
+                  color: corSecundariaTexto,
                 }}
               >
                 Solicitar Atendimento

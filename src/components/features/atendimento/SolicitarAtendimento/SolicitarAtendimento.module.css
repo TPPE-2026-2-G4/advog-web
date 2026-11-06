@@ -71,7 +71,7 @@ textarea.input {
 
 .input:focus-visible,
 .button:focus-visible {
-  outline: 2px solid #172133;
+  outline: 2px solid var(--cor-primaria, #172133);
   outline-offset: 3px;
 }
 
@@ -101,15 +101,19 @@ textarea.input {
   padding: 12px 24px;
   border: 0;
   border-radius: 8px;
-  background: #c1a077;
-  color: #172133;
+  background: var(--cor-secundaria, #c1a077);
+  color: var(--cor-secundaria-texto, #172133);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition:
+    filter 0.2s ease,
+    transform 0.2s ease;
 }
 
 .button:hover:not(:disabled) {
-  background: #b08d60;
+  filter: brightness(0.92);
+  transform: translateY(-1px);
 }
 
 .button:disabled,
