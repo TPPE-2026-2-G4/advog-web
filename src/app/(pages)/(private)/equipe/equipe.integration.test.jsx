@@ -915,4 +915,72 @@ describe('integração da página de equipe', () => {
       )
     ).toBe(false);
   });
+
+  it('renderiza a tabela de produtividade da equipe com indicadores, progresso e fallbacks via fetch', async () => {
+    fetch.mockImplementation((url) => {
+      const endpoint = String(url);
+      if (endpoint.endsWith('/atividades/produtividade')) {
+        return Promise.resolve(
+          createApiResponse([
+            {
+              funcionario_id: 1,
+              nome: 'Maria Silva',
+              finalizadas: 5,
+              em_andamento: 2,
+              a_fazer: 3,
+              atrasadas: 1,
+              progresso: 50,
+            },
+            {
+              funcionario_id: 2,
+              nome: 'Carlos Eduardo',
+              finalizadas: 0,
+              em_andamento: 0,
+              a_fazer: 0,
+              atrasadas: 0,
+              progresso: 0,
+            },
+          ])
+        );
+      }
+      return Promise.resolve(createApiResponse([]));
+    });
+
+    renderEquipe([createMember()]);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Produtividade da Equipe' })
+    ).toBeInTheDocument();
+    expect(screen.getByText('50%')).toBeInTheDocument();
+    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('Carlos Eduardo')).toBeInTheDocument();
+  });
+
+  it('permite fechar EditUserModal via tecla Escape e clique no overlay', async () => {
+    const member = createMember();
+    renderEquipe([member]);
+
+    fireEvent.click(screen.getByTitle('Editar usuário'));
+    expect(
+      screen.getByRole('dialog', { name: /Editar Usuário/i })
+    ).toBeInTheDocument();
+
+    // Fecha via Escape
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('dialog', { name: /Editar Usuário/i })
+      ).not.toBeInTheDocument();
+    });
+
+    // Reabre e fecha via clique no overlay
+    fireEvent.click(screen.getByTitle('Editar usuário'));
+    const overlay = document.querySelector('[class*="overlay"]');
+    fireEvent.click(overlay);
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('dialog', { name: /Editar Usuário/i })
+      ).not.toBeInTheDocument();
+    });
+  });
 });

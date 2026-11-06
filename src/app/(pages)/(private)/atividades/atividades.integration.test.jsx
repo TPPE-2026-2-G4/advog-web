@@ -1,11 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import AtividadesPage from './page';
 import AtividadesClient from './atividadesClient';
-import { obterKanbanAtividades } from '@/services/atividades';
-
-vi.mock('@/services/atividades', () => ({
-  obterKanbanAtividades: vi.fn(),
-}));
 
 const atividade = (id) => ({
   atividade_id: id,
@@ -43,10 +39,36 @@ const kanban = {
 describe('AtividadesClient integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    obterKanbanAtividades.mockResolvedValue(kanban);
+    sessionStorage.clear();
+    localStorage.clear();
+    sessionStorage.setItem('access_token', 'fake-valid-token');
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url) => {
+        if (String(url).includes('/atividades/kanban')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => kanban,
+          };
+        }
+        return { ok: false, status: 404, json: async () => ({}) };
+      })
+    );
   });
 
-  it('exibe o total e a contagem de cada etapa na ordem do quadro', async () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    sessionStorage.clear();
+  });
+
+  it('renderiza AtividadesPage como wrapper de AtividadesClient', () => {
+    const page = AtividadesPage();
+    expect(page).toBeTruthy();
+  });
+
+  it('exibe o total e a contagem de cada etapa na ordem do quadro via fetch', async () => {
     render(<AtividadesClient />);
 
     await waitFor(() =>
@@ -70,23 +92,71 @@ describe('AtividadesClient integration', () => {
   });
 
   it('mostra traços enquanto os dados carregam', () => {
-    obterKanbanAtividades.mockReturnValue(new Promise(() => {}));
+    fetch.mockReturnValue(new Promise(() => {}));
 
     render(<AtividadesClient />);
 
     expect(screen.getByText('Total').nextSibling).toHaveTextContent('—');
   });
 
-  it('permite tentar novamente quando o carregamento falha', async () => {
-    obterKanbanAtividades
-      .mockRejectedValueOnce(new Error('Falha ao carregar o quadro'))
-      .mockResolvedValueOnce(kanban);
+  it('trata erro quando usuário não tem token na sessão', async () => {
+    sessionStorage.removeItem('access_token');
 
     render(<AtividadesClient />);
 
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(
-        'Falha ao carregar o quadro'
+        'Sessão expirada. Faça login novamente.'
+      )
+    );
+  });
+
+  it('trata erro 401 de sessão expirada retornado pela API', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ detail: 'Token inválido' }),
+    });
+
+    render(<AtividadesClient />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Sessão expirada. Faça login novamente.'
+      )
+    );
+  });
+
+  it('trata erro 403 de permissão negada retornado pela API', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: async () => ({ detail: 'Acesso negado' }),
+    });
+
+    render(<AtividadesClient />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Você não possui permissão para visualizar as atividades.'
+      )
+    );
+  });
+
+  it('permite tentar novamente quando o carregamento falha por falha de rede', async () => {
+    fetch
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => kanban,
+      });
+
+    render(<AtividadesClient />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Não foi possível carregar as atividades.'
       )
     );
 
