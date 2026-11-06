@@ -10,6 +10,8 @@ import {
   createEmptyPermission,
   getPermissionLabel,
 } from '@/constants/permissions';
+import * as atividadesService from '@/services/atividades';
+import * as funcionariosService from '@/services/funcionarios';
 import {
   atualizarCargo,
   criarCargo,
@@ -914,5 +916,329 @@ describe('integração da página de equipe', () => {
         String(url).endsWith('/atividades/produtividade')
       )
     ).toBe(false);
+  });
+
+  describe('produtividade da equipe: casos de borda', () => {
+    const productivityRoute = (rows) =>
+      fetch.mockImplementation((url) =>
+        Promise.resolve(
+          createApiResponse(
+            String(url).endsWith('/atividades/produtividade') ? rows : []
+          )
+        )
+      );
+
+    it('destaca apenas as atrasadas quando as demais categorias estão zeradas', async () => {
+      productivityRoute([
+        {
+          funcionario_id: 5,
+          nome: 'Carlos Lima',
+          finalizadas: 0,
+          em_andamento: 0,
+          a_fazer: 0,
+          atrasadas: 3,
+          progresso: 0,
+        },
+      ]);
+
+      renderEquipe([createMember()]);
+
+      const section = screen.getByRole('region', {
+        name: 'Produtividade da Equipe',
+      });
+      const row = await within(section).findByRole('row', {
+        name: /Carlos Lima/,
+      });
+      const cells = within(row).getAllByRole('cell');
+
+      expect(cells[0]).toHaveTextContent('—');
+      expect(cells[1]).toHaveTextContent('—');
+      expect(cells[2]).toHaveTextContent('—');
+      expect(cells[3]).toHaveTextContent('3');
+      expect(cells[4]).toHaveTextContent('0%');
+    });
+
+    it('usa mensagem padrão quando a falha da produtividade não é um Error', async () => {
+      vi.spyOn(
+        atividadesService,
+        'listarProdutividadeEquipe'
+      ).mockRejectedValue('falha');
+
+      renderEquipe([createMember()]);
+
+      expect(
+        await screen.findByText(
+          'Não foi possível carregar a produtividade da equipe.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('ignora respostas da produtividade que chegam depois da desmontagem', async () => {
+      let resolveRows;
+      let rejectRows;
+      vi.spyOn(atividadesService, 'listarProdutividadeEquipe')
+        .mockReturnValueOnce(
+          new Promise((resolve) => {
+            resolveRows = resolve;
+          })
+        )
+        .mockReturnValueOnce(
+          new Promise((_, reject) => {
+            rejectRows = reject;
+          })
+        );
+
+      renderEquipe([createMember()]).unmount();
+      resolveRows([{ funcionario_id: 1, nome: 'Tarde Demais' }]);
+      renderEquipe([createMember()]).unmount();
+      rejectRows(new Error('tarde demais'));
+
+      await Promise.resolve();
+      expect(screen.queryByText('Tarde Demais')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('gestão de usuários e cargos: casos de borda', () => {
+    const pendingResponse = () => {
+      let resolve;
+      const promise = new Promise((done) => {
+        resolve = done;
+      });
+      return { promise, resolve };
+    };
+
+    it('mantém os demais membros ao excluir, alterar acesso ou cargo de um deles', async () => {
+      const maria = createMember();
+      const joao = createMember({
+        funcionario_id: 2,
+        nome_func: 'João Souza',
+        email_func: 'joao@teste.local',
+        status: 'Ativo',
+      });
+      fetch.mockImplementation((url, options = {}) => {
+        const endpoint = String(url);
+        if (options.method === 'DELETE') {
+          return Promise.resolve(createApiResponse(null));
+        }
+        if (endpoint.includes('/mudar-acesso')) {
+          return Promise.resolve(
+            createApiResponse({
+              funcionario_id: 1,
+              nome: 'Maria Silva',
+              email: 'maria@teste.local',
+              status: 'Inativo',
+            })
+          );
+        }
+        return Promise.resolve(
+          createApiResponse({
+            funcionario_id: 1,
+            nome: 'Maria Silva',
+            email: 'maria@teste.local',
+            cargo_id: 2,
+            cargo: roles[1],
+            status: 'Ativo',
+          })
+        );
+      });
+
+      renderEquipe([maria, joao]);
+
+      fireEvent.click(screen.getAllByTitle('Revogar acesso')[0]);
+      fireEvent.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+          name: 'Revogar acesso',
+        })
+      );
+      await waitFor(() =>
+        expect(screen.getByText('Inativo')).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getAllByTitle('Editar usuário')[0]);
+      const editDialog = screen.getByRole('dialog', { name: 'Editar Usuário' });
+      fireEvent.change(within(editDialog).getByLabelText('Nível de Acesso'), {
+        target: { value: '2' },
+      });
+      fireEvent.click(
+        within(editDialog).getByRole('button', { name: 'Salvar' })
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('dialog', { name: 'Editar Usuário' })
+        ).not.toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getAllByTitle('Excluir usuário')[0]);
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Excluir funcionário' })
+      );
+      await waitFor(() =>
+        expect(screen.queryByText('Maria Silva')).not.toBeInTheDocument()
+      );
+      expect(screen.getAllByText('João Souza').length).toBeGreaterThan(0);
+    });
+
+    it('não fecha os modais de exclusão e de acesso enquanto a requisição está em andamento', async () => {
+      const removal = pendingResponse();
+      fetch.mockReturnValue(removal.promise);
+      renderEquipe([createMember()]);
+
+      fireEvent.click(screen.getByTitle('Excluir usuário'));
+      const dialog = screen.getByRole('dialog');
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Excluir funcionário' })
+      );
+      fireEvent.click(within(dialog).getByRole('button', { name: /Cancelar/ }));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      removal.resolve(createApiResponse(null));
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      );
+
+      const access = pendingResponse();
+      fetch.mockReturnValue(access.promise);
+      renderEquipe([
+        createMember({ funcionario_id: 3, nome_func: 'Ana Lima' }),
+      ]);
+
+      fireEvent.click(screen.getByTitle('Revogar acesso'));
+      const accessDialog = screen.getByRole('dialog');
+      fireEvent.click(
+        within(accessDialog).getByRole('button', { name: 'Revogar acesso' })
+      );
+      fireEvent.click(
+        within(accessDialog).getByRole('button', { name: /Cancelar/ })
+      );
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      access.resolve(
+        createApiResponse({
+          funcionario_id: 3,
+          nome: 'Ana Lima',
+          email: 'ana@teste.local',
+          status: 'Inativo',
+        })
+      );
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      );
+    });
+
+    it('não fecha a edição de usuário nem envia duas vezes enquanto salva', async () => {
+      const update = pendingResponse();
+      fetch.mockReturnValue(update.promise);
+      renderEquipe([createMember()]);
+
+      fireEvent.click(screen.getByTitle('Editar usuário'));
+      const dialog = screen.getByRole('dialog', { name: 'Editar Usuário' });
+      fireEvent.change(within(dialog).getByLabelText('Nível de Acesso'), {
+        target: { value: '3' },
+      });
+      fireEvent.submit(dialog);
+      fireEvent.submit(dialog);
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+      fireEvent.click(dialog.parentElement);
+      fireEvent.keyDown(document, { key: 'Enter' });
+      expect(
+        screen.getByRole('dialog', { name: 'Editar Usuário' })
+      ).toBeInTheDocument();
+      expect(
+        fetch.mock.calls.filter(([, options]) => options?.method === 'PATCH')
+      ).toHaveLength(1);
+
+      update.resolve(
+        createApiResponse({
+          funcionario_id: 1,
+          nome: 'Maria Silva',
+          email: 'maria@teste.local',
+          cargo_id: 3,
+          cargo: roles[2],
+          status: 'Ativo',
+        })
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('dialog', { name: 'Editar Usuário' })
+        ).not.toBeInTheDocument()
+      );
+    });
+
+    it.each([
+      ['texto livre', 'texto livre'],
+      [new Error(''), 'Não foi possível atualizar o usuário.'],
+      [{}, 'Não foi possível atualizar o usuário.'],
+      ['', 'Não foi possível atualizar o usuário.'],
+    ])(
+      'exibe a mensagem adequada quando a atualização falha com %j',
+      async (failure, message) => {
+        vi.spyOn(
+          funcionariosService,
+          'mudarCargoFuncionario'
+        ).mockRejectedValue(failure);
+        renderEquipe([createMember()]);
+
+        fireEvent.click(screen.getByTitle('Editar usuário'));
+        const dialog = screen.getByRole('dialog', { name: 'Editar Usuário' });
+        fireEvent.change(within(dialog).getByLabelText('Nível de Acesso'), {
+          target: { value: '3' },
+        });
+        fireEvent.submit(dialog);
+
+        expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+          message
+        );
+      }
+    );
+
+    it.each([
+      ['identificado por id', { funcionario_id: undefined, id: 21 }],
+      [
+        'identificado pelo e-mail legado',
+        { funcionario_id: undefined, email_func: 'legado@teste.local' },
+      ],
+      [
+        'identificado pelo e-mail',
+        {
+          funcionario_id: undefined,
+          email_func: undefined,
+          email: 'novo@teste.local',
+        },
+      ],
+      [
+        'sem identificador',
+        { funcionario_id: undefined, email_func: undefined },
+      ],
+    ])('abre a edição de um usuário %s', (_label, overrides) => {
+      renderEquipe([createMember({ cargo_id: 2, ...overrides })]);
+
+      fireEvent.click(screen.getByTitle('Editar usuário'));
+
+      expect(
+        screen.getByRole('dialog', { name: 'Editar Usuário' })
+      ).toBeInTheDocument();
+    });
+
+    it('não fecha a exclusão de cargo enquanto a requisição está em andamento', async () => {
+      const removal = pendingResponse();
+      fetch.mockReturnValue(removal.promise);
+      renderEquipe();
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Excluir cargo Estagiário' })
+      );
+      const dialog = screen.getByRole('dialog');
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Excluir cargo' })
+      );
+      fireEvent.click(within(dialog).getByRole('button', { name: /Cancelar/ }));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      removal.resolve(createApiResponse(null));
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      );
+    });
   });
 });
