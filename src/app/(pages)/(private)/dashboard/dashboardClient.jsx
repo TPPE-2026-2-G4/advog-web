@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Clock } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Clock } from 'lucide-react';
 import ActivitySummary from '@/components/features/atividades/ActivitySummary/ActivitySummary';
 import RecentActivities from '@/components/features/atividades/RecentActivities/RecentActivities';
 import StatCard from '@/components/ui/StatCard/StatCard';
 import CriticalProcessesCard from '@/components/features/processos/CriticalProcessesCard/CriticalProcessesCard';
 import ProcessDetailsModal from '@/components/features/processos/ProcessDetailsModal/ProcessDetailsModal';
+import ProcessSummary from '@/components/features/processos/ProcessSummary/ProcessSummary';
 import { useKanbanAtividades } from '@/hooks/useKanbanAtividades';
 import { useProcessosCriticos } from '@/hooks/useProcessosCriticos';
 import { useResumoAtividades } from '@/hooks/useResumoAtividades';
+import { useResumoProcessos } from '@/hooks/useResumoProcessos';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { getRecentActivities } from '@/utils/atividade';
@@ -27,6 +29,13 @@ export default function DashboardClient() {
   );
   const permissions = JSON.parse(permissionsJson);
   const canView = permissions.visualizar_processos === true;
+
+  const {
+    summary: processSummary,
+    isLoading: isProcessSummaryLoading,
+    error: processSummaryError,
+    reload: reloadProcessSummary,
+  } = useResumoProcessos({ enabled: canView });
 
   const {
     summary: activitySummary,
@@ -110,6 +119,9 @@ export default function DashboardClient() {
     [detailProcess, clientNames, employeeNames]
   );
 
+  const canShowProcessStats =
+    canView && !isProcessSummaryLoading && !processSummaryError;
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -130,6 +142,12 @@ export default function DashboardClient() {
       <main className={styles.main}>
         <div className={styles.statsGrid}>
           <StatCard
+            title="Processos Ativos"
+            value={canShowProcessStats ? processSummary.em_andamento : '—'}
+            icon={ArrowUpRight}
+            iconColor="#34785f"
+          />
+          <StatCard
             title="Atividades Pendentes"
             value={
               isSummaryLoading || summaryError ? '—' : activitySummary.pendentes
@@ -137,15 +155,31 @@ export default function DashboardClient() {
             icon={Clock}
             iconColor="#C1A077"
           />
+          <StatCard
+            title="Prazos Urgentes"
+            value={canShowProcessStats ? processSummary.proximos_do_prazo : '—'}
+            icon={ArrowDownRight}
+            iconColor="#A8283A"
+          />
         </div>
 
         <div className={styles.activitiesGrid}>
-          <ActivitySummary
-            summary={activitySummary}
-            isLoading={isSummaryLoading}
-            error={summaryError}
-            onRetry={reloadSummary}
-          />
+          <div className={styles.summariesColumn}>
+            {canView && (
+              <ProcessSummary
+                summary={processSummary}
+                isLoading={isProcessSummaryLoading}
+                error={processSummaryError}
+                onRetry={reloadProcessSummary}
+              />
+            )}
+            <ActivitySummary
+              summary={activitySummary}
+              isLoading={isSummaryLoading}
+              error={summaryError}
+              onRetry={reloadSummary}
+            />
+          </div>
           <RecentActivities
             activities={recentActivities}
             isLoading={isActivitiesLoading}

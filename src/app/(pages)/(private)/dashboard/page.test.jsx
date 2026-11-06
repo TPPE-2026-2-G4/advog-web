@@ -6,7 +6,11 @@ import { obterKanbanAtividades } from '@/services/atividades';
 import { obterResumoAtividades } from '@/services/dashboard';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
-import { listarProcessosCriticos, obterProcesso } from '@/services/processos';
+import {
+  listarProcessosCriticos,
+  obterProcesso,
+  obterResumoProcessos,
+} from '@/services/processos';
 import { getCurrentUser } from '@/utils/authSession';
 
 vi.mock('@/services/atividades', () => ({
@@ -28,6 +32,7 @@ vi.mock('@/services/funcionarios', () => ({
 vi.mock('@/services/processos', () => ({
   listarProcessosCriticos: vi.fn(),
   obterProcesso: vi.fn(),
+  obterResumoProcessos: vi.fn(),
 }));
 
 vi.mock('@/utils/authSession', () => ({
@@ -49,6 +54,15 @@ const mockProcesses = [
     funcionario_id: 2,
   },
 ];
+
+const mockProcessSummary = {
+  total: 7,
+  em_andamento: 4,
+  em_analise: 2,
+  finalizados: 1,
+  proximos_do_prazo: 2,
+  atrasados: 1,
+};
 
 const mockSummary = {
   escopo: 'escritorio',
@@ -88,6 +102,7 @@ describe('DashboardPage e DashboardClient', () => {
         },
       },
     });
+    obterResumoProcessos.mockResolvedValue(mockProcessSummary);
     obterResumoAtividades.mockResolvedValue(mockSummary);
     obterKanbanAtividades.mockResolvedValue(mockKanban);
     listarClientes.mockResolvedValue([
@@ -126,6 +141,8 @@ describe('DashboardPage e DashboardClient', () => {
       screen.getByText('Você não possui permissão para visualizar processos.')
     ).toBeInTheDocument();
     expect(listarProcessosCriticos).not.toHaveBeenCalled();
+    expect(obterResumoProcessos).not.toHaveBeenCalled();
+    expect(screen.queryByText('Resumo de Processos')).not.toBeInTheDocument();
   });
 
   it('carrega processos críticos, enriquece com nomes de cliente e responsável e abre modal ao clicar em Analisar', async () => {
@@ -175,14 +192,30 @@ describe('DashboardPage e DashboardClient', () => {
     });
   });
 
-  it('exibe o card de atividades pendentes, o resumo e a atividade recente', async () => {
+  it('exibe os cards de resumo de processos, atividades pendentes, o resumo de atividades e a atividade recente', async () => {
     render(<DashboardClient />);
 
     await waitFor(() => {
+      expect(screen.getByText('Processos Ativos')).toBeInTheDocument();
       expect(screen.getByText('Atividades Pendentes')).toBeInTheDocument();
+      expect(screen.getByText('Prazos Urgentes')).toBeInTheDocument();
+      expect(screen.getByText('Resumo de Processos')).toBeInTheDocument();
       expect(screen.getByText('Resumo de Atividades')).toBeInTheDocument();
       expect(screen.getByText('Redigir petição inicial')).toBeInTheDocument();
     });
+
+    expect(screen.getByText('Em andamento').previousSibling).toHaveTextContent(
+      '4'
+    );
+    expect(screen.getByText('Em análise').previousSibling).toHaveTextContent(
+      '2'
+    );
+    expect(screen.getByText('Finalizados').previousSibling).toHaveTextContent(
+      '1'
+    );
+    expect(
+      screen.getByText('Próximos do prazo').previousSibling
+    ).toHaveTextContent('2');
 
     expect(screen.getByText('Atividades do escritório')).toBeInTheDocument();
     expect(screen.getByText('Em execução').previousSibling).toHaveTextContent(
@@ -208,7 +241,10 @@ describe('DashboardPage e DashboardClient', () => {
     expect(screen.getByText('Acesso negado')).toBeInTheDocument();
   });
 
-  it('permite recarregar o resumo e as atividades recentes após uma falha', async () => {
+  it('permite recarregar os resumos e as atividades recentes após uma falha', async () => {
+    obterResumoProcessos
+      .mockRejectedValueOnce(new Error('Falha no resumo de processos'))
+      .mockResolvedValueOnce(mockProcessSummary);
     obterResumoAtividades
       .mockRejectedValueOnce(new Error('Falha no resumo'))
       .mockResolvedValueOnce(mockSummary);
@@ -219,6 +255,9 @@ describe('DashboardPage e DashboardClient', () => {
     render(<DashboardClient />);
 
     await waitFor(() => {
+      expect(
+        screen.getByText('Falha no resumo de processos')
+      ).toBeInTheDocument();
       expect(screen.getByText('Falha no resumo')).toBeInTheDocument();
       expect(screen.getByText('Falha no kanban')).toBeInTheDocument();
     });
@@ -229,6 +268,9 @@ describe('DashboardPage e DashboardClient', () => {
     retryButtons.forEach((button) => fireEvent.click(button));
 
     await waitFor(() => {
+      expect(
+        screen.queryByText('Falha no resumo de processos')
+      ).not.toBeInTheDocument();
       expect(screen.queryByText('Falha no resumo')).not.toBeInTheDocument();
       expect(screen.queryByText('Falha no kanban')).not.toBeInTheDocument();
       expect(screen.getByText('Redigir petição inicial')).toBeInTheDocument();

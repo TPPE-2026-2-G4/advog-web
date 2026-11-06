@@ -7,6 +7,24 @@ export const PROCESS_STATUS = Object.freeze([
 
 export const PROCESS_PAGE_SIZE = 5;
 
+export const EMPTY_PROCESS_SUMMARY = Object.freeze({
+  total: 0,
+  em_andamento: 0,
+  em_analise: 0,
+  finalizados: 0,
+  proximos_do_prazo: 0,
+  atrasados: 0,
+});
+
+export const formatarResumoProcessos = (summary) => ({
+  total: Number(summary?.total || 0),
+  em_andamento: Number(summary?.em_andamento || 0),
+  em_analise: Number(summary?.em_analise || 0),
+  finalizados: Number(summary?.finalizados || 0),
+  proximos_do_prazo: Number(summary?.proximos_do_prazo || 0),
+  atrasados: Number(summary?.atrasados || 0),
+});
+
 export const DEFAULT_PROCESS_PAGE = {
   itens: [],
   total: 0,

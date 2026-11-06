@@ -7,6 +7,8 @@ import {
   toResponsavelNames,
   toResponsavelOptions,
   CNJ_REGEX,
+  EMPTY_PROCESS_SUMMARY,
+  formatarResumoProcessos,
   calculateDaysSince,
   calculateRemainingDays,
   enrichProcess,
@@ -560,5 +562,26 @@ describe('enrichProcess', () => {
     const enriched = enrichProcess(raw);
     expect(enriched.cliente).toBe('Sem cliente');
     expect(enriched.responsavel).toBe('Sem responsável');
+  });
+
+  it('formata o resumo de processos e usa zeros para valores ausentes', () => {
+    expect(formatarResumoProcessos()).toEqual(EMPTY_PROCESS_SUMMARY);
+    expect(
+      formatarResumoProcessos({
+        total: '7',
+        em_andamento: 4,
+        em_analise: '2',
+        finalizados: 1,
+        proximos_do_prazo: '2',
+        atrasados: 1,
+      })
+    ).toEqual({
+      total: 7,
+      em_andamento: 4,
+      em_analise: 2,
+      finalizados: 1,
+      proximos_do_prazo: 2,
+      atrasados: 1,
+    });
   });
 });
