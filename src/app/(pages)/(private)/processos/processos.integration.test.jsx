@@ -1104,7 +1104,12 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
           )
         );
       }
-
+      if (
+        urlString ===
+        `${API_BASE}/processos/${processWithoutMovement.processo_id}/movimentacoes`
+      ) {
+        return Promise.resolve(jsonResponse([]));
+      }
       if (urlString.startsWith(`${API_BASE}/processos/`)) {
         return Promise.resolve(
           jsonResponse(makePageResponse([processWithoutMovement]))
@@ -1137,7 +1142,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     );
 
     expect(
-      within(detailsModal).getByText(
+      await within(detailsModal).findByText(
         'Nenhuma movimentação registrada para este processo.'
       )
     ).toBeInTheDocument();
@@ -1755,9 +1760,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       const modal = await openDetails();
       openDocumentsTab(modal);
       await within(modal).findByText('peticao.pdf');
-      expect(
-        within(modal).getByText('2.0 KB •', { exact: false })
-      ).toBeVisible();
+      expect(within(modal).getByText('2.0 KB', { exact: false })).toBeVisible();
 
       fireEvent.change(within(modal).getByTestId('file-upload-input'), {
         target: {
@@ -1943,10 +1946,6 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       const modal = await openDetails(bare);
 
       expect(within(modal).getByText('Geral')).toBeInTheDocument();
-
-      fireEvent.click(
-        within(modal).getByRole('tab', { name: 'Movimentações' })
-      );
       expect(within(modal).getByText('Tribunal de Origem')).toBeInTheDocument();
     });
   });

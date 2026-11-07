@@ -1,6 +1,8 @@
 'use client';
 
 import Auth from '@/components/layout/auth/auth';
+import { useInstitucionalContext } from '@/contexts/InstitucionalContext';
+import { getContrastTextColor } from '@/utils/institucional';
 import styles from './login.module.css';
 import { useLogin } from '@/hooks/useLogin';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -8,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { Suspense } from 'react';
 
 function LoginContent() {
+  const { institucional } = useInstitucionalContext();
   const { email, setEmail, senha, setSenha, erro, isSubmitting, handleSubmit } =
     useLogin();
   const router = useRouter();
@@ -15,6 +18,9 @@ function LoginContent() {
   const [cadastroConcluido, setCadastroConcluido] = useState(
     () => searchParams.get('cadastro') === 'sucesso'
   );
+
+  const corSecundaria = institucional?.corSecundaria || '#B79A63';
+  const corSecundariaTexto = getContrastTextColor(corSecundaria);
 
   useEffect(() => {
     if (searchParams.get('cadastro') !== 'sucesso') {
@@ -34,6 +40,7 @@ function LoginContent() {
     <Auth
       title="Acesso ao Sistema"
       subtitle="Insira suas credenciais para continuar"
+      institucional={institucional}
     >
       {cadastroConcluido && (
         <div
@@ -70,11 +77,23 @@ function LoginContent() {
           onChange={(event) => setSenha(event.target.value)}
         />
 
-        <a className={styles.forgotPassword} href="/esqueci-senha">
+        <a
+          className={styles.forgotPassword}
+          href="/esqueci-senha"
+          style={{ color: corSecundaria }}
+        >
           Esqueci minha senha
         </a>
 
-        <button className={styles.button} type="submit" disabled={isSubmitting}>
+        <button
+          className={styles.button}
+          type="submit"
+          disabled={isSubmitting}
+          style={{
+            backgroundColor: corSecundaria,
+            color: corSecundariaTexto,
+          }}
+        >
           Entrar
         </button>
 

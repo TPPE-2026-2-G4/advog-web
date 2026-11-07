@@ -27,7 +27,6 @@ vi.mock('@/services/institucional', () => ({
     descricao: 'Slogan teste',
     sobreEscritorio: 'Sobre teste',
     imagemSobre: null,
-    textoAdicionalSobre: 'Texto adicional teste',
     email: 'contato@teste.com',
     telefone: '(61) 9999-9999',
     endereco: 'Brasília, DF',
@@ -359,6 +358,25 @@ describe('useInstitucional', () => {
 
     expect(result.current.saveSuccess).toBe(false);
     vi.useRealTimers();
+  });
+
+  it('bloqueia o salvamento e define saveError quando a validação de dados falhar (ex: e-mail inválido)', async () => {
+    const { result } = renderHook(() => useInstitucional());
+
+    act(() => {
+      result.current.handleInputChange('email', 'email_invalido');
+    });
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(salvarDadosInstitucionais).not.toHaveBeenCalled();
+    expect(result.current.saveError).toBe(
+      'E-mail inválido. Por favor, insira um e-mail no formato correto (ex: contato@escritorio.adv.br).'
+    );
+    expect(result.current.isSaving).toBe(false);
+    expect(result.current.saveSuccess).toBe(false);
   });
 
   it.each([

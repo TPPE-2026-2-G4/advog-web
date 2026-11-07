@@ -116,9 +116,32 @@ describe('serviço institucional', () => {
 
     it.each([
       {
-        cenario: 'API retorna erro detalhado',
+        cenario: 'API retorna erro detalhado como string',
         respostaMock: respostaComErro('Cor primária inválida'),
         mensagemEsperada: 'Cor primária inválida',
+      },
+      {
+        cenario: 'API retorna array de validação do Pydantic (e-mail inválido)',
+        respostaMock: respostaComErro([
+          {
+            loc: ['body', 'email'],
+            msg: 'value is not a valid email address',
+            type: 'value_error',
+          },
+        ]),
+        mensagemEsperada:
+          'E-mail inválido. Por favor, insira um e-mail no formato correto (ex: contato@escritorio.adv.br).',
+      },
+      {
+        cenario: 'API retorna array de validação com outro campo',
+        respostaMock: respostaComErro([
+          {
+            loc: ['body', 'nomeEscritorio'],
+            msg: 'campo obrigatório',
+            type: 'value_error',
+          },
+        ]),
+        mensagemEsperada: 'Nome do escritório: campo obrigatório',
       },
       {
         cenario: 'resposta com erro não possui JSON/detail válido',

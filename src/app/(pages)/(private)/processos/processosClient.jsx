@@ -301,6 +301,7 @@ export default function ProcessosClient({
         onClose={() => setDetailProcess(null)}
         error={detailError}
         onRetry={reloadProcesses}
+        canEdit={canEdit}
       />
 
       <DeleteProcessModal

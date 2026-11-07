@@ -8,6 +8,7 @@ import {
 } from '@testing-library/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { InstitucionalProvider } from '@/contexts/InstitucionalContext';
 import LoginPage from './page';
 
 const { mockLogin, mockPush, mockReplace } = vi.hoisted(() => ({
@@ -167,5 +168,54 @@ describe('LoginPage', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('renderiza o nome do escritório customizado e mantém o subtítulo fixo', () => {
+    render(
+      <InstitucionalProvider
+        initialData={{
+          nomeEscritorio: 'Advocacia Santos & Silva',
+          descricao: 'Atendimento jurídico de excelência',
+          corPrimaria: '#1B2A4A',
+          corSecundaria: '#B79A63',
+        }}
+      >
+        <LoginPage />
+      </InstitucionalProvider>
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Advocacia Santos & Silva' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Gestão Jurídica de Alta Performance')
+    ).toBeInTheDocument();
+  });
+
+  it('adapta a cor do botão Entrar e o contraste do texto de acordo com a cor secundária', () => {
+    render(
+      <InstitucionalProvider
+        initialData={{
+          nomeEscritorio: 'Advocacia Santos & Silva',
+          corPrimaria: '#613583',
+          corSecundaria: '#0F172A',
+        }}
+      >
+        <LoginPage />
+      </InstitucionalProvider>
+    );
+
+    const btn = screen.getByRole('button', { name: 'Entrar' });
+    expect(btn).toHaveStyle({
+      backgroundColor: '#0F172A',
+      color: '#ffffff',
+    });
+
+    const forgotLink = screen.getByRole('link', {
+      name: 'Esqueci minha senha',
+    });
+    expect(forgotLink).toHaveStyle({
+      color: '#0F172A',
+    });
   });
 });
