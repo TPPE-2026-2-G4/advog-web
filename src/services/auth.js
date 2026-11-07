@@ -90,3 +90,70 @@ export async function firstLogin({
 
   return response.json();
 }
+
+async function parseAuthError(response, defaultMessage) {
+  let message = defaultMessage;
+
+  try {
+    const errorData = await response.json();
+    if (typeof errorData?.detail === 'string') {
+      message = errorData.detail;
+    } else if (Array.isArray(errorData?.detail)) {
+      message = errorData.detail
+        .map((error) => error.msg || error.message)
+        .filter(Boolean)
+        .join(' ');
+    } else if (errorData?.message) {
+      message = errorData.message;
+    }
+  } catch {}
+
+  return message;
+}
+
+export async function requestPasswordReset(email) {
+  if (!apiUrl) {
+    throw new Error('URL da API não configurada');
+  }
+
+  const response = await fetch(`${apiUrl}/auth/esqueci-senha`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await parseAuthError(
+        response,
+        'Não foi possível enviar o link de redefinição.'
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function resetPassword({ token, senha }) {
+  if (!apiUrl) {
+    throw new Error('URL da API não configurada');
+  }
+
+  const response = await fetch(`${apiUrl}/auth/redefinir-senha`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token, senha }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await parseAuthError(response, 'Não foi possível redefinir sua senha.')
+    );
+  }
+
+  return response.json();
+}
