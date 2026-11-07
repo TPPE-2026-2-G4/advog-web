@@ -56,6 +56,23 @@ export default function ProcessDetailsModal({
 
   const processoId = process?.processo_id ?? process?.id;
 
+  const reloadMovements = useCallback(async () => {
+    if (!processoId) return;
+    setIsLoadingMovements(true);
+    setMovementsError('');
+    try {
+      const data = await listarMovimentacoes(processoId);
+      setMovements(Array.isArray(data) ? data : []);
+      setMovementsError('');
+    } catch (err) {
+      setMovementsError(
+        err instanceof Error ? err.message : 'Falha ao carregar movimentações.'
+      );
+    } finally {
+      setIsLoadingMovements(false);
+    }
+  }, [processoId]);
+
   const reloadDocuments = useCallback(async () => {
     if (!processoId) return;
     setIsLoadingDocs(true);
@@ -63,6 +80,7 @@ export default function ProcessDetailsModal({
     try {
       const data = await listarDocumentos(processoId);
       setDocuments(Array.isArray(data) ? data : []);
+      setDocsError('');
     } catch (err) {
       setDocsError(
         err instanceof Error ? err.message : 'Falha ao carregar documentos.'
@@ -146,12 +164,20 @@ export default function ProcessDetailsModal({
   const tabId = (id) => `process-${process.processo_id}-${id}`;
 
   const handleSelectTab = (tabKey) => {
-    setActiveTab(tabKey);
+    if (tabKey === activeTab) {
+      if (tabKey === 'movimentacoes') {
+        reloadMovements();
+      } else if (tabKey === 'documentos') {
+        reloadDocuments();
+      }
+      return;
+    }
     if (tabKey === 'movimentacoes') {
       setIsLoadingMovements(true);
     } else if (tabKey === 'documentos') {
       setIsLoadingDocs(true);
     }
+    setActiveTab(tabKey);
   };
 
   const handleTabKeyDown = (event, index) => {
@@ -209,12 +235,9 @@ export default function ProcessDetailsModal({
   };
 
   const handleViewDoc = async (doc) => {
-    const directUrl = typeof doc === 'object' ? doc?.url : null;
-    if (directUrl) {
-      window.open(directUrl, '_blank');
-      return;
-    }
-    const docId = typeof doc === 'object' ? doc.documento_id : doc;
+    const docId = typeof doc === 'object' ? doc?.documento_id : doc;
+    if (!processoId || !docId) return;
+
     try {
       const res = await obterUrlDocumento(processoId, docId);
       if (res?.url) {
@@ -343,7 +366,7 @@ export default function ProcessDetailsModal({
                 </div>
                 <div className={styles.detailItem}>
                   <dt>Tribunal</dt>
-                  <dd>{process.tribunal}</dd>
+                  <dd>{process.tribunal || 'Tribunal de Origem'}</dd>
                 </div>
                 <div className={styles.detailItem}>
                   <dt>Responsável</dt>
@@ -366,17 +389,18 @@ export default function ProcessDetailsModal({
 
             {activeTab === 'movimentacoes' && (
               <div className={styles.movementsList}>
-                {movementsError && (
-                  <div role="alert" className={styles.refreshError}>
-                    {movementsError}
-                  </div>
-                )}
-
                 {isLoadingMovements ? (
                   <div className={styles.emptyDocuments}>
                     <p className={styles.emptyDocumentsText}>
                       Carregando movimentações…
                     </p>
+                  </div>
+                ) : movementsError ? (
+                  <div role="alert" className={styles.refreshError}>
+                    <p>{movementsError}</p>
+                    <button type="button" onClick={reloadMovements}>
+                      Tentar novamente
+                    </button>
                   </div>
                 ) : movements.length > 0 ? (
                   movements.map((mov) => {
@@ -442,7 +466,10 @@ export default function ProcessDetailsModal({
 
                 {docsError && (
                   <div role="alert" className={styles.refreshError}>
-                    {docsError}
+                    <p>{docsError}</p>
+                    <button type="button" onClick={reloadDocuments}>
+                      Tentar novamente
+                    </button>
                   </div>
                 )}
 
@@ -468,11 +495,8 @@ export default function ProcessDetailsModal({
                               {doc.nome_original}
                             </p>
                             <p className={styles.documentMeta}>
-                              <span>
-                                {(doc.tamanho_bytes / 1024).toFixed(1)} KB
-                              </span>
-                              <span>—</span>
-                              <span>{formatProcessDate(doc.data_upload)}</span>
+                              {(doc.tamanho_bytes / 1024).toFixed(1)} KB •{' '}
+                              {formatProcessDate(doc.data_upload)}
                             </p>
                           </div>
                         </div>
@@ -501,7 +525,7 @@ export default function ProcessDetailsModal({
                       </div>
                     ))}
                   </div>
-                ) : (
+                ) : !docsError ? (
                   <div className={styles.emptyDocuments}>
                     <File
                       className={styles.emptyDocumentsIcon}
@@ -521,7 +545,7 @@ export default function ProcessDetailsModal({
                       </button>
                     )}
                   </div>
-                )}
+                ) : null}
               </div>
             )}
           </div>
