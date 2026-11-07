@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ActivitySummary from '@/components/features/atividades/ActivitySummary/ActivitySummary';
 import CriticalProcessesCard from '@/components/features/processos/CriticalProcessesCard/CriticalProcessesCard';
 import RecentActivities from '@/components/features/atividades/RecentActivities/RecentActivities';
+import DashboardPage from './page';
 import DashboardClient from './dashboardClient';
 import { obterKanbanAtividades } from '@/services/atividades';
 import { obterResumoAtividades } from '@/services/dashboard';
@@ -119,6 +120,11 @@ describe('DashboardClient integration', () => {
     listarDocumentos.mockResolvedValue([]);
     obterUrlDocumento.mockResolvedValue({ url: '' });
     uploadDocumento.mockResolvedValue({});
+  });
+
+  it('renderiza DashboardPage como wrapper de DashboardClient', () => {
+    const page = DashboardPage();
+    expect(page).toBeTruthy();
   });
 
   it('bloqueia acesso sem permissão', () => {

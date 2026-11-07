@@ -40,17 +40,19 @@
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 600;
-  color: #111827;
-  background-color: #c1a077;
+  color: var(--cor-secundaria-texto, #172133);
+  background-color: var(--cor-secundaria, #c1a077);
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    filter 0.2s ease;
   white-space: nowrap;
 }
 
 .newClientBtn:hover {
-  background-color: #b08d60;
+  filter: brightness(0.88);
 }
 
 .filtersBar {
