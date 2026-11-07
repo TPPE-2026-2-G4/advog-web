@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   calcularResumoFinanceiro,
   getStatusConcluido,
@@ -41,6 +41,19 @@ export function useFinancas(initialData, options = {}) {
     totalPages: 1,
   });
   const [resumoBackend, setResumoBackend] = useState(null);
+  const [versaoDados, setVersaoDados] = useState(0);
+  const ultimoFiltroRef = useRef(null);
+
+  const notificarMutacao = useCallback(() => {
+    setVersaoDados((v) => v + 1);
+    if (ultimoFiltroRef.current !== null) {
+      obterResumoFinancas(ultimoFiltroRef.current)
+        .then((resumoData) => {
+          if (resumoData) setResumoBackend(resumoData);
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     listarCategorias()
@@ -136,6 +149,7 @@ export function useFinancas(initialData, options = {}) {
         ...prev,
         total: Math.max(0, prev.total - 1),
       }));
+      notificarMutacao();
       options.onDelete?.(item);
 
       if (item.categoria_id) {
@@ -202,6 +216,7 @@ export function useFinancas(initialData, options = {}) {
       };
       setLancamentos((current = []) => [newItem, ...current]);
       setPagination((prev) => ({ ...prev, total: prev.total + 1 }));
+      notificarMutacao();
       if (newItem.categoria && newItem.categoria !== 'Outros') {
         setCategorias((prev) => {
           const exists = prev.some(
@@ -270,6 +285,7 @@ export function useFinancas(initialData, options = {}) {
       setLancamentos((current = []) =>
         current.map((entry) => (entry.id === item.id ? updated : entry))
       );
+      notificarMutacao();
       options.onUpdate?.(updated);
       setSelectedLancamento(null);
 
@@ -318,6 +334,7 @@ export function useFinancas(initialData, options = {}) {
       setLancamentos((current = []) =>
         current.map((entry) => (entry.id === item.id ? updated : entry))
       );
+      notificarMutacao();
       options.onToggleStatus?.(updated);
       return updated;
     } catch (err) {
@@ -330,6 +347,7 @@ export function useFinancas(initialData, options = {}) {
 
   const handleFilterLancamentos = useCallback(
     async (filters) => {
+      ultimoFiltroRef.current = filters;
       try {
         const page = filters.page || 1;
         const pageSize = filters.page_size || pagination.pageSize;
@@ -390,6 +408,7 @@ export function useFinancas(initialData, options = {}) {
     pagination,
     resumo,
     resumoBackend,
+    versaoDados,
     totalLancamentos: pagination.total || lancamentos.length,
     isNewModalOpen,
     setIsNewModalOpen,

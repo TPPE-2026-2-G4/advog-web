@@ -29,6 +29,7 @@ import {
   listarCategorias,
 } from '@/services/financas';
 import {
+  MESES_ABREV,
   formatCurrency,
   formatCurrencyNumber,
   formatCompactCurrency,
@@ -39,6 +40,7 @@ import {
   calcularIndicadoresFinanceiros,
   agruparFluxoCaixaPorMes,
   agruparDespesasPorCategoria,
+  obterDataEfetivaIso,
   parseApiError,
   toLancamento,
   toApiLancamento,
@@ -147,10 +149,17 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
         const parsedUrl = new URL(url);
         const minStr = parsedUrl.searchParams.get('valor_min');
         const maxStr = parsedUrl.searchParams.get('valor_max');
+        const statusStr = parsedUrl.searchParams.get('status');
         const minVal = minStr !== null ? Number(minStr) : null;
         const maxVal = maxStr !== null ? Number(maxStr) : null;
 
         const itensFiltrados = dbLancamentos.filter((l) => {
+          if (
+            statusStr &&
+            String(l.status || '').toLowerCase() !== statusStr.toLowerCase()
+          ) {
+            return false;
+          }
           const val = Number(l.valor) || 0;
           if (minVal !== null && !isNaN(minVal) && val < minVal) return false;
           if (maxVal !== null && !isNaN(maxVal) && val > maxVal) return false;
@@ -189,6 +198,8 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
         const parsedUrl = new URL(url);
         const statusFilter = parsedUrl.searchParams.get('status');
         const catIdFilter = parsedUrl.searchParams.get('categoria_id');
+        const page = Number(parsedUrl.searchParams.get('page')) || 1;
+        const pageSize = Number(parsedUrl.searchParams.get('page_size')) || 5;
 
         let filtered = [...dbLancamentos];
         if (statusFilter) {
@@ -202,13 +213,14 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
           );
         }
 
+        const start = (page - 1) * pageSize;
         return createJsonResponse(
           {
-            itens: filtered,
+            itens: filtered.slice(start, start + pageSize),
             total: filtered.length,
-            page: Number(parsedUrl.searchParams.get('page')) || 1,
-            page_size: Number(parsedUrl.searchParams.get('page_size')) || 5,
-            total_pages: 1,
+            page,
+            page_size: pageSize,
+            total_pages: Math.max(1, Math.ceil(filtered.length / pageSize)),
           },
           200
         );
@@ -241,9 +253,12 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
           target && target.status.toLowerCase() === 'realizado'
             ? 'Pendente'
             : 'Realizado';
+        const agora = new Date();
+        const hojeIso = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
         const updated = {
           ...(target || { lancamento_id: id }),
           status: nextStatus,
+          data_pagamento: nextStatus === 'Realizado' ? hojeIso : null,
         };
         dbLancamentos = dbLancamentos.map((l) =>
           (l.lancamento_id ?? l.id) === id ? updated : l
@@ -1414,6 +1429,15 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     expect(formatDateToIso('10/08')).toBe('10/08');
     expect(formatDateToIso('10/08/2026')).toBe('2026-08-10');
 
+    expect(obterDataEfetivaIso(null)).toBe('');
+    expect(
+      obterDataEfetivaIso({
+        status: 'realizado',
+        data_vencimento: '2026-03-10',
+        data_pagamento: '2026-11-07',
+      })
+    ).toBe('2026-11-07');
+
     expect(verificarStatusPorVencimento(null)).toBe('pendente');
     expect(verificarStatusPorVencimento({})).toBe('pendente');
     expect(
@@ -1661,25 +1685,175 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     expect(await obterResumoFinancas()).toBeNull();
   });
 
-  it('integra o Dashboard Financeiro (US06) consumindo GET /lancamentos/grafico com filtros de período e valores e atualizando os gráficos', async () => {
+  it('integra o Dashboard Financeiro (US06) em regime de caixa por data_pagamento, sem depender da paginação da tabela e atualizando em tempo real', async () => {
+    const agora = new Date();
+    const anoAtual = agora.getFullYear();
+    const mesIdxAtual = agora.getMonth();
+    const mesAtualStr = String(mesIdxAtual + 1).padStart(2, '0');
+    const dataMesAtual = `${anoAtual}-${mesAtualStr}-10`;
+    const mesAnteriorDate = new Date(anoAtual, mesIdxAtual - 1, 10);
+    const labelMesAtual = MESES_ABREV[mesIdxAtual];
+    const labelMesAnterior = MESES_ABREV[mesAnteriorDate.getMonth()];
+
+    dbCategorias = [
+      ...initialApiCategorias,
+      { categoria_id: 40, nome_categoria: 'Perícia Técnica' },
+    ];
+
+    // 7 lançamentos (> page_size 5) para validar que a rosquinha pega todos os itens sem depender da paginação
+    dbLancamentos = [
+      {
+        lancamento_id: 301,
+        tipo: 'e',
+        titulo: 'Honorários Recebidos Mês Atual',
+        descricao: 'Parcela recebida',
+        valor: 5000,
+        data_vencimento: dataMesAtual,
+        data_pagamento: dataMesAtual,
+        categoria_id: 10,
+        status: 'Realizado',
+        recorrente: false,
+      },
+      {
+        lancamento_id: 302,
+        tipo: 's',
+        titulo: 'Despesa Atrasada de Março',
+        descricao: 'Conta antiga atrasada',
+        valor: 1500,
+        data_vencimento: '2026-03-10',
+        data_pagamento: null,
+        categoria_id: 30,
+        status: 'Atrasado',
+        recorrente: false,
+      },
+      {
+        lancamento_id: 303,
+        tipo: 's',
+        titulo: 'Aluguel Pago no Mês',
+        descricao: 'Locação',
+        valor: 3200,
+        data_vencimento: dataMesAtual,
+        data_pagamento: dataMesAtual,
+        categoria_id: 30,
+        status: 'Realizado',
+        recorrente: true,
+      },
+      {
+        lancamento_id: 304,
+        tipo: 's',
+        titulo: 'Custas Pagas no Mês',
+        descricao: 'Custas',
+        valor: 1100,
+        data_vencimento: dataMesAtual,
+        data_pagamento: dataMesAtual,
+        categoria_id: 20,
+        status: 'Realizado',
+        recorrente: false,
+      },
+      {
+        lancamento_id: 305,
+        tipo: 'e',
+        titulo: 'Honorários Pendentes',
+        descricao: 'A receber',
+        valor: 2400,
+        data_vencimento: dataMesAtual,
+        data_pagamento: null,
+        categoria_id: 10,
+        status: 'Pendente',
+        recorrente: false,
+      },
+      {
+        lancamento_id: 306,
+        tipo: 's',
+        titulo: 'Laudo Contábil Página 2',
+        descricao: 'Item na página 2 da tabela',
+        valor: 1200,
+        data_vencimento: dataMesAtual,
+        data_pagamento: dataMesAtual,
+        categoria_id: 40,
+        status: 'Realizado',
+        recorrente: false,
+      },
+      {
+        lancamento_id: 307,
+        tipo: 's',
+        titulo: 'Despesa Pendente Página 2',
+        descricao: 'Não paga ainda',
+        valor: 800,
+        data_vencimento: dataMesAtual,
+        data_pagamento: null,
+        categoria_id: 40,
+        status: 'Pendente',
+        recorrente: false,
+      },
+    ];
+
     render(<FinancasClient initialData={[]} />);
 
+    // Cards mostram apenas realizados do mês atual e todas as entradas pendentes em A Receber
+    // Rosquinha exibe Perícia Técnica (item 306 da página 2!) mesmo estando na página 1 da tabela
     await waitFor(() => {
       expect(screen.getByTestId('kpi-receita-mes')).toHaveTextContent(
         '5.000,00'
       );
       expect(screen.getByTestId('kpi-despesas-mes')).toHaveTextContent(
-        '3.200,00'
+        '5.500,00'
       );
       expect(screen.getByTestId('kpi-saldo-liquido')).toHaveTextContent(
-        '1.800,00'
+        '-500,00'
       );
-      expect(screen.getByTestId('kpi-a-receber')).toHaveTextContent('0,00');
+      expect(screen.getByTestId('kpi-a-receber')).toHaveTextContent('2.400,00');
+      expect(
+        screen.getByTestId('donut-segment-Perícia Técnica')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId('donut-segment-Despesas Operacionais')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId('donut-segment-Custas Processuais')
+      ).toBeInTheDocument();
+    });
+
+    // Navegar para a página 2 da tabela NÃO reduz as categorias da rosquinha
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
+    await waitFor(() => {
+      expect(screen.getByText('Laudo Contábil Página 2')).toBeInTheDocument();
+    });
+    expect(
+      screen.getByTestId('donut-segment-Despesas Operacionais')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('donut-segment-Custas Processuais')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('donut-segment-Perícia Técnica')
+    ).toBeInTheDocument();
+
+    // Voltar para página 1 e marcar a despesa atrasada de Março (302) como realizada hoje -> atualiza Despesas do Mês na hora sem F5!
+    fireEvent.click(screen.getByRole('button', { name: 'Página anterior' }));
+    await waitFor(() => {
+      expect(screen.getByText('Despesa Atrasada de Março')).toBeInTheDocument();
+    });
+
+    const concluirBtns = screen.getAllByRole('button', {
+      name: 'Marcar como realizado',
+    });
+    fireEvent.click(concluirBtns[0]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('kpi-despesas-mes')).toHaveTextContent(
+        '7.000,00'
+      );
+      expect(screen.getByTestId('kpi-saldo-liquido')).toHaveTextContent(
+        '-2.000,00'
+      );
     });
 
     const graficoInitialCall = fetchMock.mock.calls.find(
       ([url, init]) =>
-        String(url).includes('/lancamentos/grafico?dias=180') &&
+        String(url).includes(
+          '/lancamentos/grafico?dias=180&status=Realizado'
+        ) &&
         (!init?.method || init.method === 'GET')
     );
     expect(graficoInitialCall).toBeDefined();
@@ -1687,7 +1861,7 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     fireEvent.click(screen.getByRole('button', { name: '3m' }));
     await waitFor(() => {
       const call3m = fetchMock.mock.calls.find(([url]) =>
-        String(url).includes('/lancamentos/grafico?dias=90')
+        String(url).includes('/lancamentos/grafico?dias=90&status=Realizado')
       );
       expect(call3m).toBeDefined();
     });
@@ -1702,24 +1876,26 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     await waitFor(() => {
       const callValores = fetchMock.mock.calls.find(([url]) =>
         String(url).includes(
-          '/lancamentos/grafico?dias=90&valor_min=1000&valor_max=6000'
+          '/lancamentos/grafico?dias=90&valor_min=1000&valor_max=6000&status=Realizado'
         )
       );
       expect(callValores).toBeDefined();
     });
 
-    const faixaJul = screen.getByTestId('ponto-entrada-Jul');
-    fireEvent.mouseEnter(faixaJul);
+    const faixaAnterior = screen.getByTestId(
+      `ponto-entrada-${labelMesAnterior}`
+    );
+    fireEvent.mouseEnter(faixaAnterior);
     expect(screen.getByTestId('fluxo-crosshair')).toBeInTheDocument();
     expect(screen.getByTestId('fluxo-tooltip')).toBeInTheDocument();
 
-    const faixaAgo = screen.getByTestId('ponto-entrada-Ago');
-    fireEvent.mouseMove(faixaAgo);
-    fireEvent.click(faixaAgo);
+    const faixaAtual = screen.getByTestId(`ponto-entrada-${labelMesAtual}`);
+    fireEvent.mouseMove(faixaAtual);
+    fireEvent.click(faixaAtual);
     expect(screen.queryByTestId('fluxo-tooltip')).not.toBeInTheDocument();
-    fireEvent.click(faixaAgo);
+    fireEvent.click(faixaAtual);
     expect(screen.getByTestId('fluxo-tooltip')).toBeInTheDocument();
-    fireEvent.mouseLeave(faixaAgo.closest('div'));
+    fireEvent.mouseLeave(faixaAtual.closest('div'));
     expect(screen.queryByTestId('fluxo-tooltip')).not.toBeInTheDocument();
 
     const segDespesas = screen.getByTestId(
@@ -1740,7 +1916,7 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     expect(screen.getByTestId('donut-center-tooltip')).toBeInTheDocument();
     fireEvent.mouseLeave(legendaDespesas.parentElement);
 
-    // Exercita helpers SVG, indicadores negativos, estado vazio e utilitários/serviços de gráfico e calendário
+    // Exercita helpers SVG, indicadores e utilitários/serviços de gráfico e calendário
     expect(buildSmoothLinePath([])).toBe('');
     expect(buildSmoothLinePath([{ x: 5, y: 10 }])).toBe('M 5.0 10.0');
     expect(buildSmoothAreaPath([])).toBe('');
@@ -1760,6 +1936,17 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       despesasMes: 0,
       saldoLiquido: 0,
       aReceber: 0,
+    });
+    expect(
+      calcularIndicadoresFinanceiros([], {
+        realizado: { total_entradas: 2000, total_saidas: 500 },
+        pendente: { total_entradas: 300 },
+      })
+    ).toEqual({
+      receitaMes: 2000,
+      despesasMes: 500,
+      saldoLiquido: 1500,
+      aReceber: 300,
     });
     expect(
       calcularIndicadoresFinanceiros([
@@ -1785,8 +1972,16 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     expect(
       agruparFluxoCaixaPorMes(
         [],
-        [{ dataIso: '2026-08-10', tipo: 'entrada', valor: 500 }],
-        2
+        [
+          {
+            dataPagamentoIso: '2026-08-10',
+            tipo: 'entrada',
+            valor: 500,
+            status: 'realizado',
+          },
+        ],
+        2,
+        '2026-08-31'
       )
     ).toHaveLength(2);
     expect(agruparDespesasPorCategoria(null)).toEqual([]);
@@ -1880,7 +2075,9 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
         }}
       />
     );
-    expect(screen.getByLabelText('Tendência negativa')).toBeInTheDocument();
+    expect(
+      screen.getAllByLabelText('Tendência negativa').length
+    ).toBeGreaterThan(0);
     expect(screen.getByText('Nenhuma despesa registrada')).toBeInTheDocument();
   });
 });

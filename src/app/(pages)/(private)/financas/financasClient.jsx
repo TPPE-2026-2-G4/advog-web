@@ -23,6 +23,7 @@ export default function FinancasClient({
     categorias,
     pagination,
     resumoBackend,
+    versaoDados,
     isNewModalOpen,
     setIsNewModalOpen,
     selectedLancamento,
@@ -129,6 +130,7 @@ export default function FinancasClient({
       <FinancialDashboard
         lancamentos={lancamentos}
         resumoBackend={resumoBackend}
+        refreshTrigger={versaoDados}
       />
 
       <LancamentosTable
