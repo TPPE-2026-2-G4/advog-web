@@ -3,16 +3,16 @@ import { describe, expect, it, vi } from 'vitest';
 import ProcessSummary from './ProcessSummary';
 
 const summary = {
-  total: 7,
+  total: 9,
   em_andamento: 4,
   em_analise: 2,
   finalizados: 1,
   proximos_do_prazo: 2,
-  atrasados: 1,
+  atrasados: 3,
 };
 
 describe('ProcessSummary', () => {
-  it('renderiza o título e os quatro totais do resumo de processos', () => {
+  it('renderiza o título e os cinco indicadores do resumo de processos, incluindo atrasados diferente de zero', () => {
     render(<ProcessSummary summary={summary} />);
 
     expect(
@@ -24,18 +24,21 @@ describe('ProcessSummary', () => {
     expect(screen.getByText('Em análise').previousSibling).toHaveTextContent(
       '2'
     );
-    expect(screen.getByText('Finalizados').previousSibling).toHaveTextContent(
+    expect(screen.getByText('Concluídos').previousSibling).toHaveTextContent(
       '1'
     );
     expect(
       screen.getByText('Próximos do prazo').previousSibling
     ).toHaveTextContent('2');
+    expect(screen.getByText('Atrasados').previousSibling).toHaveTextContent(
+      '3'
+    );
   });
 
-  it('exibe um traço nos totais enquanto carrega', () => {
+  it('exibe um traço nos cinco indicadores enquanto carrega', () => {
     render(<ProcessSummary summary={summary} isLoading />);
 
-    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.getAllByText('—')).toHaveLength(5);
     expect(screen.getByRole('region')).toHaveAttribute('aria-busy', 'true');
   });
 
@@ -48,12 +51,15 @@ describe('ProcessSummary', () => {
     expect(screen.getByText('Em análise').previousSibling).toHaveTextContent(
       '0'
     );
-    expect(screen.getByText('Finalizados').previousSibling).toHaveTextContent(
+    expect(screen.getByText('Concluídos').previousSibling).toHaveTextContent(
       '0'
     );
     expect(
       screen.getByText('Próximos do prazo').previousSibling
     ).toHaveTextContent('0');
+    expect(screen.getByText('Atrasados').previousSibling).toHaveTextContent(
+      '0'
+    );
   });
 
   it('exibe o erro e permite tentar novamente', () => {
