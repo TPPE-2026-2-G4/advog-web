@@ -12,6 +12,7 @@ import {
   formatStatusLabel,
   getStatusConcluido,
   isStatusConcluido,
+  obterDataEfetivaIso,
   parseApiError,
   toApiLancamento,
   toLancamento,
@@ -82,12 +83,44 @@ describe('financas utils', () => {
     );
   });
 
+  describe('obterDataEfetivaIso', () => {
+    it('prioriza data de pagamento para itens realizados e vencimento para não realizados', () => {
+      expect(obterDataEfetivaIso(null)).toBe('');
+      expect(
+        obterDataEfetivaIso({
+          status: 'realizado',
+          data_vencimento: '2026-03-10',
+          data_pagamento: '2026-11-07T14:00:00',
+        })
+      ).toBe('2026-11-07');
+      expect(
+        obterDataEfetivaIso({
+          status: 'realizado',
+          dataVencimento: '10/03/2026',
+        })
+      ).toBe('2026-03-10');
+      expect(
+        obterDataEfetivaIso({
+          status: 'pendente',
+          data_vencimento: '2026-03-10',
+          data_pagamento: '2026-11-07',
+        })
+      ).toBe('2026-03-10');
+      expect(
+        obterDataEfetivaIso({
+          status: 'atrasado',
+          data: '15/04/2026',
+        })
+      ).toBe('2026-04-15');
+    });
+  });
+
   describe('calcularIndicadoresFinanceiros', () => {
-    it('calcula indicadores a partir do resumoBackend quando disponível', () => {
+    it('calcula indicadores em regime de caixa a partir do resumoBackend quando lancamentos está vazio', () => {
       const resumoBackend = {
-        realizado: { total_entradas: 13500, total_saidas: 4000 },
-        pendente: { total_entradas: 5200, total_saidas: 230 },
-        atrasado: { total_entradas: 2000, total_saidas: 0 },
+        realizado: { total_entradas: 13500, total_saidas: 4230 },
+        pendente: { total_entradas: 5200, total_saidas: 800 },
+        atrasado: { total_entradas: 2000, total_saidas: 500 },
       };
 
       expect(calcularIndicadoresFinanceiros([], resumoBackend)).toEqual({
@@ -110,23 +143,76 @@ describe('financas utils', () => {
       });
     });
 
-    it('calcula indicadores a partir da lista de lançamentos quando resumoBackend é nulo', () => {
+    it('considera apenas entradas e despesas realizadas no mês de referência pela data_pagamento e soma A Receber pendente/atrasado', () => {
       const itens = [
-        { tipo: 'entrada', valor: 5000, status: 'realizado' },
-        { tipo: 'entrada', valor: 8500, status: 'Realizado' },
-        { tipo: 'entrada', valor: 4200, status: 'pendente' },
-        { tipo: 'entrada', valor: 3000, status: 'atrasado' },
-        { tipo: 'saida', valor: 4000, status: 'realizado' },
-        { tipo: 'saida', valor: 230, status: 'pendente' },
+        {
+          tipo: 'entrada',
+          valor: 5000,
+          status: 'realizado',
+          data_pagamento: '2026-11-05',
+          data_vencimento: '2026-11-05',
+        },
+        {
+          tipo: 'entrada',
+          valor: 8500,
+          status: 'Realizado',
+          data_pagamento: '2026-11-12',
+          data_vencimento: '2026-10-15',
+        },
+        {
+          tipo: 'entrada',
+          valor: 9999,
+          status: 'realizado',
+          data_pagamento: '2026-06-10',
+          data_vencimento: '2026-06-10',
+        },
+        {
+          tipo: 'entrada',
+          valor: 4200,
+          status: 'pendente',
+          data_vencimento: '2026-11-20',
+        },
+        {
+          tipo: 'entrada',
+          valor: 3000,
+          status: 'atrasado',
+          data_vencimento: '2026-03-10',
+        },
+        {
+          tipo: 'saida',
+          valor: 4000,
+          status: 'realizado',
+          data_vencimento: '2026-03-10',
+          data_pagamento: '2026-11-07',
+        },
+        {
+          tipo: 'saida',
+          valor: 230,
+          status: 'realizado',
+        },
+        {
+          tipo: 'saida',
+          valor: 1500,
+          status: 'realizado',
+          data_pagamento: '2026-08-10',
+        },
+        {
+          tipo: 'saida',
+          valor: 900,
+          status: 'pendente',
+          data_vencimento: '2026-11-25',
+        },
         { tipo: 'outro', valor: 'invalido', status: 'pendente' },
       ];
 
-      expect(calcularIndicadoresFinanceiros(itens, null)).toEqual({
-        receitaMes: 13500,
-        despesasMes: 4230,
-        saldoLiquido: 9270,
-        aReceber: 7200,
-      });
+      expect(calcularIndicadoresFinanceiros(itens, null, '2026-11-07')).toEqual(
+        {
+          receitaMes: 13500,
+          despesasMes: 4230,
+          saldoLiquido: 9270,
+          aReceber: 7200,
+        }
+      );
     });
 
     it('retorna zeros quando lancamentos não é um array', () => {
@@ -140,7 +226,7 @@ describe('financas utils', () => {
   });
 
   describe('agruparFluxoCaixaPorMes', () => {
-    it('agrupa pontos do endpoint /lancamentos/grafico nos últimos N meses', () => {
+    it('agrupa pontos do endpoint /lancamentos/grafico nos últimos N meses quando lancamentos está vazio', () => {
       const pontos = [
         { data: '2026-06-10', total_entradas: 12000, total_saidas: 4000 },
         { data: '2026-06-25', entradas: 3000, saidas: 500 },
@@ -176,17 +262,44 @@ describe('financas utils', () => {
       ]);
     });
 
-    it('usa a lista de lançamentos como fallback quando pontosGrafico está vazio e infere maiorDataIso', () => {
+    it('filtra apenas lançamentos realizados e agrupa pela data_pagamento', () => {
       const lancamentos = [
-        { dataIso: '2026-07-10', tipo: 'entrada', valor: 8000 },
-        { dataVencimentoIso: '2026-08-12', tipo: 'saida', valor: 2500 },
-        { data_vencimento: '2026-08-20', tipo: 'entrada', valor: 'invalido' },
-        { data: '15/08/2026', tipo: 'outro', valor: 100 },
-        { data: 'invalida', tipo: 'entrada', valor: 500 },
+        {
+          data_vencimento: '2026-03-05',
+          data_pagamento: '2026-07-10',
+          tipo: 'entrada',
+          valor: 8000,
+          status: 'realizado',
+        },
+        {
+          dataVencimentoIso: '2026-08-12',
+          tipo: 'saida',
+          valor: 2500,
+          status: 'realizado',
+        },
+        {
+          dataIso: '2026-08-15',
+          tipo: 'entrada',
+          valor: 9999,
+          status: 'pendente',
+        },
+        {
+          data_vencimento: '2026-08-20',
+          tipo: 'entrada',
+          valor: 'invalido',
+          status: 'realizado',
+        },
+        { data: '15/08/2026', tipo: 'outro', valor: 100, status: 'realizado' },
+        {
+          data: 'invalida',
+          tipo: 'entrada',
+          valor: 500,
+          status: 'realizado',
+        },
         null,
       ];
 
-      const serie = agruparFluxoCaixaPorMes([], lancamentos, 2);
+      const serie = agruparFluxoCaixaPorMes([], lancamentos, 2, '2026-08-31');
       expect(serie).toEqual([
         {
           key: '2026-07',
@@ -205,7 +318,7 @@ describe('financas utils', () => {
       ]);
     });
 
-    it('aceita dataReferencia como instância de Date ou usa data atual quando não há dados', () => {
+    it('aceita dataReferencia como instância de Date ou usa data atual quando não há referência válida', () => {
       const serieComDate = agruparFluxoCaixaPorMes(
         null,
         null,
@@ -215,44 +328,102 @@ describe('financas utils', () => {
       expect(serieComDate).toHaveLength(6);
       expect(serieComDate[5].key).toBe('2026-05');
 
-      const serieVazia = agruparFluxoCaixaPorMes([], []);
-      expect(serieVazia).toHaveLength(6);
+      const serieRefInvalida = agruparFluxoCaixaPorMes([], [], 3, 'invalida');
+      expect(serieRefInvalida).toHaveLength(3);
     });
   });
 
   describe('agruparDespesasPorCategoria', () => {
-    it('soma apenas saídas maiores que zero, ordena decrescentemente e aplica filtros de valor', () => {
+    it('soma apenas saídas realizadas maiores que zero, respeita período por data_pagamento e filtros de valor', () => {
       const lancamentos = [
-        { tipo: 'entrada', categoria: 'Honorários', valor: 10000 },
-        { tipo: 'saida', categoria: 'Despesas Operacionais', valor: 3000 },
-        { tipo: 'saida', categoria: 'Despesas Operacionais', valor: 1000 },
-        { tipo: 'saida', categoria: 'Custas', valor: 1000 },
-        { tipo: 'saida', categoria: '   ', valor: 500 },
-        { tipo: 'saida', categoria: 'Zero', valor: 0 },
+        {
+          tipo: 'entrada',
+          categoria: 'Honorários',
+          valor: 10000,
+          status: 'realizado',
+        },
+        {
+          tipo: 'saida',
+          categoria: 'Despesas Operacionais',
+          valor: 3000,
+          status: 'realizado',
+          data_vencimento: '2026-03-01',
+          data_pagamento: '2026-11-05',
+        },
+        {
+          tipo: 'saida',
+          categoria: 'Despesas Operacionais',
+          valor: 1000,
+          status: 'realizado',
+          data_pagamento: '2026-10-10',
+        },
+        {
+          tipo: 'saida',
+          categoria: 'Despesas Operacionais',
+          valor: 7777,
+          status: 'pendente',
+          data_vencimento: '2026-11-10',
+        },
+        {
+          tipo: 'saida',
+          categoria: 'Fora do Período',
+          valor: 5000,
+          status: 'realizado',
+          data_pagamento: '2025-01-10',
+        },
+        {
+          tipo: 'saida',
+          categoria: 'Custas',
+          valor: 1000,
+          status: 'realizado',
+          data_pagamento: '2026-09-20',
+        },
+        {
+          tipo: 'saida',
+          categoria: '   ',
+          valor: 500,
+          status: 'realizado',
+          data_pagamento: '2026-11-01',
+        },
+        {
+          tipo: 'saida',
+          categoria: 'Zero',
+          valor: 0,
+          status: 'realizado',
+          data_pagamento: '2026-11-01',
+        },
         null,
       ];
 
-      const todas = agruparDespesasPorCategoria(lancamentos);
-      expect(todas).toHaveLength(3);
-      expect(todas[0].categoria).toBe('Despesas Operacionais');
-      expect(todas[0].valor).toBe(4000);
-      expect(todas[1].categoria).toBe('Custas');
-      expect(todas[1].valor).toBe(1000);
-      expect(todas[2].categoria).toBe('Outros');
-      expect(todas[2].valor).toBe(500);
+      const noPeriodo = agruparDespesasPorCategoria(lancamentos, {
+        periodoMeses: 3,
+        dataReferencia: '2026-11-07',
+      });
+      expect(noPeriodo).toHaveLength(3);
+      expect(noPeriodo[0].categoria).toBe('Despesas Operacionais');
+      expect(noPeriodo[0].valor).toBe(4000);
+      expect(noPeriodo[1].categoria).toBe('Custas');
+      expect(noPeriodo[1].valor).toBe(1000);
+      expect(noPeriodo[2].categoria).toBe('Outros');
+      expect(noPeriodo[2].valor).toBe(500);
 
       const filtradas = agruparDespesasPorCategoria(lancamentos, {
         valorMin: '800',
         valorMax: '2000',
+        periodoMeses: 3,
+        dataReferencia: '2026-11-07',
       });
       expect(filtradas).toHaveLength(2);
       expect(filtradas.reduce((acc, i) => acc + i.valor, 0)).toBe(2000);
     });
 
-    it('retorna array vazio quando não há despesas ou quando entrada é inválida', () => {
+    it('retorna array vazio quando não há despesas realizadas ou quando entrada é inválida', () => {
       expect(agruparDespesasPorCategoria(null)).toEqual([]);
       expect(
-        agruparDespesasPorCategoria([{ tipo: 'entrada', valor: 500 }])
+        agruparDespesasPorCategoria([
+          { tipo: 'entrada', valor: 500, status: 'realizado' },
+          { tipo: 'saida', valor: 500, status: 'pendente' },
+        ])
       ).toEqual([]);
     });
   });
@@ -326,8 +497,6 @@ describe('financas utils', () => {
 
     it('formatStatusLabel formata corretamente o label baseado no tipo e status', () => {
       expect(formatStatusLabel('realizado', 'entrada')).toBe('Realizado');
-      expect(formatStatusLabel('realizado', 'entrada')).toBe('Realizado');
-      expect(formatStatusLabel('realizado', 'saida')).toBe('Realizado');
       expect(formatStatusLabel('realizado', 'saida')).toBe('Realizado');
       expect(formatStatusLabel('atrasado', 'entrada')).toBe('Atrasado');
       expect(formatStatusLabel('atrasado', 'saida')).toBe('Atrasado');
@@ -544,6 +713,7 @@ describe('financas utils', () => {
       expect(toApiLancamento(null)).toEqual({});
     });
   });
+
   describe('parseApiError branches', () => {
     it('cobre fallback stringify em detail array (quando não tem msg)', () => {
       const err = { detail: [{ noMsg: true }] };
