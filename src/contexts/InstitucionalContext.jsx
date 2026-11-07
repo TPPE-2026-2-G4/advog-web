@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  startTransition,
 } from 'react';
 import {
   DEFAULT_INSTITUCIONAL,
@@ -20,19 +21,6 @@ export const InstitucionalContext = createContext({
 
 export function getInitialInstitucional(initialData) {
   if (initialData) return initialData;
-  if (typeof window !== 'undefined') {
-    try {
-      const cached = localStorage.getItem('institucional_data');
-      if (cached) {
-        const dadosCache = JSON.parse(cached);
-        if (dadosCache && typeof dadosCache === 'object') {
-          return { ...DEFAULT_INSTITUCIONAL, ...dadosCache };
-        }
-      }
-    } catch {
-      // Ignora erro de leitura do cache
-    }
-  }
   return DEFAULT_INSTITUCIONAL;
 }
 
@@ -76,7 +64,7 @@ function aplicarVariaveisCSS(dados) {
           getContrastTextColor(cp) +
           ' !important; } ';
         css +=
-          'aside[data-testid="sidebar"] { background-color: ' +
+          'aside, [class*="sidebar"] { background-color: ' +
           cp +
           ' !important; } ';
       }
@@ -87,10 +75,19 @@ function aplicarVariaveisCSS(dados) {
           ' !important; --cor-secundaria-texto: ' +
           getContrastTextColor(cs) +
           ' !important; } ';
+        css +=
+          '[class*="avatar"] { background-color: ' + cs + ' !important; } ';
+        css +=
+          '[class*="logoIcon"] { background-color: ' +
+          cs +
+          ' !important; color: ' +
+          (cp || '#172133') +
+          ' !important; } ';
       }
       if (dados.logotipo) {
         css +=
           '[data-testid="sidebar-logo-icon"] { display: none !important; } ';
+        css += '[class*="logoIcon"] { display: none !important; } ';
       }
       styleEl.textContent = css;
     }
@@ -129,6 +126,9 @@ export function InstitucionalProvider({ children, initialData }) {
         const dadosCache = JSON.parse(cached);
         if (dadosCache && typeof dadosCache === 'object') {
           aplicarVariaveisCSS(dadosCache);
+          startTransition(() => {
+            setInstitucional((prev) => ({ ...prev, ...dadosCache }));
+          });
         }
       }
     } catch {

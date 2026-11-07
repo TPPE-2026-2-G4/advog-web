@@ -116,10 +116,8 @@ describe('InstitucionalContext', () => {
       </InstitucionalProvider>
     );
 
-    // Deve estar disponível imediatamente no primeiro ciclo de renderização
-    expect(screen.getByTestId('nome')).toHaveTextContent(
-      'Escritório Sem Flash'
-    );
+    // Deve carregar os dados do localStorage e sincronizar o estado prevenindo flash
+    expect(await screen.findByText('Escritório Sem Flash')).toBeInTheDocument();
     expect(screen.getByTestId('primaria')).toHaveTextContent('#123456');
     expect(screen.getByTestId('secundaria')).toHaveTextContent('#654321');
     expect(screen.getByTestId('logo')).toHaveTextContent(
@@ -135,7 +133,9 @@ describe('InstitucionalContext', () => {
 
     const styleEl = document.getElementById('theme-injected-overrides');
     expect(styleEl).toBeInTheDocument();
-    expect(styleEl?.textContent).toContain('--cor-primaria: #123456 !important');
+    expect(styleEl?.textContent).toContain(
+      '--cor-primaria: #123456 !important'
+    );
     expect(styleEl?.textContent).toContain(
       '[data-testid="sidebar-logo-icon"] { display: none !important; }'
     );
