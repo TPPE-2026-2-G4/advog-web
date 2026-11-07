@@ -172,6 +172,15 @@ describe('useForgotPassword', () => {
       serviceMock.mockRejectedValueOnce(rejeicao);
       render(createElement(Consumer, { resetMode }));
 
+      if (resetMode) {
+        fireEvent.change(screen.getByLabelText('senha'), {
+          target: { value: 'senha-valida' },
+        });
+        fireEvent.change(screen.getByLabelText('confirmar senha'), {
+          target: { value: 'senha-valida' },
+        });
+      }
+
       fireEvent.submit(screen.getByRole('button', { name: 'Enviar' }));
 
       expect(await screen.findByTestId('erro')).toHaveTextContent(mensagem);
