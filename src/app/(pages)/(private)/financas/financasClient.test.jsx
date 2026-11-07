@@ -157,7 +157,6 @@ vi.mock('@/services/financas', () => ({
   criarFinancas: vi.fn(),
   atualizarFinancas: vi.fn(),
   excluirFinancas: vi.fn(),
-  atualizarFinancas: vi.fn(),
   mudarStatusLancamento: vi.fn(),
   listarCategorias: vi
     .fn()

@@ -31,8 +31,6 @@ import {
   criarCategoria,
   excluirCategoria,
   listarCategorias,
-  obterCalendario,
-  exportarCalendarioIcs,
 } from '@/services/financas';
 import {
   MESES_ABREV,
@@ -2110,6 +2108,8 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       screen.getAllByLabelText('Tendência negativa').length
     ).toBeGreaterThan(0);
     expect(screen.getByText('Nenhuma despesa registrada')).toBeInTheDocument();
+  });
+
   it('integra obterCalendario com filtros, sem filtros, respostas sem array e falhas de rede', async () => {
     // Com todos os filtros aplicados
     const resComFiltros = await obterCalendario({
