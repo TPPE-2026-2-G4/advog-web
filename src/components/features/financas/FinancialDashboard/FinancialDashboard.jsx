@@ -53,12 +53,14 @@ export default function FinancialDashboard({
   indicadores: indicadoresProp = null,
   pontosGraficoInicial = [],
   dataReferencia = null,
+  refreshTrigger = 0,
   onFilterGrafico,
 }) {
   const uid = useId();
   const [periodoAtivo, setPeriodoAtivo] = useState('6m');
   const [valorMin, setValorMin] = useState('');
   const [valorMax, setValorMax] = useState('');
+  const [todosLancamentosApi, setTodosLancamentosApi] = useState(null);
   const [pontosGraficoApi, setPontosGraficoApi] =
     useState(pontosGraficoInicial);
   const [indiceAtivo, setIndiceAtivo] = useState(null);
@@ -72,18 +74,32 @@ export default function FinancialDashboard({
   useEffect(() => {
     let ativo = true;
     const buscar = async () => {
-      if (typeof financasService.obterGraficoFinancas !== 'function') return;
-      const resposta = await financasService.obterGraficoFinancas({
-        dias: configPeriodo.dias,
-        valor_min: valorMin || undefined,
-        valor_max: valorMax || undefined,
-      });
-      if (ativo && resposta && Array.isArray(resposta.itens)) {
-        setPontosGraficoApi((prev) =>
-          prev.length === 0 && resposta.itens.length === 0
-            ? prev
-            : resposta.itens
-        );
+      if (typeof financasService.listarFinancas === 'function') {
+        const todos = await financasService.listarFinancas();
+        const listaCompleta = Array.isArray(todos)
+          ? todos
+          : Array.isArray(todos?.itens)
+            ? todos.itens
+            : null;
+        if (ativo && listaCompleta !== null) {
+          setTodosLancamentosApi(listaCompleta);
+        }
+      }
+
+      if (typeof financasService.obterGraficoFinancas === 'function') {
+        const resposta = await financasService.obterGraficoFinancas({
+          dias: configPeriodo.dias,
+          status: 'Realizado',
+          valor_min: valorMin || undefined,
+          valor_max: valorMax || undefined,
+        });
+        if (ativo && resposta && Array.isArray(resposta.itens)) {
+          setPontosGraficoApi((prev) =>
+            prev.length === 0 && resposta.itens.length === 0
+              ? prev
+              : resposta.itens
+          );
+        }
       }
     };
 
@@ -98,10 +114,22 @@ export default function FinancialDashboard({
     return () => {
       ativo = false;
     };
-  }, [periodoAtivo, configPeriodo.dias, valorMin, valorMax, onFilterGrafico]);
+  }, [
+    periodoAtivo,
+    configPeriodo.dias,
+    valorMin,
+    valorMax,
+    refreshTrigger,
+    onFilterGrafico,
+  ]);
+
+  const lancamentosBase = useMemo(
+    () => (todosLancamentosApi !== null ? todosLancamentosApi : lancamentos),
+    [todosLancamentosApi, lancamentos]
+  );
 
   const lancamentosFiltradosPorValor = useMemo(() => {
-    const lista = Array.isArray(lancamentos) ? lancamentos : [];
+    const lista = Array.isArray(lancamentosBase) ? lancamentosBase : [];
     const temMin = String(valorMin).trim() !== '';
     const temMax = String(valorMax).trim() !== '';
     if (!temMin && !temMax) return lista;
@@ -115,12 +143,22 @@ export default function FinancialDashboard({
       if (max !== null && !isNaN(max) && v > max) return false;
       return true;
     });
-  }, [lancamentos, valorMin, valorMax]);
+  }, [lancamentosBase, valorMin, valorMax]);
 
   const indicadores = useMemo(() => {
     if (indicadoresProp) return indicadoresProp;
-    return calcularIndicadoresFinanceiros(lancamentos, resumoBackend);
-  }, [indicadoresProp, lancamentos, resumoBackend]);
+    return calcularIndicadoresFinanceiros(
+      lancamentosBase,
+      todosLancamentosApi !== null ? null : resumoBackend,
+      dataReferencia
+    );
+  }, [
+    indicadoresProp,
+    lancamentosBase,
+    todosLancamentosApi,
+    resumoBackend,
+    dataReferencia,
+  ]);
 
   const serieFluxo = useMemo(
     () =>
@@ -140,11 +178,13 @@ export default function FinancialDashboard({
 
   const categoriasDespesas = useMemo(
     () =>
-      agruparDespesasPorCategoria(lancamentos, {
+      agruparDespesasPorCategoria(lancamentosBase, {
         valorMin,
         valorMax,
+        periodoMeses: configPeriodo.meses,
+        dataReferencia,
       }),
-    [lancamentos, valorMin, valorMax]
+    [lancamentosBase, valorMin, valorMax, configPeriodo.meses, dataReferencia]
   );
 
   const maxAxis = useMemo(() => {
