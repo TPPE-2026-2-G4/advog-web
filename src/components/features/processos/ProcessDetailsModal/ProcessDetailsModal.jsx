@@ -343,7 +343,7 @@ export default function ProcessDetailsModal({
                 </div>
                 <div className={styles.detailItem}>
                   <dt>Tribunal</dt>
-                  <dd>{process.tribunal}</dd>
+                  <dd>{process.tribunal || 'Tribunal de Origem'}</dd>
                 </div>
                 <div className={styles.detailItem}>
                   <dt>Responsável</dt>

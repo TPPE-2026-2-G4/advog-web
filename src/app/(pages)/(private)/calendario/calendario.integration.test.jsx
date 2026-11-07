@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import CalendarioClient from './calendarioClient';
 import { exportarCalendarioIcs, obterCalendario } from '@/services/financas';
@@ -729,6 +729,149 @@ describe('CalendarioClient', () => {
     await waitFor(() => {
       expect(
         screen.getByText('Falha no servidor ao gerar ICS')
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('data inicial, mês sem lançamentos e exportação', () => {
+    const withDate = (overrides) => ({
+      id: 301,
+      titulo: 'Lançamento de teste',
+      tipo: 'entrada',
+      valor: 100,
+      status: 'pendente',
+      ...overrides,
+    });
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 9, 15));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it.each([
+      ['data brasileira', { data: '15/08/2026' }, 'Agosto 2026'],
+      [
+        'data ISO com horário',
+        { dataIso: '2026-09-05T10:00:00' },
+        'Setembro 2026',
+      ],
+      ['data em formato desconhecido', { data: 'quando der' }, 'Outubro 2026'],
+      ['data brasileira incompleta', { data: '15/08' }, 'Outubro 2026'],
+      ['ano sem mês', { data: '2026-' }, 'Outubro 2026'],
+    ])(
+      'abre o calendário no mês indicado por %s',
+      (_label, overrides, month) => {
+        render(<CalendarioClient initialData={[withDate(overrides)]} />);
+
+        expect(screen.getByText(month)).toBeInTheDocument();
+      }
+    );
+
+    it('abre no mês atual quando os lançamentos não possuem data', () => {
+      render(
+        <CalendarioClient initialData={[{ id: 1, titulo: 'Sem data' }]} />
+      );
+
+      expect(screen.getByText('Outubro 2026')).toBeInTheDocument();
+    });
+
+    it('abre no mês atual quando não há lançamentos iniciais válidos', () => {
+      render(<CalendarioClient initialData={null} />);
+
+      expect(screen.getByText('Outubro 2026')).toBeInTheDocument();
+    });
+
+    it('mantém os lançamentos quando a consulta do mês não devolve uma lista', async () => {
+      obterCalendario.mockResolvedValue(null);
+
+      render(
+        <CalendarioClient
+          initialData={mockEventosAgosto}
+          initialDate={new Date(2026, 7, 1)}
+        />
+      );
+
+      await waitFor(() => expect(obterCalendario).toHaveBeenCalled());
+      expect(screen.getByText('R$ 10.000,00')).toBeInTheDocument();
+    });
+
+    it('mescla lançamentos recebidos do servidor identificados por lancamento_id', async () => {
+      obterCalendario.mockResolvedValue([
+        {
+          lancamento_id: 777,
+          titulo: 'Recebido do servidor',
+          tipo: 'entrada',
+          valor: 321,
+          status: 'pendente',
+          data_vencimento: '2026-08-12',
+        },
+      ]);
+
+      render(
+        <CalendarioClient
+          initialData={mockEventosAgosto}
+          initialDate={new Date(2026, 7, 1)}
+        />
+      );
+
+      expect(await screen.findByText('R$ 321,00')).toBeInTheDocument();
+    });
+
+    it('informa quando o dia selecionado não tem lançamentos', () => {
+      render(
+        <CalendarioClient
+          initialData={mockEventosAgosto}
+          initialDate={new Date(2026, 7, 1)}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId('day-15'));
+
+      expect(
+        screen.getByText('Sem lançamentos neste dia.')
+      ).toBeInTheDocument();
+    });
+
+    it('ignora um segundo clique em exportar enquanto a exportação está em andamento', async () => {
+      let finish;
+      exportarCalendarioIcs.mockReturnValue(
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+      );
+      render(
+        <CalendarioClient
+          initialData={mockEventosAgosto}
+          initialDate={new Date(2026, 7, 1)}
+        />
+      );
+      const button = screen.getByRole('button', { name: /Exportar/i });
+
+      fireEvent.click(button);
+      fireEvent.click(button);
+
+      expect(exportarCalendarioIcs).toHaveBeenCalledTimes(1);
+      finish(new Blob([]));
+      await waitFor(() => expect(button).not.toBeDisabled());
+    });
+
+    it('usa mensagem padrão quando a exportação falha sem mensagem', async () => {
+      exportarCalendarioIcs.mockRejectedValue(undefined);
+      render(
+        <CalendarioClient
+          initialData={mockEventosAgosto}
+          initialDate={new Date(2026, 7, 1)}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /Exportar/i }));
+
+      expect(
+        await screen.findByText('Erro ao exportar calendário.')
       ).toBeInTheDocument();
     });
   });

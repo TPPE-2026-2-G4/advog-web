@@ -4,18 +4,26 @@ import {
   atualizarProcesso,
   criarProcesso,
   excluirProcesso,
+  exportarProcessos,
   listarProcessos,
   obterProcesso,
 } from '@/services/processos';
+import { downloadBlob } from '@/utils/exportacao';
 import { useProcessos } from './useProcessos';
 
 vi.mock('@/services/processos', () => ({
   atualizarProcesso: vi.fn(),
   criarProcesso: vi.fn(),
   excluirProcesso: vi.fn(),
+  exportarProcessos: vi.fn(),
   listarProcessos: vi.fn(),
   obterProcesso: vi.fn(),
   sincronizarProcessos: vi.fn(),
+}));
+
+vi.mock('@/utils/exportacao', async (importOriginal) => ({
+  ...(await importOriginal()),
+  downloadBlob: vi.fn(),
 }));
 
 const responsaveis = [{ value: '3', label: 'Ana Paula' }];
@@ -454,5 +462,56 @@ describe('useProcessos', () => {
     });
 
     expect(excluirProcesso).not.toHaveBeenCalled();
+  });
+});
+
+describe('useProcessos - exportação de relatórios', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    obterProcesso.mockImplementation(async (id) => createApiProcess(id));
+    listarProcessos.mockResolvedValue(apiPage([createApiProcess(1)]));
+  });
+
+  it('exporta com os filtros aplicados na listagem e baixa o arquivo', async () => {
+    const blob = new Blob(['pdf']);
+    exportarProcessos.mockResolvedValue(blob);
+    const { result } = renderProcessos(initialPageOf([createApiProcess(1)]));
+
+    act(() => {
+      result.current.setFilter('status', 'Arquivado');
+      result.current.setFilter('responsavelId', '3');
+    });
+    await waitFor(() =>
+      expect(listarProcessos).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'Arquivado', responsavelId: '3' })
+      )
+    );
+
+    await act(() => result.current.exportReport('xlsx'));
+
+    expect(exportarProcessos).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'Arquivado',
+        responsavelId: '3',
+        busca: '',
+      }),
+      'xlsx'
+    );
+    expect(downloadBlob).toHaveBeenCalledWith(
+      blob,
+      expect.stringMatching(/^processos_\d{8}\.xlsx$/)
+    );
+    expect(result.current.isExporting).toBe(false);
+    expect(result.current.exportError).toBe('');
+  });
+
+  it('informa o erro quando a exportação falha', async () => {
+    exportarProcessos.mockRejectedValue(new Error('Falha ao exportar'));
+    const { result } = renderProcessos(initialPageOf([createApiProcess(1)]));
+
+    await act(() => result.current.exportReport('csv'));
+
+    expect(result.current.exportError).toBe('Falha ao exportar');
+    expect(downloadBlob).not.toHaveBeenCalled();
   });
 });

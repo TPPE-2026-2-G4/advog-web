@@ -82,9 +82,9 @@
 
 .retryButton {
   flex-shrink: 0;
-  color: #172133;
+  color: var(--cor-primaria, #172133);
   background-color: #ffffff;
-  border: 1px solid #172133;
+  border: 1px solid var(--cor-primaria, #172133);
 }
 
 .retryButton:hover:not(:disabled) {
@@ -98,7 +98,7 @@
 
 .addButton:focus-visible,
 .retryButton:focus-visible {
-  outline: 2px solid #c1a077;
+  outline: 2px solid var(--cor-secundaria, #c1a077);
   outline-offset: 2px;
 }
 

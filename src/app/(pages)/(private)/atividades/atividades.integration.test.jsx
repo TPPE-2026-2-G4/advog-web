@@ -1,7 +1,25 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AtividadesPage from './page';
 import AtividadesClient from './atividadesClient';
+import { obterKanbanAtividades } from '@/services/atividades';
+import { obterResumoAtividades } from '@/services/dashboard';
+import { useKanbanAtividades } from '@/hooks/useKanbanAtividades';
+import { useResumoAtividades } from '@/hooks/useResumoAtividades';
+
+vi.mock('@/services/atividades', () => ({
+  obterKanbanAtividades: vi.fn(),
+}));
+
+vi.mock('@/services/dashboard', () => ({
+  obterResumoAtividades: vi.fn(),
+}));
 
 const atividade = (id) => ({
   atividade_id: id,
@@ -39,28 +57,7 @@ const kanban = {
 describe('AtividadesClient integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    sessionStorage.clear();
-    localStorage.clear();
-    sessionStorage.setItem('access_token', 'fake-valid-token');
-
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url) => {
-        if (String(url).includes('/atividades/kanban')) {
-          return {
-            ok: true,
-            status: 200,
-            json: async () => kanban,
-          };
-        }
-        return { ok: false, status: 404, json: async () => ({}) };
-      })
-    );
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    sessionStorage.clear();
+    obterKanbanAtividades.mockResolvedValue(kanban);
   });
 
   it('renderiza AtividadesPage como wrapper de AtividadesClient', () => {
@@ -68,7 +65,7 @@ describe('AtividadesClient integration', () => {
     expect(page).toBeTruthy();
   });
 
-  it('exibe o total e a contagem de cada etapa na ordem do quadro via fetch', async () => {
+  it('exibe o total e a contagem de cada etapa na ordem do quadro', async () => {
     render(<AtividadesClient />);
 
     await waitFor(() =>
@@ -92,71 +89,23 @@ describe('AtividadesClient integration', () => {
   });
 
   it('mostra traços enquanto os dados carregam', () => {
-    fetch.mockReturnValue(new Promise(() => {}));
+    obterKanbanAtividades.mockReturnValue(new Promise(() => {}));
 
     render(<AtividadesClient />);
 
     expect(screen.getByText('Total').nextSibling).toHaveTextContent('—');
   });
 
-  it('trata erro quando usuário não tem token na sessão', async () => {
-    sessionStorage.removeItem('access_token');
+  it('permite tentar novamente quando o carregamento falha', async () => {
+    obterKanbanAtividades
+      .mockRejectedValueOnce(new Error('Falha ao carregar o quadro'))
+      .mockResolvedValueOnce(kanban);
 
     render(<AtividadesClient />);
 
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(
-        'Sessão expirada. Faça login novamente.'
-      )
-    );
-  });
-
-  it('trata erro 401 de sessão expirada retornado pela API', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-      json: async () => ({ detail: 'Token inválido' }),
-    });
-
-    render(<AtividadesClient />);
-
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(
-        'Sessão expirada. Faça login novamente.'
-      )
-    );
-  });
-
-  it('trata erro 403 de permissão negada retornado pela API', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      json: async () => ({ detail: 'Acesso negado' }),
-    });
-
-    render(<AtividadesClient />);
-
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(
-        'Você não possui permissão para visualizar as atividades.'
-      )
-    );
-  });
-
-  it('permite tentar novamente quando o carregamento falha por falha de rede', async () => {
-    fetch
-      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => kanban,
-      });
-
-    render(<AtividadesClient />);
-
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(
-        'Não foi possível carregar as atividades.'
+        'Falha ao carregar o quadro'
       )
     );
 
@@ -166,5 +115,114 @@ describe('AtividadesClient integration', () => {
       expect(screen.getByText('Total').nextSibling).toHaveTextContent('7')
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('usa mensagem padrão quando a falha não é uma instância de Error', async () => {
+    obterKanbanAtividades.mockRejectedValue('falha');
+
+    render(<AtividadesClient />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Não foi possível carregar as atividades.'
+    );
+  });
+
+  it('exibe o quadro do usuário quando a API não devolve o escopo do escritório', async () => {
+    obterKanbanAtividades.mockResolvedValue({
+      escopo: 'usuario',
+      etapas: [{ etapa_id: 1, nome: 'Backlog', ordem: 1 }],
+    });
+    const { result } = renderHook(() => useKanbanAtividades());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.scope).toBe('usuario');
+  });
+
+  it('ignora respostas do quadro que chegam depois da desmontagem', async () => {
+    let resolveKanban;
+    let rejectKanban;
+    obterKanbanAtividades
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveKanban = resolve;
+        })
+      )
+      .mockReturnValueOnce(
+        new Promise((_, reject) => {
+          rejectKanban = reject;
+        })
+      );
+
+    const first = render(<AtividadesClient />);
+    first.unmount();
+    resolveKanban(kanban);
+
+    const second = render(<AtividadesClient />);
+    second.unmount();
+    rejectKanban(new Error('tarde demais'));
+
+    await Promise.resolve();
+    expect(screen.queryByText('tarde demais')).not.toBeInTheDocument();
+  });
+
+  describe('hooks de atividades desabilitados', () => {
+    it('não consultam a API quando desabilitados', () => {
+      const kanbanHook = renderHook(() => useKanbanAtividades(false));
+      const summaryHook = renderHook(() => useResumoAtividades(false));
+
+      expect(kanbanHook.result.current.isLoading).toBe(false);
+      expect(summaryHook.result.current.isLoading).toBe(false);
+      expect(obterKanbanAtividades).not.toHaveBeenCalled();
+      expect(obterResumoAtividades).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resumo de atividades', () => {
+    it('recarrega o resumo, trata falhas e ignora respostas tardias', async () => {
+      obterResumoAtividades
+        .mockRejectedValueOnce('falha')
+        .mockResolvedValueOnce({ escopo: 'escritorio', pendentes: 2 });
+      const { result, rerender } = renderHook(() => useResumoAtividades());
+
+      await waitFor(() =>
+        expect(result.current.error).toBe(
+          'Não foi possível carregar o resumo de atividades.'
+        )
+      );
+
+      result.current.reload();
+      rerender();
+      await waitFor(() => expect(result.current.summary.pendentes).toBe(2));
+      expect(result.current.error).toBe('');
+    });
+
+    it('usa a mensagem do erro recebido e ignora respostas após a desmontagem', async () => {
+      obterResumoAtividades.mockRejectedValueOnce(new Error('Falha na API'));
+      const failed = renderHook(() => useResumoAtividades());
+      await waitFor(() =>
+        expect(failed.result.current.error).toBe('Falha na API')
+      );
+
+      let resolveSummary;
+      let rejectSummary;
+      obterResumoAtividades
+        .mockReturnValueOnce(
+          new Promise((resolve) => {
+            resolveSummary = resolve;
+          })
+        )
+        .mockReturnValueOnce(
+          new Promise((_, reject) => {
+            rejectSummary = reject;
+          })
+        );
+      renderHook(() => useResumoAtividades()).unmount();
+      resolveSummary({ pendentes: 9 });
+      renderHook(() => useResumoAtividades()).unmount();
+      rejectSummary(new Error('tarde demais'));
+
+      await Promise.resolve();
+      expect(failed.result.current.summary.pendentes).toBe(0);
+    });
   });
 });

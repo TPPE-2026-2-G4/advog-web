@@ -7,6 +7,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import RootLayout from '@/app/layout';
+import UserMenu from '@/components/layout/navbar/userMenu';
 import PrivateLayout from './layout';
 import DashboardPage from './dashboard/page';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -356,5 +357,86 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
     expect(screen.getByTestId('nome-escritorio')).toHaveTextContent(
       'Escritório Via Storage'
     );
+  });
+
+  describe('menu do usuário: variações de dados e de sessão', () => {
+    const renderMenu = (user) => {
+      sessionStorage.setItem('current_user', JSON.stringify(user));
+      return render(<UserMenu />);
+    };
+
+    it.each([
+      [
+        'nomes e e-mail no formato legado',
+        {
+          nome_func: 'Carlos Eduardo Lima',
+          email_func: 'carlos@advog.com',
+          nome_cargo: 'Sócio',
+        },
+        'Carlos E.',
+        'Sócio',
+        'carlos@advog.com',
+      ],
+      [
+        'cargo informado como texto',
+        { nome: 'Ana', email: 'ana@advog.com', cargo: 'Advogada' },
+        'Ana',
+        'Advogada',
+        'ana@advog.com',
+      ],
+      [
+        'cargo com nome_cargo',
+        { nome: 'Ana Paula', cargo: { nome_cargo: 'Gerente' } },
+        'Ana P.',
+        'Gerente',
+        '',
+      ],
+      [
+        'cargo com nome',
+        { nome: 'Ana Paula', cargo: { nome: 'Estagiária' } },
+        'Ana P.',
+        'Estagiária',
+        '',
+      ],
+      [
+        'usuário sem nome nem cargo',
+        { email: 'anonimo@advog.com', cargo: {} },
+        '',
+        '',
+        'anonimo@advog.com',
+      ],
+    ])('exibe o usuário com %s', (_label, user, shortName, role, email) => {
+      renderMenu(user);
+
+      const trigger = screen.getAllByRole('button')[0];
+      expect(trigger).toHaveTextContent(`${shortName}${role}`);
+
+      fireEvent.click(trigger);
+      if (email) expect(screen.getByText(email)).toBeInTheDocument();
+    });
+
+    it('fecha o menu ao clicar fora e encerra a sessão sem o provedor de autenticação', () => {
+      sessionStorage.setItem('access_token', 'token');
+      renderMenu({ nome: 'Ana Paula', email: 'ana@advog.com' });
+
+      const trigger = screen.getAllByRole('button')[0];
+      fireEvent.click(trigger);
+      expect(screen.getByText('ana@advog.com')).toBeInTheDocument();
+
+      fireEvent.mouseDown(document.body);
+      expect(screen.queryByText('ana@advog.com')).not.toBeInTheDocument();
+
+      fireEvent.click(trigger);
+      fireEvent.mouseDown(screen.getByText('ana@advog.com'));
+      expect(screen.getByText('ana@advog.com')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Sair/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /^Sair$|Confirmar/i })
+      );
+
+      expect(mockPush).toHaveBeenCalledWith('/login');
+      expect(getAccessToken()).toBeNull();
+    });
   });
 });
