@@ -270,6 +270,20 @@ describe('serviço de autenticação', () => {
         'Token obrigatório Senha inválida',
       ],
       [
+        'senha com menos de 8 caracteres',
+        respostaComErro({
+          detail: [
+            {
+              loc: ['body', 'senha'],
+              type: 'string_too_short',
+              msg: 'String should have at least 8 characters',
+              ctx: { min_length: 8 },
+            },
+          ],
+        }),
+        'A nova senha deve conter pelo menos 8 caracteres.',
+      ],
+      [
         'JSON inválido',
         respostaComErroSemJson(),
         'Não foi possível redefinir sua senha.',

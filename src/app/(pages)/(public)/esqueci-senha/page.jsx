@@ -72,6 +72,7 @@ export function ForgotPasswordContent({ resetMode = false }) {
               className={styles.input}
               type="password"
               placeholder="••••••••"
+              minLength={8}
               value={senha}
               onChange={(event) => setSenha(event.target.value)}
               required

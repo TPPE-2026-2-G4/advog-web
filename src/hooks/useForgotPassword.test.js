@@ -91,6 +91,24 @@ describe('useForgotPassword', () => {
     expect(resetMock).not.toHaveBeenCalled();
   });
 
+  it('rejeita senha menor que 8 caracteres', async () => {
+    getParamMock.mockReturnValue('token-reset');
+    render(createElement(Consumer, { resetMode: true }));
+
+    fireEvent.change(screen.getByLabelText('senha'), {
+      target: { value: '1234567' },
+    });
+    fireEvent.change(screen.getByLabelText('confirmar senha'), {
+      target: { value: '1234567' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: 'Enviar' }));
+
+    expect(await screen.findByTestId('erro')).toHaveTextContent(
+      'A nova senha deve conter pelo menos 8 caracteres.'
+    );
+    expect(resetMock).not.toHaveBeenCalled();
+  });
+
   it('redefine a senha e redireciona para o login', async () => {
     getParamMock.mockReturnValue('token-reset');
     resetMock.mockResolvedValueOnce({ mensagem: 'ok' });

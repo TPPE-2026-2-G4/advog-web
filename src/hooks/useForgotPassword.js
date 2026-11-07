@@ -25,6 +25,11 @@ export function useForgotPassword({ resetMode = false } = {}) {
       return;
     }
 
+    if (resetMode && senha.length < 8) {
+      setErro('A nova senha deve conter pelo menos 8 caracteres.');
+      return;
+    }
+
     if (token && senha !== confirmarSenha) {
       setErro('As senhas não conferem.');
       return;

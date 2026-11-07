@@ -100,7 +100,16 @@ async function parseAuthError(response, defaultMessage) {
       message = errorData.detail;
     } else if (Array.isArray(errorData?.detail)) {
       message = errorData.detail
-        .map((error) => error.msg || error.message)
+        .map((error) => {
+          const field = error.loc?.at(-1);
+          if (
+            field === 'senha' &&
+            (error.type === 'string_too_short' || error.ctx?.min_length === 8)
+          ) {
+            return 'A nova senha deve conter pelo menos 8 caracteres.';
+          }
+          return error.msg || error.message;
+        })
         .filter(Boolean)
         .join(' ');
     } else if (errorData?.message) {
