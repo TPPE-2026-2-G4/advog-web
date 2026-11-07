@@ -6,8 +6,9 @@ import styles from './ProcessSummary.module.css';
 const SUMMARY_ITEMS = [
   { key: 'em_andamento', label: 'Em andamento', tone: 'success' },
   { key: 'em_analise', label: 'Em análise', tone: 'info' },
-  { key: 'finalizados', label: 'Finalizados', tone: 'dark' },
+  { key: 'finalizados', label: 'Concluídos', tone: 'dark' },
   { key: 'proximos_do_prazo', label: 'Próximos do prazo', tone: 'warning' },
+  { key: 'atrasados', label: 'Atrasados', tone: 'danger' },
 ];
 
 export default function ProcessSummary({
