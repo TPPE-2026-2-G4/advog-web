@@ -247,11 +247,6 @@ describe('Componentes UI do Módulo Site', () => {
         campo: 'endereco',
         valor: 'Novo Endereço',
       },
-      {
-        label: 'Informações adicionais (exibidas abaixo da descrição)',
-        campo: 'textoAdicionalSobre',
-        valor: 'Novas informações adicionais',
-      },
     ])(
       'chama onInputChange("$campo", "$valor") ao editar o campo "$label"',
       ({ label, campo, valor }) => {
@@ -264,6 +259,59 @@ describe('Componentes UI do Módulo Site', () => {
         expect(handleInputChange).toHaveBeenCalledWith(campo, valor);
       }
     );
+
+    it('não renderiza o campo de informações adicionais (textoAdicionalSobre)', () => {
+      render(<ContentTab formData={{}} onInputChange={vi.fn()} />);
+      expect(
+        screen.queryByLabelText(
+          'Informações adicionais (exibidas abaixo da descrição)'
+        )
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText(/Mais de 500 casos atendidos/i)
+      ).not.toBeInTheDocument();
+    });
+
+    it('formata o telefone com máscara e bloqueia texto não-numérico', () => {
+      const handleInputChange = vi.fn();
+      render(<ContentTab formData={{}} onInputChange={handleInputChange} />);
+
+      const telInput = screen.getByLabelText('Telefone');
+      expect(telInput).toHaveAttribute('maxLength', '15');
+      expect(telInput).toHaveAttribute('type', 'tel');
+
+      fireEvent.change(telInput, { target: { value: '61987654321' } });
+      expect(handleInputChange).toHaveBeenCalledWith(
+        'telefone',
+        '(61) 98765-4321'
+      );
+
+      fireEvent.change(telInput, { target: { value: 'somente_letras' } });
+      expect(handleInputChange).toHaveBeenCalledWith('telefone', '');
+    });
+
+    it('impõe limites de maxLength nos campos do formulário de conteúdo', () => {
+      render(<ContentTab formData={{}} onInputChange={vi.fn()} />);
+      expect(screen.getByLabelText('Nome do escritório')).toHaveAttribute(
+        'maxLength',
+        '100'
+      );
+      expect(
+        screen.getByLabelText('Slogan / subtítulo do hero')
+      ).toHaveAttribute('maxLength', '200');
+      expect(screen.getByLabelText('Sobre o escritório')).toHaveAttribute(
+        'maxLength',
+        '2000'
+      );
+      expect(screen.getByLabelText('Email')).toHaveAttribute(
+        'maxLength',
+        '100'
+      );
+      expect(screen.getByLabelText('Endereço')).toHaveAttribute(
+        'maxLength',
+        '200'
+      );
+    });
 
     it('renderiza upload de imagem da seção sobre e aciona onUploadImagemSobre', () => {
       const handleUpload = vi.fn();
@@ -828,7 +876,7 @@ describe('Componentes UI do Módulo Site', () => {
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
 
-    it('renderiza imagemSobre, textoAdicionalSobre, áreas de atuação e advogados visíveis', () => {
+    it('renderiza imagemSobre, áreas de atuação e advogados visíveis', () => {
       const mockTeam = [
         {
           funcionario_id: 1,
@@ -894,7 +942,6 @@ describe('Componentes UI do Módulo Site', () => {
           onClose={vi.fn()}
           formData={{
             imagemSobre: 'http://minio/sobre.jpg',
-            textoAdicionalSobre: 'Mais de 500 casos atendidos',
           }}
           team={mockTeam}
           areas={mockAreas}
@@ -906,9 +953,6 @@ describe('Componentes UI do Módulo Site', () => {
         'src',
         'http://localhost:9000/sobre.jpg'
       );
-      expect(
-        screen.getByText('Mais de 500 casos atendidos')
-      ).toBeInTheDocument();
 
       expect(screen.getByText('Áreas de Atuação')).toBeInTheDocument();
       expect(screen.getByText('Direito Civil')).toBeInTheDocument();

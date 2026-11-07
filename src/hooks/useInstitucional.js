@@ -6,6 +6,7 @@ import {
   salvarDadosInstitucionais,
   uploadImagemInstitucional,
 } from '@/services/institucional';
+import { validarDadosInstitucionais } from '@/utils/institucional';
 import {
   listarFuncionarios,
   mudarExibicaoInstitucional,
@@ -239,6 +240,13 @@ export function useInstitucional(initialData, options = {}) {
     setIsSaving(true);
     setSaveError('');
     setSaveSuccess(false);
+
+    const erroValidacao = validarDadosInstitucionais(formData);
+    if (erroValidacao) {
+      setSaveError(erroValidacao);
+      setIsSaving(false);
+      return;
+    }
 
     try {
       const saved = await salvarDadosInstitucionais(formData);

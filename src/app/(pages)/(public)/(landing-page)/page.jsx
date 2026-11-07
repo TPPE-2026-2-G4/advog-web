@@ -6,6 +6,7 @@ import {
   getImageUrl,
   formatParagraphs,
   getContrastTextColor,
+  getAreaIcon,
 } from '@/utils/institucional';
 import {
   Scale,
@@ -23,39 +24,6 @@ import PublicNavbar from '@/components/layout/PublicNavbar/PublicNavbar';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
-
-function getAreaIcon(titulo = '', index = 0) {
-  const t = (titulo || '').toLowerCase();
-  if (t.includes('trabalh') || t.includes('empresari')) return Briefcase;
-  if (
-    t.includes('penal') ||
-    t.includes('criminal') ||
-    t.includes('seguran') ||
-    t.includes('defesa')
-  ) {
-    return Shield;
-  }
-  if (
-    t.includes('tribut') ||
-    t.includes('públic') ||
-    t.includes('public') ||
-    t.includes('bancár')
-  ) {
-    return Landmark;
-  }
-  if (t.includes('famíl') || t.includes('famil') || t.includes('sucess')) {
-    return Users;
-  }
-  if (
-    t.includes('contrat') ||
-    t.includes('imobiliár') ||
-    t.includes('consumid')
-  ) {
-    return FileText;
-  }
-  const icons = [Briefcase, Scale, Shield, Landmark, FileText, Users];
-  return icons[index % icons.length];
-}
 
 export default async function Home() {
   const [institucional, funcionarios, atuacoes] = await Promise.all([
@@ -188,14 +156,6 @@ export default async function Home() {
                   {sobreTextos.map((paragrafo, index) => (
                     <p key={index}>{paragrafo}</p>
                   ))}
-                  {institucional?.textoAdicionalSobre && (
-                    <span
-                      className={styles.extraBadge}
-                      style={{ borderLeftColor: corSecundaria }}
-                    >
-                      {institucional.textoAdicionalSobre}
-                    </span>
-                  )}
                 </div>
               </div>
 

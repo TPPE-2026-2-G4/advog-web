@@ -11,7 +11,6 @@ export const DEFAULT_INSTITUCIONAL = {
   descricao: '',
   sobreEscritorio: '',
   imagemSobre: null,
-  textoAdicionalSobre: '',
   email: '',
   telefone: '',
   endereco: '',
@@ -22,6 +21,54 @@ export const DEFAULT_INSTITUCIONAL = {
 };
 
 export const DEFAULT_EQUIPE_SITE = [];
+
+const validationFieldLabels = {
+  nomeEscritorio: 'Nome do escritório',
+  descricao: 'Slogan / subtítulo',
+  sobreEscritorio: 'Sobre o escritório',
+  telefone: 'Telefone',
+  email: 'E-mail',
+  endereco: 'Endereço',
+  corPrimaria: 'Cor primária',
+  corSecundaria: 'Cor de acento',
+};
+
+async function parseInstitucionalError(response, fallbackMessage) {
+  try {
+    const error = await response.json();
+    if (!error) return fallbackMessage;
+    if (typeof error === 'string') return error;
+    if (typeof error.detail === 'string') return error.detail;
+    if (Array.isArray(error.detail)) {
+      const messages = error.detail
+        .map((item) => {
+          if (typeof item === 'string') return item;
+          const field = item.loc ? item.loc[item.loc.length - 1] : null;
+          const label = validationFieldLabels[field] || field;
+          if (field === 'email') {
+            return 'E-mail inválido. Por favor, insira um e-mail no formato correto (ex: contato@escritorio.adv.br).';
+          }
+          if (label && item.msg) {
+            return `${label}: ${item.msg}`;
+          }
+          return (
+            item.msg || (item.message ? item.message : JSON.stringify(item))
+          );
+        })
+        .filter(Boolean);
+      if (messages.length > 0) return messages.join(' ');
+    }
+    if (typeof error.detail === 'object' && error.detail !== null) {
+      return (
+        error.detail.message || error.detail.msg || JSON.stringify(error.detail)
+      );
+    }
+    if (error.message) return error.message;
+    return fallbackMessage;
+  } catch {
+    return fallbackMessage;
+  }
+}
 
 export async function buscarDadosInstitucionais() {
   try {
@@ -48,7 +95,13 @@ export async function salvarDadosInstitucionais(dados) {
 
     // Remove campos de imagem do payload, pois o backend já os salva na rota de upload.
     // Enviar a presigned URL de volta corromperia a chave no banco de dados.
-    const { imagemSobre, logotipo, bannerHero, ...dadosLimpos } = dados;
+    const {
+      imagemSobre,
+      logotipo,
+      bannerHero,
+      textoAdicionalSobre,
+      ...dadosLimpos
+    } = dados;
 
     const response = await fetch(`${apiUrl}/institucional`, {
       method: 'PUT',
@@ -57,10 +110,11 @@ export async function salvarDadosInstitucionais(dados) {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => null);
-      throw new Error(
-        error?.detail || 'Não foi possível salvar as configurações do site.'
+      const errorMessage = await parseInstitucionalError(
+        response,
+        'Não foi possível salvar as configurações do site.'
       );
+      throw new Error(errorMessage);
     }
 
     return await response.json();
