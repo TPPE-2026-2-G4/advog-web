@@ -8,7 +8,9 @@ import StatCard from '@/components/ui/StatCard/StatCard';
 import CriticalProcessesCard from '@/components/features/processos/CriticalProcessesCard/CriticalProcessesCard';
 import ProcessDetailsModal from '@/components/features/processos/ProcessDetailsModal/ProcessDetailsModal';
 import ProcessSummary from '@/components/features/processos/ProcessSummary/ProcessSummary';
+import UpcomingDeadlines from '@/components/features/processos/UpcomingDeadlines/UpcomingDeadlines';
 import { useKanbanAtividades } from '@/hooks/useKanbanAtividades';
+import { usePrazosProximos } from '@/hooks/usePrazosProximos';
 import { useProcessosCriticos } from '@/hooks/useProcessosCriticos';
 import { useResumoAtividades } from '@/hooks/useResumoAtividades';
 import { useResumoProcessos } from '@/hooks/useResumoProcessos';
@@ -36,6 +38,13 @@ export default function DashboardClient() {
     error: processSummaryError,
     reload: reloadProcessSummary,
   } = useResumoProcessos({ enabled: canView });
+
+  const {
+    processos: upcomingProcesses,
+    isLoading: isUpcomingLoading,
+    error: upcomingError,
+    reload: reloadUpcoming,
+  } = usePrazosProximos({ enabled: canView });
 
   const {
     summary: activitySummary,
@@ -114,6 +123,14 @@ export default function DashboardClient() {
     [processos, clientNames, employeeNames]
   );
 
+  const enrichedUpcomingProcesses = useMemo(
+    () =>
+      upcomingProcesses.map((proc) =>
+        enrichProcess(proc, clientNames, employeeNames)
+      ),
+    [upcomingProcesses, clientNames, employeeNames]
+  );
+
   const enrichedDetail = useMemo(
     () => enrichProcess(detailProcess, clientNames, employeeNames),
     [detailProcess, clientNames, employeeNames]
@@ -163,48 +180,73 @@ export default function DashboardClient() {
           />
         </div>
 
-        <div className={styles.activitiesGrid}>
-          <div className={styles.summariesColumn}>
-            {canView && (
+        {canView ? (
+          <>
+            <div className={styles.summariesGrid}>
               <ProcessSummary
                 summary={processSummary}
                 isLoading={isProcessSummaryLoading}
                 error={processSummaryError}
                 onRetry={reloadProcessSummary}
               />
-            )}
-            <ActivitySummary
-              summary={activitySummary}
-              isLoading={isSummaryLoading}
-              error={summaryError}
-              onRetry={reloadSummary}
-            />
-          </div>
-          <RecentActivities
-            activities={recentActivities}
-            isLoading={isActivitiesLoading}
-            error={activitiesError}
-            onRetry={reloadActivities}
-          />
-        </div>
-
-        {canView ? (
-          <CriticalProcessesCard
-            processes={enrichedProcesses}
-            isLoading={isLoading}
-            isReloading={isReloading}
-            error={error}
-            onRetry={reload}
-            onAnalyze={openDetail}
-            thresholdDays={15}
-          />
-        ) : (
-          <div className={styles.errorState} role="alert">
-            <div>
-              <h2>Acesso negado</h2>
-              <p>Você não possui permissão para visualizar processos.</p>
+              <ActivitySummary
+                summary={activitySummary}
+                isLoading={isSummaryLoading}
+                error={summaryError}
+                onRetry={reloadSummary}
+              />
             </div>
-          </div>
+
+            <div className={styles.activitiesGrid}>
+              <UpcomingDeadlines
+                processes={enrichedUpcomingProcesses}
+                isLoading={isUpcomingLoading}
+                error={upcomingError}
+                onRetry={reloadUpcoming}
+                onView={openDetail}
+              />
+              <RecentActivities
+                activities={recentActivities}
+                isLoading={isActivitiesLoading}
+                error={activitiesError}
+                onRetry={reloadActivities}
+              />
+            </div>
+
+            <CriticalProcessesCard
+              processes={enrichedProcesses}
+              isLoading={isLoading}
+              isReloading={isReloading}
+              error={error}
+              onRetry={reload}
+              onAnalyze={openDetail}
+              thresholdDays={15}
+            />
+          </>
+        ) : (
+          <>
+            <div className={styles.activitiesGrid}>
+              <ActivitySummary
+                summary={activitySummary}
+                isLoading={isSummaryLoading}
+                error={summaryError}
+                onRetry={reloadSummary}
+              />
+              <RecentActivities
+                activities={recentActivities}
+                isLoading={isActivitiesLoading}
+                error={activitiesError}
+                onRetry={reloadActivities}
+              />
+            </div>
+
+            <div className={styles.errorState} role="alert">
+              <div>
+                <h2>Acesso negado</h2>
+                <p>Você não possui permissão para visualizar processos.</p>
+              </div>
+            </div>
+          </>
         )}
       </main>
 

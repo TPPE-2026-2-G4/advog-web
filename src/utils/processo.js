@@ -5,6 +5,11 @@ export const PROCESS_STATUS = Object.freeze([
   'Arquivado',
 ]);
 
+export const FINALIZED_PROCESS_STATUS = Object.freeze([
+  'Concluído',
+  'Arquivado',
+]);
+
 export const PROCESS_PAGE_SIZE = 5;
 
 export const EMPTY_PROCESS_SUMMARY = Object.freeze({
@@ -40,6 +45,14 @@ const CNJ_DIGIT_LIMIT = 20;
 const ISO_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
 const BR_DATE_REGEX = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+
+const formatUtcDateIso = (utcTimestamp) => {
+  const date = new Date(utcTimestamp);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const isValidDateParts = (year, month, day) => {
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -98,6 +111,63 @@ export function calculateRemainingDays(value, now = new Date()) {
 export function isOverdueDeadline(value, now = new Date()) {
   const remainingDays = calculateRemainingDays(value, now);
   return remainingDays !== null && remainingDays < 0;
+}
+
+export function getUpcomingDeadlineWindow(days = 15, now = new Date()) {
+  const todayUtc = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate()
+  );
+  const safeDays = Math.max(0, Number(days) || 0);
+  const endUtc = todayUtc + safeDays * DAY_IN_MILLISECONDS;
+
+  return {
+    prazoInicio: formatUtcDateIso(todayUtc),
+    prazoFim: formatUtcDateIso(endUtc),
+  };
+}
+
+export function getDeadlineTone(remainingDays) {
+  if (remainingDays <= 3) return 'danger';
+  if (remainingDays <= 5) return 'warning';
+  return 'success';
+}
+
+export function formatDeadlineCountdown(remainingDays) {
+  if (remainingDays === 0) return 'Vence hoje';
+  return `Vence em: ${remainingDays} dia(s)`;
+}
+
+export function getUpcomingProcesses(
+  processes = [],
+  { days = 15, limit = 5, now = new Date() } = {}
+) {
+  const safeList = Array.isArray(processes) ? processes : [];
+
+  return safeList
+    .filter(
+      (process) => process && !FINALIZED_PROCESS_STATUS.includes(process.status)
+    )
+    .map((process) => ({
+      ...process,
+      dias_restantes: calculateRemainingDays(process.data_prazo, now),
+    }))
+    .filter(
+      (process) =>
+        process.dias_restantes !== null &&
+        process.dias_restantes >= 0 &&
+        process.dias_restantes <= days
+    )
+    .sort((a, b) => {
+      if (a.dias_restantes !== b.dias_restantes) {
+        return a.dias_restantes - b.dias_restantes;
+      }
+      const idA = Number(a.processo_id ?? a.id ?? 0);
+      const idB = Number(b.processo_id ?? b.id ?? 0);
+      return idA - idB;
+    })
+    .slice(0, limit);
 }
 
 export function calculateDaysSince(value, now = new Date()) {

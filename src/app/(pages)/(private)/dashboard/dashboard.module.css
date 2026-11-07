@@ -41,18 +41,18 @@
   gap: 24px;
 }
 
+.summariesGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
 .activitiesGrid {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
-}
-
-.summariesColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  min-width: 0;
 }
 
 .warningBanner {
@@ -89,6 +89,12 @@
   margin: 6px 0 0;
   color: #6b7280;
   font-size: 14px;
+}
+
+@media (max-width: 1180px) {
+  .summariesGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1024px) {
