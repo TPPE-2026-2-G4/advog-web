@@ -18,35 +18,91 @@ export const InstitucionalContext = createContext({
   atualizarInstitucional: () => {},
 });
 
+export function getInitialInstitucional(initialData) {
+  if (initialData) return initialData;
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('institucional_data');
+      if (cached) {
+        const dadosCache = JSON.parse(cached);
+        if (dadosCache && typeof dadosCache === 'object') {
+          return { ...DEFAULT_INSTITUCIONAL, ...dadosCache };
+        }
+      }
+    } catch {
+      // Ignora erro de leitura do cache
+    }
+  }
+  return DEFAULT_INSTITUCIONAL;
+}
+
 function aplicarVariaveisCSS(dados) {
   if (typeof document !== 'undefined' && dados) {
-    if (dados.corPrimaria) {
-      document.documentElement.style.setProperty(
-        '--cor-primaria',
-        dados.corPrimaria
-      );
+    const cp = dados.corPrimaria;
+    const cs = dados.corSecundaria;
+
+    if (cp) {
+      document.documentElement.style.setProperty('--cor-primaria', cp);
       document.documentElement.style.setProperty(
         '--cor-primaria-texto',
-        getContrastTextColor(dados.corPrimaria)
+        getContrastTextColor(cp)
       );
     }
-    if (dados.corSecundaria) {
-      document.documentElement.style.setProperty(
-        '--cor-secundaria',
-        dados.corSecundaria
-      );
+    if (cs) {
+      document.documentElement.style.setProperty('--cor-secundaria', cs);
       document.documentElement.style.setProperty(
         '--cor-secundaria-texto',
-        getContrastTextColor(dados.corSecundaria)
+        getContrastTextColor(cs)
       );
+    }
+
+    let styleEl = document.getElementById('theme-injected-overrides');
+    if (
+      !styleEl &&
+      (cp || cs || dados.logotipo) &&
+      typeof document.head !== 'undefined'
+    ) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'theme-injected-overrides';
+      document.head.appendChild(styleEl);
+    }
+    if (styleEl) {
+      let css = '';
+      if (cp) {
+        css +=
+          ':root, [class*="layout"] { --cor-primaria: ' +
+          cp +
+          ' !important; --cor-primaria-texto: ' +
+          getContrastTextColor(cp) +
+          ' !important; } ';
+        css +=
+          'aside[data-testid="sidebar"] { background-color: ' +
+          cp +
+          ' !important; } ';
+      }
+      if (cs) {
+        css +=
+          ':root, [class*="layout"] { --cor-secundaria: ' +
+          cs +
+          ' !important; --cor-secundaria-texto: ' +
+          getContrastTextColor(cs) +
+          ' !important; } ';
+      }
+      if (dados.logotipo) {
+        css +=
+          '[data-testid="sidebar-logo-icon"] { display: none !important; } ';
+      }
+      styleEl.textContent = css;
     }
   }
 }
 
 export function InstitucionalProvider({ children, initialData }) {
-  const [institucional, setInstitucional] = useState(
-    () => initialData || DEFAULT_INSTITUCIONAL
-  );
+  const [institucional, setInstitucional] = useState(() => {
+    const dadosIniciais = getInitialInstitucional(initialData);
+    aplicarVariaveisCSS(dadosIniciais);
+    return dadosIniciais;
+  });
 
   const atualizarInstitucional = useCallback((novosDados) => {
     setInstitucional((prev) => {
@@ -67,7 +123,6 @@ export function InstitucionalProvider({ children, initialData }) {
   }, []);
 
   useEffect(() => {
-    // Sincroniza variáveis CSS imediatamente com o cache local
     try {
       const cached = localStorage.getItem('institucional_data');
       if (cached) {
@@ -79,21 +134,6 @@ export function InstitucionalProvider({ children, initialData }) {
     } catch {
       // Ignora erro de leitura do cache
     }
-
-    // Atualiza o estado React de forma assíncrona para evitar renderizações em cascata
-    Promise.resolve().then(() => {
-      try {
-        const cached = localStorage.getItem('institucional_data');
-        if (cached) {
-          const dadosCache = JSON.parse(cached);
-          if (dadosCache && typeof dadosCache === 'object') {
-            setInstitucional((prev) => ({ ...prev, ...dadosCache }));
-          }
-        }
-      } catch {
-        // Ignora erro de leitura do cache
-      }
-    });
 
     buscarDadosInstitucionais().then((dados) => {
       if (

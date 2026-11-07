@@ -48,13 +48,32 @@ export default function RootLayout({ children }) {
                         var yiq = (r * 299 + g * 587 + b * 114) / 1000;
                         return yiq >= 150 ? dark : light;
                       }
-                      if (d.corPrimaria) {
-                        document.documentElement.style.setProperty('--cor-primaria', d.corPrimaria);
-                        document.documentElement.style.setProperty('--cor-primaria-texto', getContrast(d.corPrimaria));
+                      var cp = d.corPrimaria;
+                      var cs = d.corSecundaria;
+                      if (cp) {
+                        document.documentElement.style.setProperty('--cor-primaria', cp);
+                        document.documentElement.style.setProperty('--cor-primaria-texto', getContrast(cp));
                       }
-                      if (d.corSecundaria) {
-                        document.documentElement.style.setProperty('--cor-secundaria', d.corSecundaria);
-                        document.documentElement.style.setProperty('--cor-secundaria-texto', getContrast(d.corSecundaria));
+                      if (cs) {
+                        document.documentElement.style.setProperty('--cor-secundaria', cs);
+                        document.documentElement.style.setProperty('--cor-secundaria-texto', getContrast(cs));
+                      }
+                      var styleEl = document.createElement('style');
+                      styleEl.id = 'theme-injected-overrides';
+                      var css = '';
+                      if (cp) {
+                        css += ':root, [class*="layout"] { --cor-primaria: ' + cp + ' !important; --cor-primaria-texto: ' + getContrast(cp) + ' !important; } ';
+                        css += 'aside[data-testid="sidebar"] { background-color: ' + cp + ' !important; } ';
+                      }
+                      if (cs) {
+                        css += ':root, [class*="layout"] { --cor-secundaria: ' + cs + ' !important; --cor-secundaria-texto: ' + getContrast(cs) + ' !important; } ';
+                      }
+                      if (d.logotipo) {
+                        css += '[data-testid="sidebar-logo-icon"] { display: none !important; } ';
+                      }
+                      styleEl.textContent = css;
+                      if (document.head) {
+                        document.head.appendChild(styleEl);
                       }
                     }
                   }
