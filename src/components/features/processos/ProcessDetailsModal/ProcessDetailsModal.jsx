@@ -1,15 +1,31 @@
 'use client';
 
-import { File, FileText } from 'lucide-react';
+import { AlertTriangle, Eye, File, FileText, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import { formatProcessDate } from '@/utils/processo';
 import {
+  excluirDocumento,
   listarDocumentos,
+  listarMovimentacoes,
   obterUrlDocumento,
   uploadDocumento,
 } from '@/services/processos';
 import styles from './ProcessDetailsModal.module.css';
+
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
+const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'doc', 'png', 'jpg', 'jpeg'];
+
+const MOVEMENT_TYPE_LABELS = {
+  CRIACAO_PROCESSO: 'Criação do Processo',
+  ATUALIZACAO_PROCESSO: 'Atualização de Status',
+  SINCRONIZACAO_TRIBUNAL: 'DataJud',
+  UPLOAD_ARQUIVO: 'Documento Anexado',
+  EXCLUSAO_ARQUIVO: 'Documento Removido',
+  CRIACAO_ATIVIDADE: 'Nova Atividade',
+  ATUALIZACAO_ETAPA_ATIVIDADE: 'Etapa de Atividade',
+  EXCLUSAO_ATIVIDADE: 'Atividade Removida',
+};
 
 const getStatusStyle = (status) => {
   if (status === 'Ativo') return styles.statusActive;
@@ -23,23 +39,48 @@ export default function ProcessDetailsModal({
   onClose,
   error,
   onRetry,
+  canEdit = true,
 }) {
   const [activeTab, setActiveTab] = useState('resumo');
+  const [movements, setMovements] = useState([]);
+  const [isLoadingMovements, setIsLoadingMovements] = useState(false);
+  const [movementsError, setMovementsError] = useState('');
   const [documents, setDocuments] = useState([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [docToDelete, setDocToDelete] = useState(null);
+  const [isDeletingDoc, setIsDeletingDoc] = useState(false);
+  const [deleteModalError, setDeleteModalError] = useState('');
   const [docsError, setDocsError] = useState('');
   const fileInputRef = useRef(null);
 
-  const processoId = process?.processo_id;
+  const processoId = process?.processo_id ?? process?.id;
 
-  const loadDocuments = useCallback(async () => {
+  const reloadMovements = useCallback(async () => {
+    if (!processoId) return;
+    setIsLoadingMovements(true);
+    setMovementsError('');
+    try {
+      const data = await listarMovimentacoes(processoId);
+      setMovements(Array.isArray(data) ? data : []);
+      setMovementsError('');
+    } catch (err) {
+      setMovementsError(
+        err instanceof Error ? err.message : 'Falha ao carregar movimentações.'
+      );
+    } finally {
+      setIsLoadingMovements(false);
+    }
+  }, [processoId]);
+
+  const reloadDocuments = useCallback(async () => {
     if (!processoId) return;
     setIsLoadingDocs(true);
     setDocsError('');
     try {
       const data = await listarDocumentos(processoId);
       setDocuments(Array.isArray(data) ? data : []);
+      setDocsError('');
     } catch (err) {
       setDocsError(
         err instanceof Error ? err.message : 'Falha ao carregar documentos.'
@@ -50,27 +91,64 @@ export default function ProcessDetailsModal({
   }, [processoId]);
 
   useEffect(() => {
-    let ignore = false;
-    if (activeTab === 'documentos' && processoId) {
-      listarDocumentos(processoId)
-        .then((data) => {
-          if (!ignore) {
-            setDocuments(Array.isArray(data) ? data : []);
-            setDocsError('');
-          }
-        })
-        .catch((err) => {
-          if (!ignore) {
-            setDocsError(
-              err instanceof Error
-                ? err.message
-                : 'Falha ao carregar documentos.'
-            );
-          }
-        });
-    }
+    if (activeTab !== 'movimentacoes' || !processoId) return;
+
+    let isSubscribed = true;
+
+    listarMovimentacoes(processoId)
+      .then((data) => {
+        if (isSubscribed) {
+          setMovements(Array.isArray(data) ? data : []);
+          setMovementsError('');
+        }
+      })
+      .catch((err) => {
+        if (isSubscribed) {
+          setMovementsError(
+            err instanceof Error
+              ? err.message
+              : 'Falha ao carregar movimentações.'
+          );
+        }
+      })
+      .finally(() => {
+        if (isSubscribed) {
+          setIsLoadingMovements(false);
+        }
+      });
+
     return () => {
-      ignore = true;
+      isSubscribed = false;
+    };
+  }, [activeTab, processoId, process?.status, process?.data_realizado]);
+
+  useEffect(() => {
+    if (activeTab !== 'documentos' || !processoId) return;
+
+    let isSubscribed = true;
+
+    listarDocumentos(processoId)
+      .then((data) => {
+        if (isSubscribed) {
+          setDocuments(Array.isArray(data) ? data : []);
+          setDocsError('');
+        }
+      })
+      .catch((err) => {
+        if (isSubscribed) {
+          setDocsError(
+            err instanceof Error ? err.message : 'Falha ao carregar documentos.'
+          );
+        }
+      })
+      .finally(() => {
+        if (isSubscribed) {
+          setIsLoadingDocs(false);
+        }
+      });
+
+    return () => {
+      isSubscribed = false;
     };
   }, [activeTab, processoId]);
 
@@ -84,6 +162,24 @@ export default function ProcessDetailsModal({
     { id: 'documentos', label: 'Documentos' },
   ];
   const tabId = (id) => `process-${process.processo_id}-${id}`;
+
+  const handleSelectTab = (tabKey) => {
+    if (tabKey === activeTab) {
+      if (tabKey === 'movimentacoes') {
+        reloadMovements();
+      } else if (tabKey === 'documentos') {
+        reloadDocuments();
+      }
+      return;
+    }
+    if (tabKey === 'movimentacoes') {
+      setIsLoadingMovements(true);
+    } else if (tabKey === 'documentos') {
+      setIsLoadingDocs(true);
+    }
+    setActiveTab(tabKey);
+  };
+
   const handleTabKeyDown = (event, index) => {
     const positions = {
       ArrowRight: (index + 1) % tabs.length,
@@ -94,7 +190,7 @@ export default function ProcessDetailsModal({
     const nextIndex = positions[event.key];
     if (nextIndex === undefined) return;
     event.preventDefault();
-    setActiveTab(tabs[nextIndex].id);
+    handleSelectTab(tabs[nextIndex].id);
     document.getElementById(tabId(tabs[nextIndex].id))?.focus();
   };
 
@@ -105,11 +201,27 @@ export default function ProcessDetailsModal({
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !processoId) return;
+
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
+      setDocsError(
+        'Formato inválido. Envie arquivos PDF, DOCX, DOC, PNG ou JPG.'
+      );
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setDocsError('O arquivo excede o limite máximo permitido de 25MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     setIsUploading(true);
     setDocsError('');
     try {
       await uploadDocumento(processoId, file);
-      await loadDocuments();
+      await reloadDocuments();
     } catch (err) {
       setDocsError(
         err instanceof Error ? err.message : 'Falha ao enviar documento.'
@@ -122,7 +234,10 @@ export default function ProcessDetailsModal({
     }
   };
 
-  const handleViewDoc = async (docId) => {
+  const handleViewDoc = async (doc) => {
+    const docId = typeof doc === 'object' ? doc?.documento_id : doc;
+    if (!processoId || !docId) return;
+
     try {
       const res = await obterUrlDocumento(processoId, docId);
       if (res?.url) {
@@ -132,6 +247,35 @@ export default function ProcessDetailsModal({
       setDocsError(
         err instanceof Error ? err.message : 'Falha ao abrir documento.'
       );
+    }
+  };
+
+  const openDeleteConfirm = (doc) => {
+    setDocToDelete(doc);
+    setDeleteModalError('');
+  };
+
+  const closeDeleteConfirm = () => {
+    if (!isDeletingDoc) {
+      setDocToDelete(null);
+      setDeleteModalError('');
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!docToDelete || !processoId) return;
+    setIsDeletingDoc(true);
+    setDeleteModalError('');
+    try {
+      await excluirDocumento(processoId, docToDelete.documento_id);
+      setDocToDelete(null);
+      await reloadDocuments();
+    } catch (err) {
+      setDeleteModalError(
+        err instanceof Error ? err.message : 'Falha ao excluir documento.'
+      );
+    } finally {
+      setIsDeletingDoc(false);
     }
   };
 
@@ -165,27 +309,39 @@ export default function ProcessDetailsModal({
         )}
 
         <div className={styles.tabsContainer}>
-          <div
-            className={styles.tabsList}
-            role="tablist"
-            aria-label="Detalhes do processo"
-          >
-            {tabs.map((tab, index) => (
+          <div className={styles.tabsHeaderRow}>
+            <div
+              className={styles.tabsList}
+              role="tablist"
+              aria-label="Detalhes do processo"
+            >
+              {tabs.map((tab, index) => (
+                <button
+                  key={tab.id}
+                  id={tabId(tab.id)}
+                  type="button"
+                  role="tab"
+                  aria-controls={`${tabId(tab.id)}-panel`}
+                  aria-selected={activeTab === tab.id}
+                  tabIndex={activeTab === tab.id ? 0 : -1}
+                  className={`${styles.tabButton} ${activeTab === tab.id ? styles.tabButtonActive : ''}`}
+                  onClick={() => handleSelectTab(tab.id)}
+                  onKeyDown={(event) => handleTabKeyDown(event, index)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {activeTab === 'documentos' && canEdit && (
               <button
-                key={tab.id}
-                id={tabId(tab.id)}
                 type="button"
-                role="tab"
-                aria-controls={`${tabId(tab.id)}-panel`}
-                aria-selected={activeTab === tab.id}
-                tabIndex={activeTab === tab.id ? 0 : -1}
-                className={`${styles.tabButton} ${activeTab === tab.id ? styles.tabButtonActive : ''}`}
-                onClick={() => setActiveTab(tab.id)}
-                onKeyDown={(event) => handleTabKeyDown(event, index)}
+                className={styles.tabAddDocButton}
+                onClick={handleUploadClick}
+                disabled={isUploading}
               >
-                {tab.label}
+                {isUploading ? 'Enviando…' : 'Adicionar Documento'}
               </button>
-            ))}
+            )}
           </div>
           {error && (
             <div role="alert" className={styles.refreshError}>
@@ -210,7 +366,7 @@ export default function ProcessDetailsModal({
                 </div>
                 <div className={styles.detailItem}>
                   <dt>Tribunal</dt>
-                  <dd>{process.tribunal}</dd>
+                  <dd>{process.tribunal || 'Tribunal de Origem'}</dd>
                 </div>
                 <div className={styles.detailItem}>
                   <dt>Responsável</dt>
@@ -233,43 +389,57 @@ export default function ProcessDetailsModal({
 
             {activeTab === 'movimentacoes' && (
               <div className={styles.movementsList}>
-                {process.data_realizado ? (
-                  <div className={styles.movementItem}>
-                    <div className={styles.movementIconWrapper}>
-                      <FileText size={16} aria-hidden="true" />
-                    </div>
-                    <div className={styles.movementInfo}>
-                      <p className={styles.movementTitle}>
-                        Atualização de Movimentação Sincronizada
-                      </p>
-                      <p className={styles.movementMeta}>
-                        <span>{formatProcessDate(process.data_realizado)}</span>
-                        <span>—</span>
-                        <span className={styles.movementTag}>DataJud</span>
-                      </p>
-                    </div>
+                {isLoadingMovements ? (
+                  <div className={styles.emptyDocuments}>
+                    <p className={styles.emptyDocumentsText}>
+                      Carregando movimentações…
+                    </p>
                   </div>
-                ) : null}
-
-                {process.data_inicio ? (
-                  <div className={styles.movementItem}>
-                    <div className={styles.movementIconWrapper}>
-                      <FileText size={16} aria-hidden="true" />
-                    </div>
-                    <div className={styles.movementInfo}>
-                      <p className={styles.movementTitle}>
-                        Distribuição Inicial do Processo
-                      </p>
-                      <p className={styles.movementMeta}>
-                        <span>{formatProcessDate(process.data_inicio)}</span>
-                        <span>—</span>
-                        <span>{process.tribunal || 'Tribunal de Origem'}</span>
-                      </p>
-                    </div>
+                ) : movementsError ? (
+                  <div role="alert" className={styles.refreshError}>
+                    <p>{movementsError}</p>
+                    <button type="button" onClick={reloadMovements}>
+                      Tentar novamente
+                    </button>
                   </div>
-                ) : null}
+                ) : movements.length > 0 ? (
+                  movements.map((mov) => {
+                    const isDataJud =
+                      mov.tipo_movimentacao === 'SINCRONIZACAO_TRIBUNAL';
+                    const typeLabel =
+                      MOVEMENT_TYPE_LABELS[mov.tipo_movimentacao] ||
+                      mov.tipo_movimentacao;
 
-                {!process.data_realizado && !process.data_inicio && (
+                    return (
+                      <div
+                        key={mov.movimentacao_id}
+                        className={styles.movementItem}
+                      >
+                        <div className={styles.movementIconWrapper}>
+                          <FileText size={16} aria-hidden="true" />
+                        </div>
+                        <div className={styles.movementInfo}>
+                          <p className={styles.movementTitle}>
+                            {mov.descricao}
+                          </p>
+                          <p className={styles.movementMeta}>
+                            <span>
+                              {formatProcessDate(mov.data_movimentacao)}
+                            </span>
+                            <span>—</span>
+                            {isDataJud ? (
+                              <span className={styles.movementTag}>
+                                {typeLabel}
+                              </span>
+                            ) : (
+                              <span>{typeLabel}</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
                   <div className={styles.emptyDocuments}>
                     <FileText
                       className={styles.emptyDocumentsIcon}
@@ -291,11 +461,15 @@ export default function ProcessDetailsModal({
                   onChange={handleFileChange}
                   style={{ display: 'none' }}
                   data-testid="file-upload-input"
+                  accept=".pdf,.docx,.doc,.png,.jpg,.jpeg"
                 />
 
                 {docsError && (
                   <div role="alert" className={styles.refreshError}>
-                    {docsError}
+                    <p>{docsError}</p>
+                    <button type="button" onClick={reloadDocuments}>
+                      Tentar novamente
+                    </button>
                   </div>
                 )}
 
@@ -306,53 +480,52 @@ export default function ProcessDetailsModal({
                     </p>
                   </div>
                 ) : documents.length > 0 ? (
-                  <>
-                    <div className={styles.documentsHeader}>
-                      <button
-                        type="button"
-                        className={styles.uploadButton}
-                        onClick={handleUploadClick}
-                        disabled={isUploading}
+                  <div className={styles.documentsList}>
+                    {documents.map((doc) => (
+                      <div
+                        key={doc.documento_id}
+                        className={styles.documentItem}
                       >
-                        {isUploading ? 'Enviando…' : '+ Adicionar Documento'}
-                      </button>
-                    </div>
-                    <div className={styles.documentsList}>
-                      {documents.map((doc) => (
-                        <div
-                          key={doc.documento_id}
-                          className={styles.documentItem}
-                        >
-                          <div className={styles.documentMain}>
-                            <File
-                              size={20}
-                              className={styles.documentIcon}
-                              aria-hidden="true"
-                            />
-                            <div>
-                              <p className={styles.documentName}>
-                                {doc.nome_original}
-                              </p>
-                              <p className={styles.documentMeta}>
-                                {(doc.tamanho_bytes / 1024).toFixed(1)} KB •{' '}
-                                {formatProcessDate(doc.data_upload)}
-                              </p>
-                            </div>
+                        <div className={styles.documentMain}>
+                          <div className={styles.documentIconWrapper}>
+                            <FileText size={16} aria-hidden="true" />
                           </div>
-                          <div className={styles.documentActions}>
-                            <button
-                              type="button"
-                              className={styles.docActionBtn}
-                              onClick={() => handleViewDoc(doc.documento_id)}
-                            >
-                              Visualizar
-                            </button>
+                          <div className={styles.documentInfo}>
+                            <p className={styles.documentName}>
+                              {doc.nome_original}
+                            </p>
+                            <p className={styles.documentMeta}>
+                              {(doc.tamanho_bytes / 1024).toFixed(1)} KB •{' '}
+                              {formatProcessDate(doc.data_upload)}
+                            </p>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
+                        <div className={styles.documentActions}>
+                          <button
+                            type="button"
+                            className={styles.docIconButton}
+                            onClick={() => handleViewDoc(doc)}
+                            aria-label="Visualizar"
+                            title="Visualizar documento"
+                          >
+                            <Eye size={16} aria-hidden="true" />
+                          </button>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              className={`${styles.docIconButton} ${styles.docDeleteIconButton}`}
+                              onClick={() => openDeleteConfirm(doc)}
+                              aria-label={`Excluir documento ${doc.nome_original}`}
+                              title="Excluir documento"
+                            >
+                              <Trash2 size={16} aria-hidden="true" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : !docsError ? (
                   <div className={styles.emptyDocuments}>
                     <File
                       className={styles.emptyDocumentsIcon}
@@ -361,21 +534,82 @@ export default function ProcessDetailsModal({
                     <p className={styles.emptyDocumentsText}>
                       Nenhum documento anexado.
                     </p>
-                    <button
-                      type="button"
-                      className={styles.uploadButton}
-                      onClick={handleUploadClick}
-                      disabled={isUploading}
-                    >
-                      {isUploading ? 'Enviando…' : 'Fazer Upload'}
-                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className={styles.uploadButton}
+                        onClick={handleUploadClick}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? 'Enviando…' : 'Fazer Upload'}
+                      </button>
+                    )}
                   </div>
-                )}
+                ) : null}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {docToDelete && (
+        <Modal
+          isOpen={Boolean(docToDelete)}
+          onClose={closeDeleteConfirm}
+          preventClose={isDeletingDoc}
+          className={styles.deleteConfirmModal}
+          overlayClassName={styles.deleteConfirmOverlay}
+          ariaLabelledBy="delete-doc-modal-title"
+        >
+          <div className={styles.deleteConfirmHeader}>
+            <div className={styles.deleteConfirmIconWrapper}>
+              <AlertTriangle size={22} aria-hidden="true" />
+            </div>
+            <ModalCloseButton
+              onClose={closeDeleteConfirm}
+              disabled={isDeletingDoc}
+            />
+          </div>
+
+          <div className={styles.deleteConfirmBody}>
+            <h3
+              id="delete-doc-modal-title"
+              className={styles.deleteConfirmTitle}
+            >
+              Excluir documento?
+            </h3>
+            <p className={styles.deleteConfirmMessage}>
+              Tem certeza que deseja excluir o documento{' '}
+              <strong>{docToDelete.nome_original}</strong>? Esta ação não poderá
+              ser desfeita.
+            </p>
+            {deleteModalError && (
+              <p className={styles.deleteConfirmError} role="alert">
+                {deleteModalError}
+              </p>
+            )}
+          </div>
+
+          <div className={styles.deleteConfirmFooter}>
+            <button
+              type="button"
+              className={styles.deleteConfirmCancelBtn}
+              onClick={closeDeleteConfirm}
+              disabled={isDeletingDoc}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className={styles.deleteConfirmDeleteBtn}
+              onClick={handleConfirmDelete}
+              disabled={isDeletingDoc}
+            >
+              {isDeletingDoc ? 'Excluindo…' : 'Excluir'}
+            </button>
+          </div>
+        </Modal>
+      )}
     </Modal>
   );
 }

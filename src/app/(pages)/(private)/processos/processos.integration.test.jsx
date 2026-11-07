@@ -1104,7 +1104,12 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
           )
         );
       }
-
+      if (
+        urlString ===
+        `${API_BASE}/processos/${processWithoutMovement.processo_id}/movimentacoes`
+      ) {
+        return Promise.resolve(jsonResponse([]));
+      }
       if (urlString.startsWith(`${API_BASE}/processos/`)) {
         return Promise.resolve(
           jsonResponse(makePageResponse([processWithoutMovement]))
@@ -1137,7 +1142,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     );
 
     expect(
-      within(detailsModal).getByText(
+      await within(detailsModal).findByText(
         'Nenhuma movimentação registrada para este processo.'
       )
     ).toBeInTheDocument();
@@ -1148,10 +1153,15 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       })
     );
 
-    await within(detailsModal).findByRole('alert');
+    const alert = await within(detailsModal).findByRole('alert');
+    expect(alert).toHaveTextContent('Não foi possível carregar os documentos.');
 
     expect(
-      within(detailsModal).getByText('Nenhum documento anexado.')
+      within(detailsModal).queryByText('Nenhum documento anexado.')
+    ).not.toBeInTheDocument();
+
+    expect(
+      within(detailsModal).getByRole('button', { name: 'Tentar novamente' })
     ).toBeInTheDocument();
 
     const fileInput = within(detailsModal).getByTestId('file-upload-input');
@@ -1617,6 +1627,13 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         upload = () => jsonResponse({}),
         documentUrl = () =>
           jsonResponse({ url: 'https://example.com/doc.pdf' }),
+        deleteDoc = () => ({
+          ok: true,
+          status: 204,
+          json: vi.fn().mockResolvedValue(undefined),
+        }),
+        movements = () => jsonResponse([]),
+        processDetail,
       } = {},
       proc = initialApiProcess
     ) => {
@@ -1633,11 +1650,24 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
           result = upload();
         } else if (
           target.startsWith(`${docsUrl}/`) &&
+          options.method === 'DELETE'
+        ) {
+          result = deleteDoc();
+        } else if (
+          target.startsWith(`${docsUrl}/`) &&
           target.endsWith('/url')
         ) {
           result = documentUrl();
         } else if (target === docsUrl) {
           result = list();
+        } else if (
+          target ===
+            `${API_BASE}/processos/${proc.processo_id}/movimentacoes` ||
+          target.endsWith('/movimentacoes')
+        ) {
+          result = movements();
+        } else if (processDetail && target.includes('processo_id=')) {
+          result = processDetail();
         } else if (target.startsWith(`${API_BASE}/processos/`)) {
           result = jsonResponse(makePageResponse([proc]));
         } else {
@@ -1932,22 +1962,587 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       expect(within(modal).queryByRole('alert')).not.toBeInTheDocument();
     });
 
-    it('usa valores padrão para área e tribunal ausentes', async () => {
+    it('usa valores padrão para área e tribunal ausentes e aplica estilos para Concluído', async () => {
       const bare = {
         ...initialApiProcess,
         area: null,
         tribunal: null,
-        status: 'Em Análise',
+        status: 'Concluído',
       };
       routeProcessApi({}, bare);
       const modal = await openDetails(bare);
 
       expect(within(modal).getByText('Geral')).toBeInTheDocument();
+      expect(within(modal).getByText('Tribunal de Origem')).toBeInTheDocument();
+      expect(within(modal).getByText('Concluído')).toBeInTheDocument();
 
+      fireEvent.click(within(modal).getByRole('button', { name: 'Fechar' }));
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('dialog', { name: initialApiProcess.titulo_proc })
+        ).not.toBeInTheDocument()
+      );
+    });
+
+    it('aplica estilo de status Arquivado', async () => {
+      const archivedProc = {
+        ...initialApiProcess,
+        status: 'Arquivado',
+      };
+      routeProcessApi({}, archivedProc);
+      const modalArchived = await openDetails(archivedProc);
+      expect(within(modalArchived).getByText('Arquivado')).toBeInTheDocument();
+    });
+
+    it('abre modal de confirmação de exclusão de documento, permite cancelar e conclui exclusão com sucesso', async () => {
+      let currentDocs = [doc];
+      routeProcessApi({
+        list: () => jsonResponse(currentDocs),
+        deleteDoc: () => {
+          currentDocs = [];
+          return {
+            ok: true,
+            status: 204,
+            json: vi.fn().mockResolvedValue(undefined),
+          };
+        },
+      });
+      const modal = await openDetails();
+      openDocumentsTab(modal);
+      await within(modal).findByText('peticao.pdf');
+
+      fireEvent.click(
+        within(modal).getByRole('button', {
+          name: `Excluir documento ${doc.nome_original}`,
+        })
+      );
+
+      const confirmDialog = screen.getByRole('dialog', {
+        name: 'Excluir documento?',
+      });
+      expect(confirmDialog).toBeInTheDocument();
+      expect(
+        within(confirmDialog).getByText(
+          /Tem certeza que deseja excluir o documento/
+        )
+      ).toBeInTheDocument();
+
+      fireEvent.click(
+        within(confirmDialog).getByRole('button', { name: 'Cancelar' })
+      );
+      expect(
+        screen.queryByRole('dialog', { name: 'Excluir documento?' })
+      ).not.toBeInTheDocument();
+
+      fireEvent.click(
+        within(modal).getByRole('button', {
+          name: `Excluir documento ${doc.nome_original}`,
+        })
+      );
+      const confirmDialogAgain = screen.getByRole('dialog', {
+        name: 'Excluir documento?',
+      });
+      fireEvent.click(
+        within(confirmDialogAgain).getByRole('button', { name: 'Excluir' })
+      );
+
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('dialog', { name: 'Excluir documento?' })
+        ).not.toBeInTheDocument()
+      );
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, options]) =>
+            String(url).endsWith('/documentos/1') &&
+            options?.method === 'DELETE'
+        )
+      ).toBe(true);
+      expect(
+        await within(modal).findByText('Nenhum documento anexado.')
+      ).toBeInTheDocument();
+    });
+
+    it('mostra estado de exclusão e não fecha modal durante exclusão de documento', async () => {
+      let finishDelete;
+      routeProcessApi({
+        list: () => jsonResponse([doc]),
+        deleteDoc: () =>
+          new Promise((resolve) => {
+            finishDelete = () =>
+              resolve({
+                ok: true,
+                status: 204,
+                json: vi.fn().mockResolvedValue(undefined),
+              });
+          }),
+      });
+
+      const modal = await openDetails();
+      openDocumentsTab(modal);
+      await within(modal).findByText('peticao.pdf');
+
+      fireEvent.click(
+        within(modal).getByRole('button', {
+          name: `Excluir documento ${doc.nome_original}`,
+        })
+      );
+      const confirmDialog = screen.getByRole('dialog', {
+        name: 'Excluir documento?',
+      });
+
+      fireEvent.click(
+        within(confirmDialog).getByRole('button', { name: 'Excluir' })
+      );
+
+      expect(
+        within(confirmDialog).getByRole('button', { name: 'Excluindo…' })
+      ).toBeDisabled();
+
+      fireEvent.click(
+        within(confirmDialog).getByRole('button', { name: 'Cancelar' })
+      );
+      expect(
+        screen.getByRole('dialog', { name: 'Excluir documento?' })
+      ).toBeInTheDocument();
+
+      finishDelete();
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('dialog', { name: 'Excluir documento?' })
+        ).not.toBeInTheDocument()
+      );
+    });
+
+    it('exibe erro dentro do modal de confirmação ao falhar na exclusão e trata erro sem instância de Error', async () => {
+      routeProcessApi({
+        list: () => jsonResponse([doc]),
+        deleteDoc: () =>
+          jsonResponse(
+            { detail: 'Não é permitido remover este documento.' },
+            422
+          ),
+      });
+      const modal = await openDetails();
+      openDocumentsTab(modal);
+      await within(modal).findByText('peticao.pdf');
+
+      fireEvent.click(
+        within(modal).getByRole('button', {
+          name: `Excluir documento ${doc.nome_original}`,
+        })
+      );
+      const confirmDialog = screen.getByRole('dialog', {
+        name: 'Excluir documento?',
+      });
+      fireEvent.click(
+        within(confirmDialog).getByRole('button', { name: 'Excluir' })
+      );
+
+      expect(await within(confirmDialog).findByRole('alert')).toHaveTextContent(
+        'Não é permitido remover este documento.'
+      );
+
+      fireEvent.click(
+        within(confirmDialog).getByRole('button', { name: 'Cancelar' })
+      );
+      expect(
+        screen.queryByRole('dialog', { name: 'Excluir documento?' })
+      ).not.toBeInTheDocument();
+
+      const delSpy = vi
+        .spyOn(processosService, 'excluirDocumento')
+        .mockRejectedValueOnce('falha-generica');
+
+      fireEvent.click(
+        within(modal).getByRole('button', {
+          name: `Excluir documento ${doc.nome_original}`,
+        })
+      );
+      const confirmDialog2 = screen.getByRole('dialog', {
+        name: 'Excluir documento?',
+      });
+      fireEvent.click(
+        within(confirmDialog2).getByRole('button', { name: 'Excluir' })
+      );
+
+      expect(
+        await within(confirmDialog2).findByRole('alert')
+      ).toHaveTextContent('Falha ao excluir documento.');
+
+      delSpy.mockRestore();
+    });
+
+    it('valida extensão não permitida e tamanho máximo de arquivo no upload e aciona botões de envio', async () => {
+      routeProcessApi({ list: () => jsonResponse([]) });
+      const modal = await openDetails();
+      openDocumentsTab(modal);
+      await within(modal).findByText('Nenhum documento anexado.');
+
+      const fileInput = within(modal).getByTestId('file-upload-input');
+      const clickSpy = vi
+        .spyOn(fileInput, 'click')
+        .mockImplementation(() => {});
+
+      const uploadBtn = within(modal).getByRole('button', {
+        name: 'Fazer Upload',
+      });
+      fireEvent.click(uploadBtn);
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+
+      const invalidFile = new File(['code'], 'malware.exe', {
+        type: 'application/x-msdownload',
+      });
+      fireEvent.change(fileInput, { target: { files: [invalidFile] } });
+      expect(await within(modal).findByRole('alert')).toHaveTextContent(
+        'Formato inválido. Envie arquivos PDF, DOCX, DOC, PNG ou JPG.'
+      );
+
+      const hugeFile = new File(['x'], 'arquivo-enorme.pdf', {
+        type: 'application/pdf',
+      });
+      Object.defineProperty(hugeFile, 'size', {
+        value: 26 * 1024 * 1024,
+      });
+      fireEvent.change(fileInput, { target: { files: [hugeFile] } });
+      expect(await within(modal).findByRole('alert')).toHaveTextContent(
+        'O arquivo excede o limite máximo permitido de 25MB.'
+      );
+
+      clickSpy.mockRestore();
+    });
+
+    it('aciona o seletor de arquivos pelo botão do cabeçalho da aba Documentos quando canEdit é true', async () => {
+      routeProcessApi({ list: () => jsonResponse([doc]) });
+      const modal = await openDetails();
+      openDocumentsTab(modal);
+      await within(modal).findByText('peticao.pdf');
+
+      const fileInput = within(modal).getByTestId('file-upload-input');
+      const clickSpy = vi
+        .spyOn(fileInput, 'click')
+        .mockImplementation(() => {});
+
+      const addDocBtn = within(modal).getByRole('button', {
+        name: 'Adicionar Documento',
+      });
+      fireEvent.click(addDocBtn);
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+
+      clickSpy.mockRestore();
+    });
+
+    it('permite tentar novamente ao falhar no carregamento de documentos', async () => {
+      let listCalls = 0;
+      routeProcessApi({
+        list: () => {
+          listCalls += 1;
+          if (listCalls === 1) {
+            return jsonResponse({ detail: 'Falha temporária' }, 500);
+          }
+          if (listCalls === 2) {
+            return jsonResponse({ detail: 'Segunda falha' }, 500);
+          }
+          return jsonResponse([doc]);
+        },
+      });
+
+      const modal = await openDetails();
+      openDocumentsTab(modal);
+
+      const alert = await within(modal).findByRole('alert');
+      expect(alert).toHaveTextContent('Falha temporária');
+
+      fireEvent.click(
+        within(alert).getByRole('button', { name: 'Tentar novamente' })
+      );
+
+      const alert2 = await within(modal).findByRole('alert');
+      expect(alert2).toHaveTextContent('Segunda falha');
+
+      fireEvent.click(
+        within(alert2).getByRole('button', { name: 'Tentar novamente' })
+      );
+
+      expect(await within(modal).findByText('peticao.pdf')).toBeInTheDocument();
+    });
+
+    it('exibe lista de movimentações com tags DataJud e tipos customizados, e trata erro com tentar novamente', async () => {
+      const mockMovements = [
+        {
+          movimentacao_id: 101,
+          tipo_movimentacao: 'SINCRONIZACAO_TRIBUNAL',
+          descricao: 'Atualização DataJud automatizada',
+          data_movimentacao: '2026-09-02T14:30:00',
+        },
+        {
+          movimentacao_id: 102,
+          tipo_movimentacao: 'CRIACAO_PROCESSO',
+          descricao: 'Processo distribuído inicialmente',
+          data_movimentacao: '2026-09-01T10:00:00',
+        },
+        {
+          movimentacao_id: 103,
+          tipo_movimentacao: 'TIPO_INCOMUM',
+          descricao: 'Movimento especial sem rótulo mapeado',
+          data_movimentacao: '2026-09-03T11:00:00',
+        },
+      ];
+
+      let movementsCalls = 0;
+      routeProcessApi({
+        movements: () => {
+          movementsCalls += 1;
+          if (movementsCalls === 1) {
+            return jsonResponse({ detail: 'Erro no serviço DataJud' }, 500);
+          }
+          if (movementsCalls === 2) {
+            return jsonResponse({ detail: 'Segunda falha DataJud' }, 500);
+          }
+          return jsonResponse(mockMovements);
+        },
+      });
+
+      const modal = await openDetails();
+      const openMovementsTab = () =>
+        fireEvent.click(
+          within(modal).getByRole('tab', { name: 'Movimentações' })
+        );
+
+      openMovementsTab();
+
+      const alert = await within(modal).findByRole('alert');
+      expect(alert).toHaveTextContent('Erro no serviço DataJud');
+      expect(
+        within(modal).queryByText(
+          'Nenhuma movimentação registrada para este processo.'
+        )
+      ).not.toBeInTheDocument();
+
+      const retryBtn = within(alert).getByRole('button', {
+        name: 'Tentar novamente',
+      });
+      fireEvent.click(retryBtn);
+
+      const alert2 = await within(modal).findByRole('alert');
+      expect(alert2).toHaveTextContent('Segunda falha DataJud');
+
+      const retryBtn2 = within(alert2).getByRole('button', {
+        name: 'Tentar novamente',
+      });
+      fireEvent.click(retryBtn2);
+
+      expect(
+        await within(modal).findByText('Atualização DataJud automatizada')
+      ).toBeInTheDocument();
+      expect(within(modal).getByText('DataJud')).toBeInTheDocument();
+      expect(
+        within(modal).getByText('Processo distribuído inicialmente')
+      ).toBeInTheDocument();
+      expect(
+        within(modal).getByText('Criação do Processo')
+      ).toBeInTheDocument();
+      expect(
+        within(modal).getByText('Movimento especial sem rótulo mapeado')
+      ).toBeInTheDocument();
+      expect(within(modal).getByText('TIPO_INCOMUM')).toBeInTheDocument();
+    });
+
+    it('recarrega movimentações e documentos ao clicar na aba que já está selecionada e trata resposta não-array', async () => {
+      let movCalls = 0;
+      let docCalls = 0;
+      routeProcessApi({
+        movements: () => {
+          movCalls += 1;
+          if (movCalls === 2) return jsonResponse({ invalid: 'not-array' });
+          return jsonResponse([]);
+        },
+        list: () => {
+          docCalls += 1;
+          return jsonResponse([doc]);
+        },
+      });
+
+      const modal = await openDetails();
+
+      const tabResumo = within(modal).getByRole('tab', { name: 'Resumo' });
+      fireEvent.click(tabResumo);
+      expect(tabResumo).toHaveAttribute('aria-selected', 'true');
+
+      const tabMov = within(modal).getByRole('tab', { name: 'Movimentações' });
+      fireEvent.click(tabMov);
+      await within(modal).findByText(
+        'Nenhuma movimentação registrada para este processo.'
+      );
+      expect(movCalls).toBe(1);
+
+      fireEvent.click(tabMov);
+      await waitFor(() => expect(movCalls).toBe(2));
+      expect(
+        within(modal).getByText(
+          'Nenhuma movimentação registrada para este processo.'
+        )
+      ).toBeInTheDocument();
+
+      const tabDoc = within(modal).getByRole('tab', { name: 'Documentos' });
+      fireEvent.click(tabDoc);
+      await within(modal).findByText('peticao.pdf');
+      expect(docCalls).toBe(1);
+
+      fireEvent.click(tabDoc);
+      await waitFor(() => expect(docCalls).toBe(2));
+    });
+
+    it('trata resposta não-array na carga inicial da aba Movimentações', async () => {
+      routeProcessApi({
+        movements: () => jsonResponse('formato inválido'),
+      });
+      const modal = await openDetails();
       fireEvent.click(
         within(modal).getByRole('tab', { name: 'Movimentações' })
       );
-      expect(within(modal).getByText('Tribunal de Origem')).toBeInTheDocument();
+      expect(
+        await within(modal).findByText(
+          'Nenhuma movimentação registrada para este processo.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('usa mensagem padrão quando listarMovimentacoes falha sem Error e permite retry', async () => {
+      const movSpy = vi
+        .spyOn(processosService, 'listarMovimentacoes')
+        .mockRejectedValueOnce('falha')
+        .mockRejectedValueOnce('falha');
+
+      routeProcessApi();
+      const modal = await openDetails();
+      fireEvent.click(
+        within(modal).getByRole('tab', { name: 'Movimentações' })
+      );
+
+      const alert = await within(modal).findByRole('alert');
+      expect(alert).toHaveTextContent('Falha ao carregar movimentações.');
+
+      fireEvent.click(
+        within(alert).getByRole('button', { name: 'Tentar novamente' })
+      );
+      await waitFor(() =>
+        expect(within(modal).getByRole('alert')).toHaveTextContent(
+          'Falha ao carregar movimentações.'
+        )
+      );
+
+      movSpy.mockRestore();
+    });
+
+    it('oculta botões de upload e exclusão de documentos quando canEdit é false', async () => {
+      const readOnlyToken = createJwtToken({
+        ...defaultTokenPayload,
+        cargo: {
+          permissao: {
+            visualizar_processos: true,
+            criar_processos: false,
+            editar_processos: false,
+            excluir_processos: false,
+          },
+        },
+      });
+      sessionStorage.setItem('access_token', readOnlyToken);
+
+      routeProcessApi({ list: () => jsonResponse([doc]) });
+      const modal = await openDetails();
+      openDocumentsTab(modal);
+
+      await within(modal).findByText('peticao.pdf');
+
+      expect(
+        within(modal).queryByRole('button', { name: 'Adicionar Documento' })
+      ).not.toBeInTheDocument();
+
+      expect(
+        within(modal).queryByRole('button', {
+          name: `Excluir documento ${doc.nome_original}`,
+        })
+      ).not.toBeInTheDocument();
+
+      expect(
+        within(modal).getByRole('button', { name: 'Visualizar' })
+      ).toBeVisible();
+
+      sessionStorage.setItem('access_token', accessToken);
+    });
+
+    it('oculta botão de upload no estado vazio de documentos quando canEdit é false', async () => {
+      const readOnlyToken = createJwtToken({
+        ...defaultTokenPayload,
+        cargo: {
+          permissao: {
+            visualizar_processos: true,
+            criar_processos: false,
+            editar_processos: false,
+            excluir_processos: false,
+          },
+        },
+      });
+      sessionStorage.setItem('access_token', readOnlyToken);
+
+      routeProcessApi({ list: () => jsonResponse([]) });
+      const modal = await openDetails();
+      openDocumentsTab(modal);
+
+      await within(modal).findByText('Nenhum documento anexado.');
+      expect(
+        within(modal).queryByRole('button', { name: 'Fazer Upload' })
+      ).not.toBeInTheDocument();
+
+      sessionStorage.setItem('access_token', accessToken);
+    });
+
+    it('exibe alerta de atualização e aciona nova consulta ao falhar na atualização dos detalhes', async () => {
+      let detailFail = true;
+      routeProcessApi({
+        processDetail: () => {
+          if (detailFail) {
+            return jsonResponse(
+              { detail: 'Erro ao obter dados do processo' },
+              500
+            );
+          }
+          return jsonResponse(makePageResponse([initialApiProcess]));
+        },
+      });
+
+      const modal = await openDetails();
+
+      const refreshAlert = await within(modal).findByText(
+        /Os dados exibidos podem estar desatualizados\./
+      );
+      expect(refreshAlert).toBeInTheDocument();
+
+      detailFail = false;
+      const retryBtn = within(modal).getByRole('button', {
+        name: 'Tentar novamente',
+      });
+      fireEvent.click(retryBtn);
+
+      await waitFor(() =>
+        expect(
+          within(modal).queryByText(
+            /Os dados exibidos podem estar desatualizados\./
+          )
+        ).not.toBeInTheDocument()
+      );
+    });
+
+    it('exibe "Sem responsável" quando o processo não possui responsável definido', async () => {
+      const noRespProc = {
+        ...initialApiProcess,
+        responsavel_id: null,
+      };
+      routeProcessApi({}, noRespProc);
+      const modal = await openDetails(noRespProc);
+
+      expect(within(modal).getByText('Sem responsável')).toBeInTheDocument();
     });
   });
 
