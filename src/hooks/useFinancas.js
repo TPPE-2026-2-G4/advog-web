@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useExportarRelatorio } from '@/hooks/useExportarRelatorio';
 import {
   calcularResumoFinanceiro,
   getStatusConcluido,
@@ -11,6 +12,7 @@ import {
   excluirFinancas,
   listarFinancas,
   excluirCategoria,
+  exportarFinancas,
   obterResumoFinancas,
   listarCategorias,
   mudarStatusLancamento,
@@ -41,6 +43,20 @@ export function useFinancas(initialData, options = {}) {
     totalPages: 1,
   });
   const [resumoBackend, setResumoBackend] = useState(null);
+  const [versaoDados, setVersaoDados] = useState(0);
+  const ultimoFiltroRef = useRef(null);
+
+  const notificarMutacao = useCallback(() => {
+    setVersaoDados((v) => v + 1);
+    if (ultimoFiltroRef.current !== null) {
+      obterResumoFinancas(ultimoFiltroRef.current)
+        .then((resumoData) => {
+          if (resumoData) setResumoBackend(resumoData);
+        })
+        .catch(() => {});
+    }
+  }, []);
+  const activeFilters = useRef({});
 
   useEffect(() => {
     listarCategorias()
@@ -136,6 +152,7 @@ export function useFinancas(initialData, options = {}) {
         ...prev,
         total: Math.max(0, prev.total - 1),
       }));
+      notificarMutacao();
       options.onDelete?.(item);
 
       if (item.categoria_id) {
@@ -202,6 +219,7 @@ export function useFinancas(initialData, options = {}) {
       };
       setLancamentos((current = []) => [newItem, ...current]);
       setPagination((prev) => ({ ...prev, total: prev.total + 1 }));
+      notificarMutacao();
       if (newItem.categoria && newItem.categoria !== 'Outros') {
         setCategorias((prev) => {
           const exists = prev.some(
@@ -270,6 +288,7 @@ export function useFinancas(initialData, options = {}) {
       setLancamentos((current = []) =>
         current.map((entry) => (entry.id === item.id ? updated : entry))
       );
+      notificarMutacao();
       options.onUpdate?.(updated);
       setSelectedLancamento(null);
 
@@ -318,6 +337,7 @@ export function useFinancas(initialData, options = {}) {
       setLancamentos((current = []) =>
         current.map((entry) => (entry.id === item.id ? updated : entry))
       );
+      notificarMutacao();
       options.onToggleStatus?.(updated);
       return updated;
     } catch (err) {
@@ -328,8 +348,39 @@ export function useFinancas(initialData, options = {}) {
     }
   };
 
+  const { isExporting, exportError, exportReport } = useExportarRelatorio({
+    baseName: 'lancamentos',
+    request: (format) => {
+      const { categoria, ...filters } = activeFilters.current;
+      let categoriaId;
+
+      if (categoria) {
+        const found = categorias.find(
+          (c) =>
+            (c.nome_categoria || c.nome || '').toLowerCase() ===
+            categoria.toLowerCase()
+        );
+        categoriaId = found?.categoria_id || found?.id;
+
+        if (!categoriaId) {
+          throw new Error(
+            'A categoria selecionada não foi encontrada. Atualize a página e tente novamente.'
+          );
+        }
+      }
+
+      return exportarFinancas(
+        { ...filters, categoria_id: categoriaId },
+        format
+      );
+    },
+  });
+
   const handleFilterLancamentos = useCallback(
     async (filters) => {
+      ultimoFiltroRef.current = filters;
+      activeFilters.current = filters;
+
       try {
         const page = filters.page || 1;
         const pageSize = filters.page_size || pagination.pageSize;
@@ -389,6 +440,8 @@ export function useFinancas(initialData, options = {}) {
     setLancamentos,
     pagination,
     resumo,
+    resumoBackend,
+    versaoDados,
     totalLancamentos: pagination.total || lancamentos.length,
     isNewModalOpen,
     setIsNewModalOpen,
@@ -408,5 +461,8 @@ export function useFinancas(initialData, options = {}) {
     handleUpdateLancamento,
     handleToggleStatus,
     handleFilterLancamentos,
+    isExporting,
+    exportError,
+    exportReport,
   };
 }

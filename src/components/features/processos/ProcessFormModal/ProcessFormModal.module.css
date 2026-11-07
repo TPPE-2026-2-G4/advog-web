@@ -164,14 +164,13 @@
   align-items: center;
   justify-content: center;
   min-width: 144px;
-  color: #162238;
-  background-color: #b79a63;
-  border: 1px solid #b79a63;
+  color: var(--cor-secundaria-texto, #162238);
+  background-color: var(--cor-secundaria, #b79a63);
+  border: 1px solid var(--cor-secundaria, #b79a63);
 }
 
 .saveButton:hover:not(:disabled) {
-  background-color: #a98b54;
-  border-color: #a98b54;
+  filter: brightness(0.88);
 }
 
 .cancelButton:focus-visible,

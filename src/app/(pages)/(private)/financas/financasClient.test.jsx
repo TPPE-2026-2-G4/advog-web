@@ -2,6 +2,7 @@ import {
   atualizarFinancas,
   criarFinancas,
   excluirFinancas,
+  exportarFinancas,
   listarCategorias,
   obterResumoFinancas,
   listarFinancas,
@@ -10,6 +11,7 @@ import {
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import FinancasClient from './financasClient';
+import { downloadBlob } from '@/utils/exportacao';
 
 const mockLancamentos = [
   {
@@ -155,7 +157,6 @@ vi.mock('@/services/financas', () => ({
   criarFinancas: vi.fn(),
   atualizarFinancas: vi.fn(),
   excluirFinancas: vi.fn(),
-  atualizarFinancas: vi.fn(),
   mudarStatusLancamento: vi.fn(),
   listarCategorias: vi
     .fn()
@@ -165,6 +166,13 @@ vi.mock('@/services/financas', () => ({
     .mockResolvedValue({ categoria_id: 2, nome: 'Nova Categoria' }),
   excluirCategoria: vi.fn().mockResolvedValue(true),
   obterResumoFinancas: vi.fn(),
+  obterGraficoFinancas: vi.fn().mockResolvedValue({ itens: [] }),
+  exportarFinancas: vi.fn(),
+}));
+
+vi.mock('@/utils/exportacao', async (importOriginal) => ({
+  ...(await importOriginal()),
+  downloadBlob: vi.fn(),
 }));
 
 describe('FinancasClient', () => {
@@ -217,35 +225,90 @@ describe('FinancasClient', () => {
     expect(
       screen.getByText('Gestão de receitas e despesas')
     ).toBeInTheDocument();
+    expect(screen.getByText('Receita do Mês')).toBeInTheDocument();
+    expect(screen.getByText('Despesas do Mês')).toBeInTheDocument();
+    expect(screen.getByText('Saldo Líquido')).toBeInTheDocument();
+    expect(screen.getByText('A Receber')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Fluxo de Caixa' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Despesas por Categoria' })
+    ).toBeInTheDocument();
   });
 
-  it.each([
-    {
-      botao: /Relatório/i,
-      propName: 'onExportReport',
-    },
-    {
-      botao: /Novo Lançamento/i,
-      propName: 'onNewEntry',
-    },
-  ])(
-    'renderiza o botão $botao e dispara a callback $propName ao clicar',
-    ({ botao, propName }) => {
-      const handler = vi.fn();
+  it('renderiza o botão Novo Lançamento e dispara a callback onNewEntry ao clicar', () => {
+    const handler = vi.fn();
 
-      render(
-        <FinancasClient
-          initialData={mockLancamentos}
-          {...{ [propName]: handler }}
-        />
-      );
+    render(
+      <FinancasClient initialData={mockLancamentos} onNewEntry={handler} />
+    );
 
-      const buttonEl = screen.getByRole('button', { name: botao });
-      expect(buttonEl).toBeInTheDocument();
-      fireEvent.click(buttonEl);
-      expect(handler).toHaveBeenCalledOnce();
-    }
-  );
+    const buttonEl = screen.getByRole('button', { name: /Novo Lançamento/i });
+    expect(buttonEl).toBeInTheDocument();
+    fireEvent.click(buttonEl);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('exporta o relatório com os filtros aplicados na tabela', async () => {
+    const blob = new Blob(['pdf']);
+    exportarFinancas.mockResolvedValue(blob);
+
+    render(<FinancasClient initialData={mockLancamentos} />);
+
+    fireEvent.change(screen.getByLabelText('Filtrar por status'), {
+      target: { value: 'pendente' },
+    });
+    await waitFor(() =>
+      expect(listarFinancas).toHaveBeenCalledWith(
+        expect.objectContaining({ situacao: 'Pendente' })
+      )
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Relatório/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'PDF' }));
+
+    await waitFor(() =>
+      expect(exportarFinancas).toHaveBeenCalledWith(
+        expect.objectContaining({ situacao: 'Pendente' }),
+        'pdf'
+      )
+    );
+    await waitFor(() =>
+      expect(downloadBlob).toHaveBeenCalledWith(
+        blob,
+        expect.stringMatching(/^lancamentos_\d{8}\.pdf$/)
+      )
+    );
+  });
+
+  it('exibe o erro quando a exportação do relatório falha', async () => {
+    exportarFinancas.mockRejectedValue(
+      new Error('Você não possui permissão para exportar os dados financeiros.')
+    );
+
+    render(<FinancasClient initialData={mockLancamentos} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Relatório/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Você não possui permissão para exportar os dados financeiros.'
+    );
+    expect(downloadBlob).not.toHaveBeenCalled();
+  });
+
+  it('exibe o menu de exportação do relatório com os três formatos', () => {
+    render(<FinancasClient initialData={mockLancamentos} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Relatório/i }));
+
+    expect(screen.getByRole('menuitem', { name: 'PDF' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitem', { name: 'Excel (.xlsx)' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'CSV' })).toBeInTheDocument();
+  });
 
   it('renderiza a tabela de lançamentos recentes com os dados iniciais', () => {
     render(<FinancasClient initialData={mockLancamentos} />);

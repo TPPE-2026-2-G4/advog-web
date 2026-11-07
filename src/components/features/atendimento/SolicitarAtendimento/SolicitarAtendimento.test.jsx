@@ -33,11 +33,13 @@ const fieldSpecs = [
     label: 'Email',
     type: 'email',
     autocomplete: 'email',
+    maxlength: '100',
   },
   {
     label: 'Telefone',
     type: 'tel',
     autocomplete: 'tel',
+    maxlength: '15',
   },
   {
     label: 'Descreva sua demanda',
@@ -222,5 +224,19 @@ describe('SolicitarAtendimento', () => {
     expect(
       await screen.findByRole('status', { name: 'Solicitação enviada' })
     ).toHaveTextContent('Recebemos sua solicitação com sucesso.');
+  });
+
+  it('formata o telefone dinamicamente à medida que o usuário digita e remove caracteres não numéricos', () => {
+    render(<SolicitarAtendimento />);
+    const telefoneInput = screen.getByLabelText('Telefone');
+
+    fireEvent.change(telefoneInput, { target: { value: '61988887777' } });
+    expect(telefoneInput).toHaveValue('(61) 98888-7777');
+
+    fireEvent.change(telefoneInput, { target: { value: 'texto-invalido' } });
+    expect(telefoneInput).toHaveValue('');
+
+    fireEvent.change(telefoneInput, { target: { value: '6133334444' } });
+    expect(telefoneInput).toHaveValue('(61) 3333-4444');
   });
 });

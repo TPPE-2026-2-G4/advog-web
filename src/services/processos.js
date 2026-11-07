@@ -97,6 +97,33 @@ export function listarProcessos(filtros = {}) {
   );
 }
 
+export async function exportarProcessos(filtros = {}, formato = 'pdf') {
+  const fallbackMessage = 'Não foi possível exportar os processos.';
+  const token = getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+  const { token: _token, page: _page, pageSize: _pageSize, ...rest } = filtros;
+  const params = new URLSearchParams(buildProcessQuery(rest));
+  params.set('formato', formato);
+
+  let response;
+
+  try {
+    response = await fetch(`${API_URL}/processos/exportar?${params}`, {
+      cache: 'no-store',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new Error(fallbackMessage);
+  }
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, fallbackMessage));
+  }
+
+  return response.blob();
+}
+
 export async function obterProcesso(processoId) {
   const page = await request(
     `/processos/?processo_id=${encodeURIComponent(processoId)}&page_size=1`,
@@ -176,6 +203,14 @@ export function listarDocumentos(processoId) {
     `/processos/${encodeURIComponent(processoId)}/documentos`,
     { method: 'GET' },
     'Não foi possível carregar os documentos.'
+  );
+}
+
+export function listarMovimentacoes(processoId) {
+  return request(
+    `/processos/${encodeURIComponent(processoId)}/movimentacoes`,
+    { method: 'GET' },
+    'Não foi possível carregar as movimentações.'
   );
 }
 

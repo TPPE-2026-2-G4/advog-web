@@ -8,12 +8,14 @@ import {
   excluirCategoria,
   excluirFinancas,
   excluirLancamento,
+  exportarFinancas,
   listarCategorias,
   listarFinancas,
   listarLancamentos,
   mudarStatusLancamento,
   obterCalendario,
   exportarCalendarioIcs,
+  obterGraficoFinancas,
   obterResumoFinancas,
 } from './financas';
 
@@ -23,8 +25,9 @@ const respostaJson = (dados, configuracao = {}) => ({
   ...configuracao,
 });
 
-const respostaComErro = (detail) => ({
+const respostaComErro = (detail, status = 400) => ({
   ok: false,
+  status,
   json: vi.fn().mockResolvedValue({ detail }),
 });
 
@@ -1354,5 +1357,173 @@ describe('serviço de finanças', () => {
         exportarCalendarioIcs({ inicio: '2026-08-01', fim: '2026-08-31' })
       ).rejects.toThrow('Falha na exportação');
     });
+  });
+
+  describe('obterGraficoFinancas', () => {
+    it('busca dados do gráfico de entradas e saídas aplicando todos os filtros e Bearer token', async () => {
+      localStorage.setItem('token', 'token-grafico-123');
+      const mockGrafico = {
+        inicio: '2026-03-01',
+        fim: '2026-08-31',
+        valor_min: 100,
+        valor_max: 25000,
+        total_entradas: 45000,
+        total_saidas: 12000,
+        saldo: 33000,
+        itens: [
+          {
+            data: '2026-08-10',
+            entradas: 13500,
+            saidas: 4230,
+            saldo_dia: 9270,
+          },
+        ],
+      };
+      fetch.mockResolvedValueOnce(respostaJson(mockGrafico));
+
+      const res = await obterGraficoFinancas({
+        inicio: '2026-03-01',
+        fim: '2026-08-31',
+        dias: 180,
+        valor_min: 100,
+        valor_max: 25000,
+        status: 'Realizado',
+        tipo: 'e',
+        categoria_id: 10,
+        cliente_id: 5,
+      });
+
+      expect(res).toEqual(mockGrafico);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/lancamentos/grafico?inicio=2026-03-01&fim=2026-08-31&dias=180&valor_min=100&valor_max=25000&status=Realizado&tipo=e&categoria_id=10&cliente_id=5',
+        {
+          cache: 'no-store',
+          headers: { Authorization: 'Bearer token-grafico-123' },
+        }
+      );
+    });
+
+    it('normaliza itens para array vazio quando itens não é array na resposta', async () => {
+      fetch.mockResolvedValueOnce(
+        respostaJson({ total_entradas: 0, total_saidas: 0, itens: null })
+      );
+
+      const res = await obterGraficoFinancas();
+      expect(res).toEqual({
+        total_entradas: 0,
+        total_saidas: 0,
+        itens: [],
+      });
+    });
+
+    it.each([
+      ['resposta HTTP com erro', { ok: false, status: 500 }],
+      ['corpo em formato de array inesperado', respostaJson([{ id: 1 }])],
+      ['corpo nulo', respostaJson(null)],
+      ['exceção de rede', new Error('NetworkError')],
+    ])('retorna null quando ocorre %s', async (_cenario, mockRes) => {
+      if (mockRes instanceof Error) {
+        fetch.mockRejectedValueOnce(mockRes);
+      } else {
+        fetch.mockResolvedValueOnce(mockRes);
+      }
+
+      const res = await obterGraficoFinancas();
+      expect(res).toBeNull();
+    });
+  });
+});
+
+describe('exportarFinancas', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.stubGlobal('fetch', vi.fn());
+    localStorage.clear();
+    sessionStorage.clear();
+    sessionStorage.setItem('access_token', 'token-jwt');
+  });
+
+  it('baixa o relatório com os filtros ativos e o formato escolhido', async () => {
+    const blob = new Blob(['csv']);
+    fetch.mockResolvedValue({ ok: true, status: 200, blob: async () => blob });
+
+    await expect(
+      exportarFinancas(
+        {
+          inicio: '2026-08-01',
+          fim: '2026-08-31',
+          tipo: 'e',
+          situacao: 'Pendente',
+          categoria_id: 10,
+          cliente_id: 4,
+          page: 3,
+          page_size: 5,
+        },
+        'csv'
+      )
+    ).resolves.toBe(blob);
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/lancamentos/exportar?formato=csv&inicio=2026-08-01&fim=2026-08-31&tipo=e&status=Pendente&categoria_id=10&cliente_id=4',
+      { cache: 'no-store', headers: { Authorization: 'Bearer token-jwt' } }
+    );
+  });
+
+  it('exporta em PDF sem filtros por padrão', async () => {
+    fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => new Blob([]),
+    });
+
+    await exportarFinancas();
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/lancamentos/exportar?formato=pdf',
+      expect.any(Object)
+    );
+  });
+
+  it('lança erro e não consulta a API quando não há token', async () => {
+    sessionStorage.clear();
+
+    await expect(exportarFinancas({}, 'pdf')).rejects.toThrow(
+      'Sessão expirada. Faça login novamente.'
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [401, 'Sessão expirada. Faça login novamente.'],
+    [403, 'Você não possui permissão para exportar os dados financeiros.'],
+  ])('traduz o status %i em mensagem amigável', async (status, message) => {
+    fetch.mockResolvedValue(respostaComErro('negado', status));
+
+    await expect(exportarFinancas({}, 'pdf')).rejects.toThrow(message);
+  });
+
+  it('informa o motivo devolvido pela API, como o limite de linhas', async () => {
+    fetch.mockResolvedValue(
+      respostaComErro('A exportação excede 10000 lançamentos', 422)
+    );
+
+    await expect(exportarFinancas({}, 'pdf')).rejects.toThrow(
+      'A exportação excede 10000 lançamentos'
+    );
+  });
+
+  it('usa mensagem padrão para falhas de rede ou respostas sem detalhe', async () => {
+    fetch.mockRejectedValueOnce(new Error('offline'));
+    fetch.mockResolvedValueOnce({
+      ...respostaComErroSemJson(),
+      status: 500,
+    });
+
+    await expect(exportarFinancas({}, 'pdf')).rejects.toThrow(
+      'Não foi possível exportar os lançamentos.'
+    );
+    await expect(exportarFinancas({}, 'pdf')).rejects.toThrow(
+      'Não foi possível exportar os lançamentos.'
+    );
   });
 });

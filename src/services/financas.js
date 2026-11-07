@@ -228,6 +228,66 @@ export async function obterResumoFinancas(filters = {}) {
   }
 }
 
+export async function obterGraficoFinancas(filters = {}) {
+  try {
+    const token = getAccessToken();
+    const queryParams = new URLSearchParams();
+
+    if (filters.inicio) queryParams.append('inicio', filters.inicio);
+    if (filters.fim) queryParams.append('fim', filters.fim);
+    if (
+      filters.dias !== undefined &&
+      filters.dias !== null &&
+      String(filters.dias).trim() !== ''
+    ) {
+      queryParams.append('dias', String(filters.dias));
+    }
+    if (
+      filters.valor_min !== undefined &&
+      filters.valor_min !== null &&
+      String(filters.valor_min).trim() !== ''
+    ) {
+      queryParams.append('valor_min', String(filters.valor_min));
+    }
+    if (
+      filters.valor_max !== undefined &&
+      filters.valor_max !== null &&
+      String(filters.valor_max).trim() !== ''
+    ) {
+      queryParams.append('valor_max', String(filters.valor_max));
+    }
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.tipo) queryParams.append('tipo', filters.tipo);
+    if (filters.categoria_id)
+      queryParams.append('categoria_id', filters.categoria_id);
+    if (filters.cliente_id)
+      queryParams.append('cliente_id', filters.cliente_id);
+
+    const queryString = queryParams.toString()
+      ? `?${queryParams.toString()}`
+      : '';
+    const response = await fetch(
+      `${API_URL}/lancamentos/grafico${queryString}`,
+      {
+        cache: 'no-store',
+        ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+      }
+    );
+
+    if (!response.ok) return null;
+    const dados = await response.json();
+    if (!dados || typeof dados !== 'object' || Array.isArray(dados)) {
+      return null;
+    }
+    return {
+      ...dados,
+      itens: Array.isArray(dados.itens) ? dados.itens : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function criarFinancas(dados) {
   const payload = toApiLancamento(dados);
   const token = getAccessToken();
@@ -317,6 +377,46 @@ export const listarLancamentos = listarFinancas;
 export const criarLancamento = criarFinancas;
 export const atualizarLancamento = atualizarFinancas;
 export const excluirLancamento = excluirFinancas;
+
+export async function exportarFinancas(filters = {}, formato = 'pdf') {
+  const fallbackMessage = 'Não foi possível exportar os lançamentos.';
+  const token = getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+  const params = new URLSearchParams({ formato });
+  if (filters.inicio) params.append('inicio', filters.inicio);
+  if (filters.fim) params.append('fim', filters.fim);
+  if (filters.tipo) params.append('tipo', filters.tipo);
+  if (filters.situacao) params.append('status', filters.situacao);
+  if (filters.categoria_id) params.append('categoria_id', filters.categoria_id);
+  if (filters.cliente_id) params.append('cliente_id', filters.cliente_id);
+
+  let response;
+
+  try {
+    response = await fetch(`${API_URL}/lancamentos/exportar?${params}`, {
+      cache: 'no-store',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new Error(fallbackMessage);
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Sessão expirada. Faça login novamente.');
+    }
+    if (response.status === 403) {
+      throw new Error(
+        'Você não possui permissão para exportar os dados financeiros.'
+      );
+    }
+    const error = await response.json().catch(() => null);
+    throw new Error(parseApiError(error, fallbackMessage));
+  }
+
+  return response.blob();
+}
 
 export async function listarCategorias() {
   const token = getAccessToken();

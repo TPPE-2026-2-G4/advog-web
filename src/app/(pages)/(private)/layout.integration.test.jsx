@@ -7,9 +7,14 @@ import {
   waitFor,
 } from '@testing-library/react';
 import RootLayout from '@/app/layout';
+import UserMenu from '@/components/layout/navbar/userMenu';
 import PrivateLayout from './layout';
 import DashboardPage from './dashboard/page';
 import { AuthProvider } from '@/contexts/AuthContext';
+import {
+  InstitucionalProvider,
+  useInstitucionalContext,
+} from '@/contexts/InstitucionalContext';
 import { useAuth } from '@/hooks/useAuth';
 import { proxy } from '@/proxy';
 import { getPermissionLabel } from '@/constants/permissions';
@@ -243,4 +248,195 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
       expect(screen.getByText(roleEsperado)).toBeInTheDocument();
     }
   );
+
+  it('integra InstitucionalProvider no RootLayout: inicializa com cache, atualiza dados, aplica CSS e sincroniza com eventos customizados e storage', async () => {
+    localStorage.setItem(
+      'institucional_data',
+      JSON.stringify({
+        corPrimaria: '#223344',
+        corSecundaria: '#889900',
+        nomeEscritorio: 'Cached Escritório',
+      })
+    );
+
+    function TestInstitucional() {
+      const { institucional, atualizarInstitucional } =
+        useInstitucionalContext();
+      return (
+        <div>
+          <span data-testid="nome-escritorio">
+            {institucional.nomeEscritorio}
+          </span>
+          <span data-testid="cor-primaria">{institucional.corPrimaria}</span>
+          <button
+            onClick={() =>
+              atualizarInstitucional({
+                nomeEscritorio: 'Escritório Atualizado Manualmente',
+                corPrimaria: '#112233',
+                corSecundaria: '#445566',
+              })
+            }
+          >
+            Atualizar Manual
+          </button>
+        </div>
+      );
+    }
+
+    render(
+      <RootLayout>
+        <TestInstitucional />
+      </RootLayout>
+    );
+
+    // Variável CSS aplicada pelo cache
+    expect(
+      document.documentElement.style.getPropertyValue('--cor-primaria')
+    ).toBe('#223344');
+
+    // Atualização manual via atualizarInstitucional
+    fireEvent.click(screen.getByRole('button', { name: 'Atualizar Manual' }));
+
+    expect(screen.getByTestId('nome-escritorio')).toHaveTextContent(
+      'Escritório Atualizado Manualmente'
+    );
+    expect(
+      document.documentElement.style.getPropertyValue('--cor-primaria')
+    ).toBe('#112233');
+
+    // Evento institucional-updated
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('institucional-updated', {
+          detail: {
+            nomeEscritorio: 'Escritório Via Evento Customizado',
+            corPrimaria: '#334455',
+          },
+        })
+      );
+    });
+
+    expect(screen.getByTestId('nome-escritorio')).toHaveTextContent(
+      'Escritório Via Evento Customizado'
+    );
+    expect(
+      document.documentElement.style.getPropertyValue('--cor-primaria')
+    ).toBe('#334455');
+
+    // Evento storage com JSON válido
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'institucional_data',
+          newValue: JSON.stringify({
+            nomeEscritorio: 'Escritório Via Storage',
+            corPrimaria: '#556677',
+            corSecundaria: '#778899',
+          }),
+        })
+      );
+    });
+
+    expect(screen.getByTestId('nome-escritorio')).toHaveTextContent(
+      'Escritório Via Storage'
+    );
+    expect(
+      document.documentElement.style.getPropertyValue('--cor-primaria')
+    ).toBe('#556677');
+
+    // Evento storage com JSON inválido (não quebra)
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'institucional_data',
+          newValue: 'invalid-json{{{',
+        })
+      );
+    });
+
+    expect(screen.getByTestId('nome-escritorio')).toHaveTextContent(
+      'Escritório Via Storage'
+    );
+  });
+
+  describe('menu do usuário: variações de dados e de sessão', () => {
+    const renderMenu = (user) => {
+      sessionStorage.setItem('current_user', JSON.stringify(user));
+      return render(<UserMenu />);
+    };
+
+    it.each([
+      [
+        'nomes e e-mail no formato legado',
+        {
+          nome_func: 'Carlos Eduardo Lima',
+          email_func: 'carlos@advog.com',
+          nome_cargo: 'Sócio',
+        },
+        'Carlos E.',
+        'Sócio',
+        'carlos@advog.com',
+      ],
+      [
+        'cargo informado como texto',
+        { nome: 'Ana', email: 'ana@advog.com', cargo: 'Advogada' },
+        'Ana',
+        'Advogada',
+        'ana@advog.com',
+      ],
+      [
+        'cargo com nome_cargo',
+        { nome: 'Ana Paula', cargo: { nome_cargo: 'Gerente' } },
+        'Ana P.',
+        'Gerente',
+        '',
+      ],
+      [
+        'cargo com nome',
+        { nome: 'Ana Paula', cargo: { nome: 'Estagiária' } },
+        'Ana P.',
+        'Estagiária',
+        '',
+      ],
+      [
+        'usuário sem nome nem cargo',
+        { email: 'anonimo@advog.com', cargo: {} },
+        '',
+        '',
+        'anonimo@advog.com',
+      ],
+    ])('exibe o usuário com %s', (_label, user, shortName, role, email) => {
+      renderMenu(user);
+
+      const trigger = screen.getAllByRole('button')[0];
+      expect(trigger).toHaveTextContent(`${shortName}${role}`);
+
+      fireEvent.click(trigger);
+      if (email) expect(screen.getByText(email)).toBeInTheDocument();
+    });
+
+    it('fecha o menu ao clicar fora e encerra a sessão sem o provedor de autenticação', () => {
+      sessionStorage.setItem('access_token', 'token');
+      renderMenu({ nome: 'Ana Paula', email: 'ana@advog.com' });
+
+      const trigger = screen.getAllByRole('button')[0];
+      fireEvent.click(trigger);
+      expect(screen.getByText('ana@advog.com')).toBeInTheDocument();
+
+      fireEvent.mouseDown(document.body);
+      expect(screen.queryByText('ana@advog.com')).not.toBeInTheDocument();
+
+      fireEvent.click(trigger);
+      fireEvent.mouseDown(screen.getByText('ana@advog.com'));
+      expect(screen.getByText('ana@advog.com')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Sair/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /^Sair$|Confirmar/i })
+      );
+
+      expect(mockPush).toHaveBeenCalledWith('/login');
+      expect(getAccessToken()).toBeNull();
+    });
+  });
 });
