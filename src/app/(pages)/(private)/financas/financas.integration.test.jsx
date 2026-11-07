@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import {
+  act,
   render,
+  renderHook,
   screen,
   fireEvent,
   waitFor,
@@ -12,6 +14,8 @@ import FinancialDashboard, {
   buildSmoothAreaPath,
   buildSmoothLinePath,
 } from '@/components/features/financas/FinancialDashboard/FinancialDashboard';
+import * as financasService from '@/services/financas';
+import { useFinancas } from '@/hooks/useFinancas';
 import LancamentosTable from '@/components/features/financas/LancamentosTable/LancamentosTable';
 import LancamentoModal from '@/components/features/financas/LancamentoModal/LancamentoModal';
 import {
@@ -27,6 +31,8 @@ import {
   criarCategoria,
   excluirCategoria,
   listarCategorias,
+  obterCalendario,
+  exportarCalendarioIcs,
 } from '@/services/financas';
 import {
   MESES_ABREV,
@@ -94,6 +100,14 @@ function createJsonResponse(data, status = 200) {
     json: async () => data,
   };
 }
+
+const invalidJsonErrorResponse = (status = 500) => ({
+  ok: false,
+  status,
+  json: async () => {
+    throw new Error('Invalid JSON');
+  },
+});
 
 describe('Financas Integration Tests (Full Frontend Stack)', () => {
   let fetchMock;
@@ -224,6 +238,24 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
           },
           200
         );
+      }
+
+      if (
+        method === 'GET' &&
+        url.includes('/lancamentos/calendario/exportar')
+      ) {
+        return {
+          ok: true,
+          status: 200,
+          blob: async () =>
+            new Blob(['BEGIN:VCALENDAR...END:VCALENDAR'], {
+              type: 'text/calendar',
+            }),
+        };
+      }
+
+      if (method === 'GET' && url.includes('/lancamentos/calendario')) {
+        return createJsonResponse(dbLancamentos, 200);
       }
 
       if (method === 'GET' && url.includes('/lancamentos/')) {
@@ -781,7 +813,6 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       );
     };
 
-    const onExportReport = vi.fn();
     render(
       <FinancasClient
         initialData={[
@@ -797,7 +828,6 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
             status: 'realizado',
           },
         ]}
-        onExportReport={onExportReport}
       />
     );
 
@@ -808,7 +838,8 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Relatório/i }));
-    expect(onExportReport).toHaveBeenCalledOnce();
+    expect(screen.getByRole('menuitem', { name: 'PDF' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Relatório/i }));
 
     const nextBtn = screen.getByRole('button', { name: 'Próxima página' });
     expect(nextBtn).not.toBeDisabled();
@@ -2079,5 +2110,536 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       screen.getAllByLabelText('Tendência negativa').length
     ).toBeGreaterThan(0);
     expect(screen.getByText('Nenhuma despesa registrada')).toBeInTheDocument();
+  it('integra obterCalendario com filtros, sem filtros, respostas sem array e falhas de rede', async () => {
+    // Com todos os filtros aplicados
+    const resComFiltros = await obterCalendario({
+      inicio: '2026-08-01',
+      fim: '2026-08-31',
+      status: 'Realizado',
+      tipo: 'entrada',
+      categoria_id: 10,
+      cliente_id: 5,
+    });
+    expect(Array.isArray(resComFiltros)).toBe(true);
+
+    // Sem filtros e sem token
+    sessionStorage.removeItem('access_token');
+    const resSemToken = await obterCalendario();
+    expect(Array.isArray(resSemToken)).toBe(true);
+    sessionStorage.setItem('access_token', FAKE_TOKEN);
+
+    // Resposta não-ok
+    routeOverrides['GET /lancamentos/calendario'] = async () =>
+      createJsonResponse({}, 500);
+    expect(await obterCalendario()).toEqual([]);
+
+    // Resposta ok mas não-array
+    routeOverrides['GET /lancamentos/calendario'] = async () =>
+      createJsonResponse({ resultado: 'invalido' }, 200);
+    expect(await obterCalendario()).toEqual([]);
+
+    // Falha de rede (exceção no fetch)
+    routeOverrides['GET /lancamentos/calendario'] = async () => {
+      throw new Error('Network down');
+    };
+    expect(await obterCalendario()).toEqual([]);
+  });
+
+  it('integra exportarCalendarioIcs com todos os filtros, geração de blob, download e tratamento de erros da API', async () => {
+    const createObjectUrlSpy = vi
+      .spyOn(window.URL, 'createObjectURL')
+      .mockReturnValue('blob:http://localhost:3000/mock-ics');
+    const revokeObjectUrlSpy = vi
+      .spyOn(window.URL, 'revokeObjectURL')
+      .mockImplementation(() => {});
+
+    // Exportação com sucesso com filtros
+    const blob = await exportarCalendarioIcs({
+      inicio: '2026-08-01',
+      fim: '2026-08-31',
+      status: 'Pendente',
+      tipo: 'saida',
+      categoria_id: 20,
+      cliente_id: 3,
+    });
+    expect(blob).toBeTruthy();
+    expect(createObjectUrlSpy).toHaveBeenCalled();
+    expect(revokeObjectUrlSpy).toHaveBeenCalledWith(
+      'blob:http://localhost:3000/mock-ics'
+    );
+
+    // Exportação sem filtros e sem token
+    sessionStorage.removeItem('access_token');
+    const blobSemFiltros = await exportarCalendarioIcs();
+    expect(blobSemFiltros).toBeTruthy();
+    sessionStorage.setItem('access_token', FAKE_TOKEN);
+
+    // Erro da API com mensagem de detalhe
+    routeOverrides['GET /lancamentos/calendario/exportar'] = async () =>
+      createJsonResponse(
+        { detail: 'Filtro de datas inválido para exportação' },
+        400
+      );
+    await expect(exportarCalendarioIcs()).rejects.toThrow(
+      'Filtro de datas inválido para exportação'
+    );
+
+    // Erro da API com JSON inválido (fallback)
+    routeOverrides['GET /lancamentos/calendario/exportar'] = async () =>
+      invalidJsonErrorResponse(500);
+    await expect(exportarCalendarioIcs()).rejects.toThrow(
+      'Não foi possível exportar o calendário.'
+    );
+
+    createObjectUrlSpy.mockRestore();
+    revokeObjectUrlSpy.mockRestore();
+  });
+
+  describe('exportação de relatórios', () => {
+    let downloads;
+    let click;
+
+    const exportBlob = new Blob(['relatorio']);
+    const exportCalls = () =>
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes('/lancamentos/exportar')
+      );
+
+    const respondExport = (response) => {
+      routeOverrides['GET /lancamentos/exportar'] = async () => response;
+    };
+
+    const exportAs = (format) => {
+      fireEvent.click(screen.getByRole('button', { name: /Relatório/i }));
+      fireEvent.click(screen.getByRole('menuitem', { name: format }));
+    };
+
+    const renderAndWaitForList = async (props = {}) => {
+      render(<FinancasClient initialData={[]} {...props} />);
+      await waitFor(() => {
+        expect(
+          screen.getByText('Honorários Contratuais - Alfa S.A.')
+        ).toBeInTheDocument();
+      });
+    };
+
+    beforeEach(() => {
+      downloads = [];
+      URL.createObjectURL = vi.fn(() => 'blob:relatorio');
+      URL.revokeObjectURL = vi.fn();
+      click = vi
+        .spyOn(HTMLAnchorElement.prototype, 'click')
+        .mockImplementation(function () {
+          downloads.push({ href: this.href, download: this.download });
+        });
+      respondExport({ ok: true, status: 200, blob: async () => exportBlob });
+    });
+
+    afterEach(() => {
+      click.mockRestore();
+      delete URL.createObjectURL;
+      delete URL.revokeObjectURL;
+    });
+
+    it('exporta em CSV os lançamentos filtrados na tela e baixa o arquivo', async () => {
+      await renderAndWaitForList();
+
+      fireEvent.change(screen.getByLabelText('Data inicial'), {
+        target: { value: '2026-08-01' },
+      });
+      fireEvent.change(screen.getByLabelText('Data final'), {
+        target: { value: '2026-08-31' },
+      });
+      fireEvent.change(screen.getByLabelText('Filtrar por categoria'), {
+        target: { value: 'Despesas Operacionais' },
+      });
+      fireEvent.change(screen.getByLabelText('Filtrar por status'), {
+        target: { value: 'pendente' },
+      });
+      await waitFor(() => {
+        expect(
+          fetchMock.mock.calls.some(([url]) =>
+            String(url).includes(
+              'inicio=2026-08-01&fim=2026-08-31&status=Pendente&categoria_id=30'
+            )
+          )
+        ).toBe(true);
+      });
+
+      exportAs('CSV');
+
+      await waitFor(() => expect(downloads).toHaveLength(1));
+      expect(downloads[0]).toEqual({
+        href: 'blob:relatorio',
+        download: expect.stringMatching(/^lancamentos_\d{8}\.csv$/),
+      });
+      expect(URL.createObjectURL).toHaveBeenCalledWith(exportBlob);
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:relatorio');
+
+      const [[url, options]] = exportCalls();
+      expect(url).toBe(
+        'http://localhost:8000/lancamentos/exportar?formato=csv&inicio=2026-08-01&fim=2026-08-31&status=Pendente&categoria_id=30'
+      );
+      expect(options.headers).toEqual({
+        Authorization: `Bearer ${FAKE_TOKEN}`,
+      });
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ['PDF', 'pdf'],
+      ['Excel (.xlsx)', 'xlsx'],
+    ])('exporta em %s sem filtros', async (label, extension) => {
+      await renderAndWaitForList();
+
+      exportAs(label);
+
+      await waitFor(() => expect(downloads).toHaveLength(1));
+      expect(downloads[0].download).toMatch(
+        new RegExp(`^lancamentos_\\d{8}\\.${extension}$`)
+      );
+      expect(exportCalls()[0][0]).toBe(
+        `http://localhost:8000/lancamentos/exportar?formato=${extension}`
+      );
+    });
+
+    it('desabilita o botão e ignora novos cliques enquanto exporta', async () => {
+      let finishExport;
+      routeOverrides['GET /lancamentos/exportar'] = () =>
+        new Promise((resolve) => {
+          finishExport = () =>
+            resolve({ ok: true, status: 200, blob: async () => exportBlob });
+        });
+      await renderAndWaitForList();
+
+      exportAs('PDF');
+
+      const trigger = await screen.findByRole('button', {
+        name: /Exportando…/,
+      });
+      expect(trigger).toBeDisabled();
+      expect(exportCalls()).toHaveLength(1);
+
+      finishExport();
+
+      await waitFor(() => expect(downloads).toHaveLength(1));
+      expect(screen.getByRole('button', { name: /Relatório/i })).toBeEnabled();
+    });
+
+    it.each([
+      [401, {}, 'Sessão expirada. Faça login novamente.'],
+      [
+        403,
+        {},
+        'Você não possui permissão para exportar os dados financeiros.',
+      ],
+      [
+        422,
+        { detail: 'A exportação excede 10000 lançamentos' },
+        'A exportação excede 10000 lançamentos',
+      ],
+      [500, {}, 'Não foi possível exportar os lançamentos.'],
+    ])(
+      'exibe o erro quando a API responde %i e não baixa nada',
+      async (status, body, message) => {
+        respondExport(createJsonResponse(body, status));
+        await renderAndWaitForList();
+
+        exportAs('CSV');
+
+        expect(await screen.findByRole('alert')).toHaveTextContent(message);
+        expect(downloads).toHaveLength(0);
+      }
+    );
+
+    it('exibe mensagem padrão quando o corpo do erro não é JSON válido', async () => {
+      respondExport({
+        ok: false,
+        status: 500,
+        json: async () => {
+          throw new Error('corpo inválido');
+        },
+      });
+      await renderAndWaitForList();
+
+      exportAs('CSV');
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Não foi possível exportar os lançamentos.'
+      );
+    });
+
+    it('exibe mensagem padrão quando a requisição falha na rede', async () => {
+      routeOverrides['GET /lancamentos/exportar'] = async () => {
+        throw new Error('offline');
+      };
+      await renderAndWaitForList();
+
+      exportAs('PDF');
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Não foi possível exportar os lançamentos.'
+      );
+    });
+
+    it('informa sessão expirada sem consultar a API quando não há token', async () => {
+      await renderAndWaitForList();
+      sessionStorage.clear();
+
+      exportAs('PDF');
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Sessão expirada. Faça login novamente.'
+      );
+      expect(exportCalls()).toHaveLength(0);
+    });
+
+    it('limpa o erro anterior quando uma nova exportação é bem-sucedida', async () => {
+      respondExport(createJsonResponse({}, 403));
+      await renderAndWaitForList();
+
+      exportAs('CSV');
+      expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+      respondExport({ ok: true, status: 200, blob: async () => exportBlob });
+      exportAs('CSV');
+
+      await waitFor(() => expect(downloads).toHaveLength(1));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('bloqueia a exportação quando a categoria filtrada não possui identificador', async () => {
+      await renderAndWaitForList({
+        initialData: [
+          {
+            id: 1,
+            titulo: 'Lançamento antigo',
+            categoria: 'Sem Identificador',
+            tipo: 'entrada',
+            valor: 10,
+            data: '01/08/2026',
+            status: 'realizado',
+          },
+        ],
+      });
+
+      fireEvent.change(screen.getByLabelText('Filtrar por categoria'), {
+        target: { value: 'Sem Identificador' },
+      });
+
+      exportAs('PDF');
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'A categoria selecionada não foi encontrada. Atualize a página e tente novamente.'
+      );
+      expect(exportCalls()).toHaveLength(0);
+    });
+
+    it('fecha o menu de exportação com Escape e ao clicar fora', async () => {
+      await renderAndWaitForList();
+      const trigger = screen.getByRole('button', { name: /Relatório/i });
+
+      fireEvent.click(trigger);
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+      fireEvent.click(trigger);
+      fireEvent.mouseDown(
+        screen.getByRole('heading', { level: 1, name: 'Controle Financeiro' })
+      );
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('casos de borda do hook e da tabela de lançamentos', () => {
+    const baseItem = {
+      id: 1,
+      titulo: 'Honorários',
+      categoria: 'Honorários',
+      categoria_id: 10,
+      tipo: 'entrada',
+      valor: 100,
+      data: '10/08/2026',
+      dataIso: '2026-08-10',
+      status: 'pendente',
+    };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('usa mensagens padrão quando os erros das operações não trazem mensagem', async () => {
+      vi.spyOn(financasService, 'excluirFinancas').mockRejectedValue(
+        new Error('')
+      );
+      vi.spyOn(financasService, 'criarFinancas').mockRejectedValue(
+        new Error('')
+      );
+      vi.spyOn(financasService, 'atualizarFinancas').mockRejectedValue(
+        new Error('')
+      );
+      vi.spyOn(financasService, 'mudarStatusLancamento').mockRejectedValue(
+        new Error('')
+      );
+      const { result } = renderHook(() => useFinancas([baseItem]));
+
+      await act(async () => {
+        await result.current.handleDeleteLancamento(baseItem).catch(() => {});
+        await result.current.handleCreateLancamento(baseItem).catch(() => {});
+        await result.current.handleUpdateLancamento(baseItem).catch(() => {});
+        await result.current.handleToggleStatus(baseItem).catch(() => {});
+      });
+
+      expect(result.current.deleteError).toBe('Erro ao excluir lançamento.');
+      expect(result.current.saveError).toBe('Erro ao atualizar lançamento.');
+      expect(result.current.statusError).toBe('Erro ao atualizar status.');
+
+      await act(async () => {
+        await result.current.handleCreateLancamento(baseItem).catch(() => {});
+      });
+      expect(result.current.saveError).toBe('Erro ao criar lançamento.');
+    });
+
+    it('classifica como "Outros" os lançamentos salvos sem categoria', async () => {
+      vi.spyOn(financasService, 'criarFinancas').mockResolvedValue({ id: 77 });
+      vi.spyOn(financasService, 'atualizarFinancas').mockResolvedValue({});
+      const { result } = renderHook(() => useFinancas([baseItem]));
+
+      let created;
+      let updated;
+      await act(async () => {
+        created = await result.current.handleCreateLancamento({
+          titulo: 'Sem categoria',
+          tipo: 'entrada',
+          valor: 10,
+        });
+        updated = await result.current.handleUpdateLancamento({
+          id: 1,
+          titulo: 'Sem categoria',
+          tipo: 'entrada',
+          valor: 10,
+        });
+      });
+
+      expect(created.categoria).toBe('Outros');
+      expect(updated.categoria).toBe('Outros');
+    });
+
+    it('ignora categorias sem nome e aceita listagens não paginadas', async () => {
+      dbCategorias.push({ categoria_id: 99 });
+      const list = vi
+        .spyOn(financasService, 'listarFinancas')
+        .mockResolvedValueOnce([baseItem])
+        .mockResolvedValueOnce(undefined);
+      const { result } = renderHook(() => useFinancas([baseItem]));
+
+      await act(async () => {
+        await result.current.handleFilterLancamentos({});
+      });
+      expect(list).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1, page_size: 5 })
+      );
+      expect(result.current.lancamentos).toHaveLength(1);
+      expect(result.current.pagination.total).toBe(1);
+
+      await act(async () => {
+        await result.current.handleFilterLancamentos({ page: 2 });
+      });
+      expect(result.current.lancamentos).toHaveLength(0);
+      expect(result.current.pagination.totalPages).toBe(1);
+    });
+
+    it('não exporta quando a categoria filtrada só existe entre categorias sem nome', async () => {
+      dbCategorias.push({ categoria_id: 99 });
+      vi.spyOn(financasService, 'listarFinancas').mockResolvedValue({
+        itens: [],
+        total: 0,
+      });
+      const { result } = renderHook(() => useFinancas([baseItem]));
+
+      await act(async () => {
+        await result.current.handleFilterLancamentos({ categoria: 'Fantasma' });
+      });
+      await act(async () => {
+        await result.current.exportReport('pdf');
+      });
+
+      expect(result.current.exportError).toBe(
+        'A categoria selecionada não foi encontrada. Atualize a página e tente novamente.'
+      );
+    });
+
+    it('filtra localmente por categoria, data e situação quando a tabela não recebe onFilter', () => {
+      const items = [
+        { ...baseItem, id: undefined, lancamento_id: undefined },
+        {
+          ...baseItem,
+          id: 2,
+          titulo: 'Custas pagas',
+          categoria: 'Custas',
+          tipo: 'saida',
+          status: 'realizado',
+          data: '20/08/2026',
+          dataIso: undefined,
+        },
+        {
+          id: 3,
+          titulo: 'Sem categoria',
+          tipo: 'entrada',
+          valor: 5,
+          status: 'pendente',
+          data: '25/08/2026',
+        },
+      ];
+      render(
+        <LancamentosTable
+          lancamentos={items}
+          categorias={[{ categoria_id: 1 }, { nome: 'Custas' }]}
+        />
+      );
+
+      expect(screen.getByText('Custas pagas')).toBeInTheDocument();
+
+      fireEvent.change(screen.getByLabelText('Data inicial'), {
+        target: { value: '2026-08-15' },
+      });
+      fireEvent.change(screen.getByLabelText('Data final'), {
+        target: { value: '2026-08-30' },
+      });
+      fireEvent.change(screen.getByLabelText('Filtrar por categoria'), {
+        target: { value: 'Custas' },
+      });
+      expect(screen.getByText('Custas pagas')).toBeInTheDocument();
+      expect(screen.queryByText('Sem categoria')).not.toBeInTheDocument();
+
+      fireEvent.change(screen.getByLabelText('Filtrar por status'), {
+        target: { value: 'pendente' },
+      });
+      expect(screen.queryByText('Custas pagas')).not.toBeInTheDocument();
+
+      fireEvent.change(screen.getByLabelText('Filtrar por status'), {
+        target: { value: 'realizado' },
+      });
+      expect(screen.getByText('Custas pagas')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+      expect(screen.getByText('Sem categoria')).toBeInTheDocument();
+    });
+
+    it('lista todas as categorias conhecidas inclusive as de lançamentos sem categoria', () => {
+      render(
+        <LancamentosTable
+          lancamentos={[{ ...baseItem, categoria: '' }]}
+          categorias={[{ categoria_id: 5 }]}
+        />
+      );
+
+      expect(
+        within(screen.getByLabelText('Filtrar por categoria')).getAllByRole(
+          'option'
+        )
+      ).toHaveLength(1);
+    });
   });
 });

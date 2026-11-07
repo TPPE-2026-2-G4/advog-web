@@ -175,7 +175,7 @@ export function buildProcessQuery(filters = {}) {
   const values = {
     busca: filters.busca?.trim(),
     status: filters.status,
-    responsavel_id: filters.responsavelId,
+    funcionario_id: filters.responsavelId,
     prazo_inicio: normalizeProcessDate(filters.prazoInicio),
     prazo_fim: normalizeProcessDate(filters.prazoFim),
     page: filters.page,

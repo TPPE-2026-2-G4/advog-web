@@ -167,13 +167,13 @@
   align-items: center;
   justify-content: center;
   min-width: 128px;
-  color: #172133;
-  background-color: #c1a077;
-  border: 1px solid #c1a077;
+  color: var(--cor-secundaria-texto, #172133);
+  background-color: var(--cor-secundaria, #c1a077);
+  border: 1px solid var(--cor-secundaria, #c1a077);
 }
 
 .createButton:hover:not(:disabled) {
-  background-color: #b08d60;
+  filter: brightness(0.88);
 }
 
 .closeButton:disabled,

@@ -90,6 +90,21 @@ describe('US19 — integração do frontend com o contrato HTTP de processos', (
         if (parsed.pathname === '/funcionarios')
           return json([{ funcionario_id: 2, nome: 'Dr. Lucas Mendes' }]);
         if (parsed.pathname === '/processos/sincronizar') return syncResponse();
+        if (
+          parsed.pathname === `/processos/${original.processo_id}/movimentacoes`
+        ) {
+          return json([
+            {
+              movimentacao_id: 1,
+              processo_id: original.processo_id,
+              funcionario_id: null,
+              tipo_movimentacao: 'SINCRONIZACAO_TRIBUNAL',
+              descricao:
+                "Status sincronizado via Datajud de 'Ativo' para 'Concluído'.",
+              data_movimentacao: '2026-10-29T12:00:00',
+            },
+          ]);
+        }
         if (parsed.pathname === '/processos/') {
           if (failList) return json({ detail: 'Consulta indisponível' }, 503);
           expect(options.headers.Authorization).toBe('Bearer token-teste');
@@ -144,7 +159,9 @@ describe('US19 — integração do frontend com o contrato HTTP de processos', (
     });
     fireEvent.click(within(dialog).getByRole('tab', { name: 'Movimentações' }));
     expect(
-      within(dialog).getByText('Atualização de Movimentação Sincronizada')
+      await within(dialog).findByText(
+        "Status sincronizado via Datajud de 'Ativo' para 'Concluído'."
+      )
     ).toBeInTheDocument();
     expect(within(dialog).getByText('DataJud')).toBeInTheDocument();
   });

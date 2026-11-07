@@ -378,6 +378,46 @@ export const criarLancamento = criarFinancas;
 export const atualizarLancamento = atualizarFinancas;
 export const excluirLancamento = excluirFinancas;
 
+export async function exportarFinancas(filters = {}, formato = 'pdf') {
+  const fallbackMessage = 'Não foi possível exportar os lançamentos.';
+  const token = getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+  const params = new URLSearchParams({ formato });
+  if (filters.inicio) params.append('inicio', filters.inicio);
+  if (filters.fim) params.append('fim', filters.fim);
+  if (filters.tipo) params.append('tipo', filters.tipo);
+  if (filters.situacao) params.append('status', filters.situacao);
+  if (filters.categoria_id) params.append('categoria_id', filters.categoria_id);
+  if (filters.cliente_id) params.append('cliente_id', filters.cliente_id);
+
+  let response;
+
+  try {
+    response = await fetch(`${API_URL}/lancamentos/exportar?${params}`, {
+      cache: 'no-store',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new Error(fallbackMessage);
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Sessão expirada. Faça login novamente.');
+    }
+    if (response.status === 403) {
+      throw new Error(
+        'Você não possui permissão para exportar os dados financeiros.'
+      );
+    }
+    const error = await response.json().catch(() => null);
+    throw new Error(parseApiError(error, fallbackMessage));
+  }
+
+  return response.blob();
+}
+
 export async function listarCategorias() {
   const token = getAccessToken();
   const response = await fetch(`${API_URL}/categorias-lancamento`, {

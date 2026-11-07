@@ -150,6 +150,7 @@ export default function AreasTab({
               placeholder="Ex: Direito Civil"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
+              maxLength={100}
             />
           </div>
 
@@ -165,6 +166,7 @@ export default function AreasTab({
               placeholder="Ex: Contratos, responsabilidade civil, família e sucessões."
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
+              maxLength={500}
             />
           </div>
 

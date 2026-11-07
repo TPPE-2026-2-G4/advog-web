@@ -7,23 +7,47 @@
 
 .brand {
   width: 48%;
-  background-color: #172133;
+  background-color: var(--cor-primaria, #172133);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  padding: 40px 24px;
+}
+
+.brandBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.brandLogo {
+  max-width: 200px;
+  max-height: 80px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 20px;
 }
 
 .titleBrand {
-  color: white;
+  color: var(--cor-primaria-texto, white);
   font-size: 40px;
   margin: 0;
+  text-align: center;
 }
 
 .subtitleBrand {
-  color: white;
+  color: var(--cor-primaria-texto, white);
   font-size: 18px;
   margin: 16px 0 0;
+  text-align: center;
+  opacity: 0.9;
 }
 
 .auth {
@@ -36,7 +60,7 @@
 }
 
 .titleAuth {
-  color: #172133;
+  color: var(--cor-primaria, #172133);
   font-size: 32px;
   margin: 0;
 }
