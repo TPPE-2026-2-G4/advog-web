@@ -332,14 +332,14 @@ export default function ProcessDetailsModal({
                 </button>
               ))}
             </div>
-            {activeTab === 'documentos' && canEdit && (
+            {activeTab === 'documentos' && canEdit && documents.length > 0 && (
               <button
                 type="button"
                 className={styles.tabAddDocButton}
                 onClick={handleUploadClick}
                 disabled={isUploading}
               >
-                {isUploading ? 'Enviando…' : 'Adicionar Documento'}
+                {isUploading ? 'Enviando…' : 'Fazer Upload'}
               </button>
             )}
           </div>

@@ -157,6 +157,9 @@ describe('ProcessDetailsModal', () => {
     expect(
       screen.getByRole('button', { name: 'Fazer Upload' })
     ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Fazer Upload' })
+    ).toHaveLength(1);
   });
 
   it('exibe alerta de erro e opção de tentar novamente quando falha ao carregar movimentações, sem exibir estado vazio', async () => {
@@ -280,6 +283,9 @@ describe('ProcessDetailsModal', () => {
     expect(
       screen.getByRole('button', { name: 'Fazer Upload' })
     ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Fazer Upload' })
+    ).toHaveLength(1);
   });
 
   it('solicita sempre uma URL atualizada ao visualizar documento, mesmo que o documento já traga uma URL prévia', async () => {
@@ -430,8 +436,11 @@ describe('ProcessDetailsModal', () => {
       screen.getByText('10/05/2026', { exact: false })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Adicionar Documento' })
+      screen.getByRole('button', { name: 'Fazer Upload' })
     ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Fazer Upload' })
+    ).toHaveLength(1);
 
     const deleteBtn = screen.getByRole('button', {
       name: 'Excluir documento procuracao.pdf',
@@ -485,7 +494,7 @@ describe('ProcessDetailsModal', () => {
       screen.getByRole('button', { name: 'Visualizar' })
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Adicionar Documento' })
+      screen.queryByRole('button', { name: 'Fazer Upload' })
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Excluir documento contrato.pdf' })

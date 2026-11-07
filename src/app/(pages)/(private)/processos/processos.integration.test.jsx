@@ -2185,6 +2185,9 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       const uploadBtn = within(modal).getByRole('button', {
         name: 'Fazer Upload',
       });
+      expect(
+        within(modal).getAllByRole('button', { name: 'Fazer Upload' })
+      ).toHaveLength(1);
       fireEvent.click(uploadBtn);
       expect(clickSpy).toHaveBeenCalledTimes(1);
 
@@ -2222,8 +2225,11 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         .mockImplementation(() => {});
 
       const addDocBtn = within(modal).getByRole('button', {
-        name: 'Adicionar Documento',
+        name: 'Fazer Upload',
       });
+      expect(
+        within(modal).getAllByRole('button', { name: 'Fazer Upload' })
+      ).toHaveLength(1);
       fireEvent.click(addDocBtn);
       expect(clickSpy).toHaveBeenCalledTimes(1);
 
@@ -2454,7 +2460,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       await within(modal).findByText('peticao.pdf');
 
       expect(
-        within(modal).queryByRole('button', { name: 'Adicionar Documento' })
+        within(modal).queryByRole('button', { name: 'Fazer Upload' })
       ).not.toBeInTheDocument();
 
       expect(
