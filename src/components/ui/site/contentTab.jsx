@@ -5,6 +5,7 @@ import { useRef } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 import styles from './site.module.css';
 import { getImageUrl } from '@/utils/institucional';
+import { formatarTelefone } from '@/utils/cliente';
 
 export default function ContentTab({
   formData,
@@ -39,6 +40,7 @@ export default function ContentTab({
           value={formData.nomeEscritorio || ''}
           onChange={(e) => onInputChange('nomeEscritorio', e.target.value)}
           placeholder="Ex: Carreiro Advogados"
+          maxLength={100}
         />
       </div>
 
@@ -53,6 +55,7 @@ export default function ContentTab({
           value={formData.descricao || ''}
           onChange={(e) => onInputChange('descricao', e.target.value)}
           placeholder="Ex: Tradição e excelência na defesa dos seus direitos"
+          maxLength={200}
         />
       </div>
 
@@ -67,6 +70,7 @@ export default function ContentTab({
           value={formData.sobreEscritorio || ''}
           onChange={(e) => onInputChange('sobreEscritorio', e.target.value)}
           placeholder="Fundado em 2010 por Dr. Alexandre Carreiro..."
+          maxLength={2000}
         />
       </div>
 
@@ -124,22 +128,7 @@ export default function ContentTab({
         )}
       </div>
 
-      {/* Informações adicionais (exibidas abaixo da descrição) */}
-      <div className={styles.formGroup}>
-        <label htmlFor="textoAdicionalSobre" className={styles.formLabel}>
-          Informações adicionais (exibidas abaixo da descrição)
-        </label>
-        <textarea
-          id="textoAdicionalSobre"
-          className={styles.formTextarea}
-          rows={3}
-          value={formData.textoAdicionalSobre || ''}
-          onChange={(e) => onInputChange('textoAdicionalSobre', e.target.value)}
-          placeholder="Mais de 500 casos atendidos · 15 anos de atuação · Atendimento personalizado"
-        />
-      </div>
-
-      <div style={{ height: '24px' }} />
+      <div style={{ height: '16px' }} />
 
       {/* Seção Dados de contato público */}
       <h3 className={styles.cardTitle}>Dados de contato público</h3>
@@ -150,11 +139,15 @@ export default function ContentTab({
         </label>
         <input
           id="telefone"
-          type="text"
+          type="tel"
+          inputMode="numeric"
           className={styles.formInput}
           value={formData.telefone || ''}
-          onChange={(e) => onInputChange('telefone', e.target.value)}
+          onChange={(e) =>
+            onInputChange('telefone', formatarTelefone(e.target.value))
+          }
           placeholder="Ex: (61) 98765-4321"
+          maxLength={15}
         />
       </div>
 
@@ -169,6 +162,7 @@ export default function ContentTab({
           value={formData.email || ''}
           onChange={(e) => onInputChange('email', e.target.value)}
           placeholder="Ex: contato@carreiro.adv.br"
+          maxLength={100}
         />
       </div>
 
@@ -183,6 +177,7 @@ export default function ContentTab({
           value={formData.endereco || ''}
           onChange={(e) => onInputChange('endereco', e.target.value)}
           placeholder="Ex: SCLN 203, Bloco B — Brasília, DF"
+          maxLength={200}
         />
       </div>
     </div>

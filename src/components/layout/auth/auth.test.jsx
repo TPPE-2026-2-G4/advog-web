@@ -50,4 +50,97 @@ describe('Auth', () => {
       expect(screen.getByText(childText)).toBeInTheDocument();
     }
   );
+
+  it('aplica dados e cores customizados de institucional no painel brand', () => {
+    const customInstitucional = {
+      nomeEscritorio: 'Carreiro Advogados Associados',
+      descricao: 'Excelência e tradição jurídica',
+      corPrimaria: '#0F172A', // escuro
+      corSecundaria: '#EAB308', // claro
+    };
+
+    render(
+      <Auth
+        title="Entrar"
+        subtitle="Acesse sua conta"
+        institucional={customInstitucional}
+      >
+        <div />
+      </Auth>
+    );
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Carreiro Advogados Associados',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Gestão Jurídica de Alta Performance')
+    ).toBeInTheDocument();
+
+    const brand = screen.getByTestId('auth-brand');
+    expect(brand).toHaveStyle({
+      backgroundColor: '#0F172A',
+      color: '#ffffff',
+    });
+
+    const badge = screen.getByTestId('auth-logo-badge');
+    expect(badge).toHaveStyle({
+      backgroundColor: '#EAB308',
+      color: '#172133',
+    });
+  });
+
+  it('renderiza imagem de logotipo quando fornecida', () => {
+    const customInstitucional = {
+      nomeEscritorio: 'Advocacia Especial',
+      logotipo: 'https://exemplo.com/logo.png',
+    };
+
+    render(
+      <Auth
+        title="Entrar"
+        subtitle="Subtítulo"
+        institucional={customInstitucional}
+      >
+        <div />
+      </Auth>
+    );
+
+    const img = screen.getByTestId('auth-logo-img');
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute('src', 'https://exemplo.com/logo.png');
+    expect(screen.queryByTestId('auth-logo-badge')).not.toBeInTheDocument();
+  });
+
+  it('contrasta a cor do texto do brand para escuro quando corPrimaria for clara', () => {
+    const customInstitucional = {
+      nomeEscritorio: 'Escritório Luz',
+      descricao: 'Atendimento claro',
+      corPrimaria: '#FFFFFF', // claro
+      corSecundaria: '#000000', // escuro
+    };
+
+    render(
+      <Auth
+        title="Entrar"
+        subtitle="Subtítulo"
+        institucional={customInstitucional}
+      >
+        <div />
+      </Auth>
+    );
+
+    const brand = screen.getByTestId('auth-brand');
+    expect(brand).toHaveStyle({
+      backgroundColor: '#FFFFFF',
+      color: '#172133',
+    });
+
+    const badge = screen.getByTestId('auth-logo-badge');
+    expect(badge).toHaveStyle({
+      backgroundColor: '#000000',
+      color: '#ffffff',
+    });
+  });
 });

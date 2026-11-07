@@ -24,6 +24,8 @@ import {
   criarCategoria,
   excluirCategoria,
   listarCategorias,
+  obterCalendario,
+  exportarCalendarioIcs,
 } from '@/services/financas';
 import {
   formatCurrency,
@@ -84,6 +86,14 @@ function createJsonResponse(data, status = 200) {
     json: async () => data,
   };
 }
+
+const invalidJsonErrorResponse = (status = 500) => ({
+  ok: false,
+  status,
+  json: async () => {
+    throw new Error('Invalid JSON');
+  },
+});
 
 describe('Financas Integration Tests (Full Frontend Stack)', () => {
   let fetchMock;
@@ -162,6 +172,24 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
           },
           200
         );
+      }
+
+      if (
+        method === 'GET' &&
+        url.includes('/lancamentos/calendario/exportar')
+      ) {
+        return {
+          ok: true,
+          status: 200,
+          blob: async () =>
+            new Blob(['BEGIN:VCALENDAR...END:VCALENDAR'], {
+              type: 'text/calendar',
+            }),
+        };
+      }
+
+      if (method === 'GET' && url.includes('/lancamentos/calendario')) {
+        return createJsonResponse(dbLancamentos, 200);
       }
 
       if (method === 'GET' && url.includes('/lancamentos/')) {
@@ -1608,6 +1636,91 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       throw new Error('Network fail');
     };
     expect(await obterResumoFinancas()).toBeNull();
+  });
+
+  it('integra obterCalendario com filtros, sem filtros, respostas sem array e falhas de rede', async () => {
+    // Com todos os filtros aplicados
+    const resComFiltros = await obterCalendario({
+      inicio: '2026-08-01',
+      fim: '2026-08-31',
+      status: 'Realizado',
+      tipo: 'entrada',
+      categoria_id: 10,
+      cliente_id: 5,
+    });
+    expect(Array.isArray(resComFiltros)).toBe(true);
+
+    // Sem filtros e sem token
+    sessionStorage.removeItem('access_token');
+    const resSemToken = await obterCalendario();
+    expect(Array.isArray(resSemToken)).toBe(true);
+    sessionStorage.setItem('access_token', FAKE_TOKEN);
+
+    // Resposta não-ok
+    routeOverrides['GET /lancamentos/calendario'] = async () =>
+      createJsonResponse({}, 500);
+    expect(await obterCalendario()).toEqual([]);
+
+    // Resposta ok mas não-array
+    routeOverrides['GET /lancamentos/calendario'] = async () =>
+      createJsonResponse({ resultado: 'invalido' }, 200);
+    expect(await obterCalendario()).toEqual([]);
+
+    // Falha de rede (exceção no fetch)
+    routeOverrides['GET /lancamentos/calendario'] = async () => {
+      throw new Error('Network down');
+    };
+    expect(await obterCalendario()).toEqual([]);
+  });
+
+  it('integra exportarCalendarioIcs com todos os filtros, geração de blob, download e tratamento de erros da API', async () => {
+    const createObjectUrlSpy = vi
+      .spyOn(window.URL, 'createObjectURL')
+      .mockReturnValue('blob:http://localhost:3000/mock-ics');
+    const revokeObjectUrlSpy = vi
+      .spyOn(window.URL, 'revokeObjectURL')
+      .mockImplementation(() => {});
+
+    // Exportação com sucesso com filtros
+    const blob = await exportarCalendarioIcs({
+      inicio: '2026-08-01',
+      fim: '2026-08-31',
+      status: 'Pendente',
+      tipo: 'saida',
+      categoria_id: 20,
+      cliente_id: 3,
+    });
+    expect(blob).toBeTruthy();
+    expect(createObjectUrlSpy).toHaveBeenCalled();
+    expect(revokeObjectUrlSpy).toHaveBeenCalledWith(
+      'blob:http://localhost:3000/mock-ics'
+    );
+
+    // Exportação sem filtros e sem token
+    sessionStorage.removeItem('access_token');
+    const blobSemFiltros = await exportarCalendarioIcs();
+    expect(blobSemFiltros).toBeTruthy();
+    sessionStorage.setItem('access_token', FAKE_TOKEN);
+
+    // Erro da API com mensagem de detalhe
+    routeOverrides['GET /lancamentos/calendario/exportar'] = async () =>
+      createJsonResponse(
+        { detail: 'Filtro de datas inválido para exportação' },
+        400
+      );
+    await expect(exportarCalendarioIcs()).rejects.toThrow(
+      'Filtro de datas inválido para exportação'
+    );
+
+    // Erro da API com JSON inválido (fallback)
+    routeOverrides['GET /lancamentos/calendario/exportar'] = async () =>
+      invalidJsonErrorResponse(500);
+    await expect(exportarCalendarioIcs()).rejects.toThrow(
+      'Não foi possível exportar o calendário.'
+    );
+
+    createObjectUrlSpy.mockRestore();
+    revokeObjectUrlSpy.mockRestore();
   });
 
   describe('exportação de relatórios', () => {

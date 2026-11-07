@@ -1785,9 +1785,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       const modal = await openDetails();
       openDocumentsTab(modal);
       await within(modal).findByText('peticao.pdf');
-      expect(
-        within(modal).getByText('2.0 KB •', { exact: false })
-      ).toBeVisible();
+      expect(within(modal).getByText('2.0 KB', { exact: false })).toBeVisible();
 
       fireEvent.change(within(modal).getByTestId('file-upload-input'), {
         target: {

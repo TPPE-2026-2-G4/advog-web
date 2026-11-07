@@ -65,7 +65,7 @@
 
 .title {
   margin: 0;
-  color: #0f172a;
+  color: var(--cor-primaria, #0f172a);
   font-family: Georgia, Cambria, 'Times New Roman', Times, serif;
   font-size: 24px;
   font-weight: 700;
@@ -110,26 +110,32 @@
   justify-content: center;
   padding: 6px 14px;
   font-size: 13px;
-  font-weight: 500;
-  color: #0f172a;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  font-weight: 600;
+  color: var(--cor-secundaria-texto, #172133);
+  background-color: var(--cor-secundaria, #c1a077);
+  border: 1px solid var(--cor-secundaria, #c1a077);
   border-radius: 6px;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    filter 0.15s ease;
   flex-shrink: 0;
   margin-bottom: 4px;
 }
 
 .tabAddDocButton:hover:not(:disabled) {
-  background-color: #f8fafc;
-  border-color: #94a3b8;
+  filter: brightness(0.88);
 }
 
 .tabAddDocButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.tabAddDocButton:focus-visible {
+  outline: 2px solid var(--cor-secundaria, #c1a077);
+  outline-offset: 2px;
 }
 
 .tabButton {
@@ -147,14 +153,14 @@
 }
 
 .tabButton:hover {
-  color: #0f172a;
+  color: var(--cor-primaria, #0f172a);
   border-bottom-color: rgba(100, 116, 139, 0.3);
 }
 
 .tabButtonActive {
-  color: #0f172a;
+  color: var(--cor-primaria, #0f172a);
   font-weight: 600;
-  border-bottom-color: #c5a059;
+  border-bottom-color: var(--cor-secundaria, #c1a077);
 }
 
 .tabContent {
@@ -218,7 +224,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #0f172a;
+  color: var(--cor-primaria, #0f172a);
 }
 
 .movementInfo {
@@ -305,7 +311,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #0f172a;
+  color: var(--cor-primaria, #0f172a);
 }
 
 .documentInfo {
@@ -409,7 +415,7 @@
 
 .deleteConfirmTitle {
   margin: 0 0 8px;
-  color: #0f172a;
+  color: var(--cor-primaria, #0f172a);
   font-size: 20px;
   font-weight: 700;
 }
@@ -459,6 +465,11 @@
 
 .deleteConfirmCancelBtn:hover:not(:disabled) {
   background-color: #f9fafb;
+}
+
+.deleteConfirmCancelBtn:focus-visible {
+  outline: 2px solid var(--cor-secundaria, #c1a077);
+  outline-offset: 2px;
 }
 
 .deleteConfirmDeleteBtn {
@@ -514,22 +525,29 @@
   margin-top: 14px;
   padding: 8px 16px;
   font-size: 13px;
-  font-weight: 500;
-  color: #0f172a;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  font-weight: 600;
+  color: var(--cor-secundaria-texto, #172133);
+  background-color: var(--cor-secundaria, #c1a077);
+  border: 1px solid var(--cor-secundaria, #c1a077);
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    filter 0.15s ease;
 }
 
-.uploadButton:hover {
-  background-color: #f8fafc;
+.uploadButton:hover:not(:disabled) {
+  filter: brightness(0.88);
 }
 
 .uploadButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.uploadButton:focus-visible {
+  outline: 2px solid var(--cor-secundaria, #c1a077);
+  outline-offset: 2px;
 }
 
 .refreshError {
@@ -572,7 +590,7 @@
 }
 
 .tabButton:focus-visible {
-  outline: 2px solid #c5a059;
+  outline: 2px solid var(--cor-secundaria, #c1a077);
   outline-offset: -2px;
 }
 

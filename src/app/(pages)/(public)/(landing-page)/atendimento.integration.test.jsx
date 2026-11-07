@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Home from './page';
@@ -143,7 +144,9 @@ describe('Integração: Landing Page Institucional e Solicitação Pública de A
       'src',
       'http://localhost:9000/bucket/sobre.jpg'
     );
-    expect(screen.getByText('Áreas de Atuação')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('Áreas de Atuação').length
+    ).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Direito Civil')).toBeInTheDocument();
     expect(screen.getByText('Direito Societário')).toBeInTheDocument();
     expect(screen.queryByText('Área Oculta')).not.toBeInTheDocument();
@@ -277,5 +280,147 @@ describe('Integração: Landing Page Institucional e Solicitação Pública de A
     expect(
       screen.getByRole('button', { name: 'Enviar Solicitação' })
     ).toBeEnabled();
+  });
+
+  it('renderiza landing page completa com todas as categorias de ícone, identidade visual personalizada, logotipo e dados de contato no rodapé', async () => {
+    mockLandingGetEndpoints(
+      {
+        corPrimaria: '#0f172a',
+        corSecundaria: '#f59e0b',
+        nomeEscritorio: 'Albuquerque Advocacia',
+        descricao: 'Excelência jurídica personalizada',
+        logotipo: 'http://minio:9000/bucket/logo.png',
+        bannerHero: 'http://minio:9000/bucket/hero.jpg',
+        telefone: '(61) 3333-4444',
+        email: 'contato@albuquerque.adv.br',
+        endereco: 'Brasília Shopping, Torre Sul, Sala 500',
+        sobreEscritorio: 'Fundado em 2010.',
+      },
+      [
+        {
+          funcionario_id: 1,
+          nome: 'Dr. Albuquerque',
+          cargo: 'Sócio Gestor',
+          exibicaoInstitucional: true,
+        },
+      ],
+      [
+        {
+          atuacao_id: 1,
+          nome: 'Direito Penal e Criminal',
+          descricao: 'Defesa penal especializada',
+          exibicaoInstitucional: true,
+        },
+        {
+          atuacao_id: 2,
+          nome: 'Direito Tributário e Público',
+          descricao: 'Planejamento e contencioso fiscal',
+          exibicaoInstitucional: true,
+        },
+        {
+          atuacao_id: 3,
+          nome: 'Direito de Família e Sucessões',
+          descricao: 'Inventários e divórcios',
+          exibicaoInstitucional: true,
+        },
+        {
+          atuacao_id: 4,
+          nome: 'Contratos e Direito do Consumidor',
+          descricao: 'Consultoria e litígios',
+          exibicaoInstitucional: true,
+        },
+        {
+          atuacao_id: 5,
+          nome: 'Direito Internacional',
+          descricao: 'Assessoria transfronteiriça',
+          exibicaoInstitucional: true,
+        },
+      ]
+    );
+
+    render(await Home());
+
+    expect(
+      screen.getByAltText('Logotipo Albuquerque Advocacia')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Direito Penal e Criminal')).toBeInTheDocument();
+    expect(
+      screen.getByText('Direito Tributário e Público')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Direito de Família e Sucessões')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Contratos e Direito do Consumidor')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Direito Internacional')).toBeInTheDocument();
+
+    // Rodapé
+    expect(screen.getByText('(61) 3333-4444')).toBeInTheDocument();
+    expect(screen.getByText('contato@albuquerque.adv.br')).toBeInTheDocument();
+    expect(
+      screen.getByText('Brasília Shopping, Torre Sul, Sala 500')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        new RegExp(`© ${new Date().getFullYear()} Albuquerque Advocacia`)
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('interage com a PublicNavbar na landing page: scroll para início, seções e menu mobile', async () => {
+    const scrollToSpy = vi.fn();
+    window.scrollTo = scrollToSpy;
+
+    mockLandingGetEndpoints(
+      {},
+      [{ funcionario_id: 1, exibicaoInstitucional: true }],
+      [{ atuacao_id: 1, exibicaoInstitucional: true }]
+    );
+    render(await Home());
+
+    // Scroll para início via desktop link
+    const inicioLinks = screen.getAllByRole('link', { name: /Início/i });
+    fireEvent.click(inicioLinks[0]);
+    expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+
+    // Scroll para seção com elemento no documento
+    const areasLinks = screen.getAllByRole('link', {
+      name: /Áreas de Atuação/i,
+    });
+    fireEvent.click(areasLinks[0]);
+    expect(scrollToSpy).toHaveBeenCalled();
+
+    // Menu Mobile toggle
+    const hamburgerBtn = screen.getByRole('button', {
+      name: 'Abrir menu de navegação',
+    });
+    expect(hamburgerBtn).toHaveAttribute('aria-expanded', 'false');
+
+    // Abre menu mobile
+    fireEvent.click(hamburgerBtn);
+    expect(screen.getByTestId('mobile-menu')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Fechar menu de navegação' })
+    ).toHaveAttribute('aria-expanded', 'true');
+
+    // Clica em um link dentro do menu mobile fecha o menu
+    const mobileMenu = screen.getByTestId('mobile-menu');
+    const mobileSobreLink = within(mobileMenu).getByRole('link', {
+      name: 'Sobre',
+    });
+    fireEvent.click(mobileSobreLink);
+    expect(screen.queryByTestId('mobile-menu')).not.toBeInTheDocument();
+
+    // Reabre e clica em Acessar Painel fecha o menu
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Abrir menu de navegação' })
+    );
+    const mobileActionBtn = within(screen.getByTestId('mobile-menu')).getByRole(
+      'link',
+      { name: 'Acessar Painel' }
+    );
+    fireEvent.click(mobileActionBtn);
+    expect(screen.queryByTestId('mobile-menu')).not.toBeInTheDocument();
   });
 });

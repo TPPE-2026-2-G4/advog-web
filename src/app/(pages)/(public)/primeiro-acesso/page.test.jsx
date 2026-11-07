@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { firstLogin as mockFirstLogin } from '@/services/auth';
+import { InstitucionalProvider } from '@/contexts/InstitucionalContext';
 import FirstLoginPage from './page';
 
 const { mockPush, mockGetSearchParam } = vi.hoisted(() => ({
@@ -276,5 +277,47 @@ describe('FirstLoginPage', () => {
     expect(
       screen.getByRole('button', { name: 'Concluir cadastro' })
     ).not.toBeDisabled();
+  });
+
+  it('renderiza o nome do escritório customizado e mantém o subtítulo fixo', () => {
+    render(
+      <InstitucionalProvider
+        initialData={{
+          nomeEscritorio: 'Albuquerque Advocacia',
+          descricao: 'Compromisso com seus direitos',
+          corPrimaria: '#1B2A4A',
+          corSecundaria: '#B79A63',
+        }}
+      >
+        <FirstLoginPage />
+      </InstitucionalProvider>
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Albuquerque Advocacia' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Gestão Jurídica de Alta Performance')
+    ).toBeInTheDocument();
+  });
+
+  it('adapta a cor do botão Concluir cadastro e o contraste de texto de acordo com a cor secundária', () => {
+    render(
+      <InstitucionalProvider
+        initialData={{
+          nomeEscritorio: 'Albuquerque Advocacia',
+          corPrimaria: '#613583',
+          corSecundaria: '#0F172A',
+        }}
+      >
+        <FirstLoginPage />
+      </InstitucionalProvider>
+    );
+
+    const btn = screen.getByRole('button', { name: 'Concluir cadastro' });
+    expect(btn).toHaveStyle({
+      backgroundColor: '#0F172A',
+      color: '#ffffff',
+    });
   });
 });
