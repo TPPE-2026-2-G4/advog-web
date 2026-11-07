@@ -6,6 +6,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import AtividadesPage from './page';
 import AtividadesClient from './atividadesClient';
 import { obterKanbanAtividades } from '@/services/atividades';
 import { obterResumoAtividades } from '@/services/dashboard';
@@ -57,6 +58,11 @@ describe('AtividadesClient integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     obterKanbanAtividades.mockResolvedValue(kanban);
+  });
+
+  it('renderiza AtividadesPage como wrapper de AtividadesClient', () => {
+    const page = AtividadesPage();
+    expect(page).toBeTruthy();
   });
 
   it('exibe o total e a contagem de cada etapa na ordem do quadro', async () => {

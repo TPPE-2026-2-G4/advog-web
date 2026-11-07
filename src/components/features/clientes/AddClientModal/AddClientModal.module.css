@@ -111,16 +111,18 @@
   padding: 10px 24px;
   font-size: 14px;
   font-weight: 600;
-  color: #111827;
-  background-color: #c1a077;
+  color: var(--cor-secundaria-texto, #111827);
+  background-color: var(--cor-secundaria, #c1a077);
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    filter 0.15s ease;
 }
 
 .submitBtn:hover:not(:disabled) {
-  background-color: #b08d60;
+  filter: brightness(0.88);
 }
 
 .submitBtn:disabled,

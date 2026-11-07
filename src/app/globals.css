@@ -1,3 +1,10 @@
+:root {
+  --cor-primaria: #172133;
+  --cor-primaria-texto: #ffffff;
+  --cor-secundaria: #c1a077;
+  --cor-secundaria-texto: #172133;
+}
+
 body {
   font-family: var(--font-inter), sans-serif;
 }
@@ -13,6 +20,17 @@ h6 {
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 html,

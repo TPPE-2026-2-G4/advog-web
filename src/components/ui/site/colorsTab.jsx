@@ -1,11 +1,13 @@
 'use client';
 
 import { Scale } from 'lucide-react';
+import { getContrastTextColor } from '@/utils/institucional';
 import styles from './site.module.css';
 
 export default function ColorsTab({ formData, onInputChange }) {
   const corPrimaria = formData.corPrimaria || '#1B2A4A';
   const corSecundaria = formData.corSecundaria || '#B79A63';
+  const corSecundariaTexto = getContrastTextColor(corSecundaria);
 
   return (
     <div className={styles.container}>
@@ -105,7 +107,7 @@ export default function ColorsTab({ formData, onInputChange }) {
               className={styles.navbarMockupBtn}
               style={{
                 backgroundColor: corSecundaria,
-                color: '#172133',
+                color: corSecundariaTexto,
               }}
             >
               Acessar Painel

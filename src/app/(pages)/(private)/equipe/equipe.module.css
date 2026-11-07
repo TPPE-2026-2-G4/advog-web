@@ -34,19 +34,21 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #c1a077;
-  color: #172133;
+  background-color: var(--cor-secundaria, #c1a077);
+  color: var(--cor-secundaria-texto, #172133);
   font-weight: 600;
   font-size: 14px;
   border: none;
   border-radius: 6px;
   padding: 10px 16px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition:
+    background-color 0.2s,
+    filter 0.2s;
 }
 
 .addButton:hover {
-  background-color: #b08d60;
+  filter: brightness(0.88);
 }
 
 .statsGrid {

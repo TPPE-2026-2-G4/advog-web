@@ -247,11 +247,6 @@ describe('Componentes UI do Módulo Site', () => {
         campo: 'endereco',
         valor: 'Novo Endereço',
       },
-      {
-        label: 'Informações adicionais (exibidas abaixo da descrição)',
-        campo: 'textoAdicionalSobre',
-        valor: 'Novas informações adicionais',
-      },
     ])(
       'chama onInputChange("$campo", "$valor") ao editar o campo "$label"',
       ({ label, campo, valor }) => {
@@ -264,6 +259,59 @@ describe('Componentes UI do Módulo Site', () => {
         expect(handleInputChange).toHaveBeenCalledWith(campo, valor);
       }
     );
+
+    it('não renderiza o campo de informações adicionais (textoAdicionalSobre)', () => {
+      render(<ContentTab formData={{}} onInputChange={vi.fn()} />);
+      expect(
+        screen.queryByLabelText(
+          'Informações adicionais (exibidas abaixo da descrição)'
+        )
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText(/Mais de 500 casos atendidos/i)
+      ).not.toBeInTheDocument();
+    });
+
+    it('formata o telefone com máscara e bloqueia texto não-numérico', () => {
+      const handleInputChange = vi.fn();
+      render(<ContentTab formData={{}} onInputChange={handleInputChange} />);
+
+      const telInput = screen.getByLabelText('Telefone');
+      expect(telInput).toHaveAttribute('maxLength', '15');
+      expect(telInput).toHaveAttribute('type', 'tel');
+
+      fireEvent.change(telInput, { target: { value: '61987654321' } });
+      expect(handleInputChange).toHaveBeenCalledWith(
+        'telefone',
+        '(61) 98765-4321'
+      );
+
+      fireEvent.change(telInput, { target: { value: 'somente_letras' } });
+      expect(handleInputChange).toHaveBeenCalledWith('telefone', '');
+    });
+
+    it('impõe limites de maxLength nos campos do formulário de conteúdo', () => {
+      render(<ContentTab formData={{}} onInputChange={vi.fn()} />);
+      expect(screen.getByLabelText('Nome do escritório')).toHaveAttribute(
+        'maxLength',
+        '100'
+      );
+      expect(
+        screen.getByLabelText('Slogan / subtítulo do hero')
+      ).toHaveAttribute('maxLength', '200');
+      expect(screen.getByLabelText('Sobre o escritório')).toHaveAttribute(
+        'maxLength',
+        '2000'
+      );
+      expect(screen.getByLabelText('Email')).toHaveAttribute(
+        'maxLength',
+        '100'
+      );
+      expect(screen.getByLabelText('Endereço')).toHaveAttribute(
+        'maxLength',
+        '200'
+      );
+    });
 
     it('renderiza upload de imagem da seção sobre e aciona onUploadImagemSobre', () => {
       const handleUpload = vi.fn();
@@ -677,6 +725,36 @@ describe('Componentes UI do Módulo Site', () => {
       const swatchPrimaria = screen.getByTestId('swatch-primaria');
       expect(swatchPrimaria).toHaveStyle({ backgroundColor: '#1B2A4A' });
     });
+
+    it('contrasta a cor do texto do botão na prévia da navbar para branco quando cor secundária for escura', () => {
+      render(
+        <ColorsTab
+          formData={{ corSecundaria: '#0F172A' }}
+          onInputChange={vi.fn()}
+        />
+      );
+
+      const btn = screen.getByRole('button', { name: 'Acessar Painel' });
+      expect(btn).toHaveStyle({
+        backgroundColor: '#0F172A',
+        color: '#ffffff',
+      });
+    });
+
+    it('contrasta a cor do texto do botão na prévia da navbar para escuro quando cor secundária for clara', () => {
+      render(
+        <ColorsTab
+          formData={{ corSecundaria: '#B79A63' }}
+          onInputChange={vi.fn()}
+        />
+      );
+
+      const btn = screen.getByRole('button', { name: 'Acessar Painel' });
+      expect(btn).toHaveStyle({
+        backgroundColor: '#B79A63',
+        color: '#172133',
+      });
+    });
   });
 
   describe('PreviewModal', () => {
@@ -710,6 +788,52 @@ describe('Componentes UI do Módulo Site', () => {
       expect(screen.getByText('(61) 98765-4321')).toBeInTheDocument();
       expect(screen.getByText('contato@carreiro.adv.br')).toBeInTheDocument();
       expect(screen.getByText('Brasília, DF')).toBeInTheDocument();
+    });
+
+    it('contrasta a cor do texto dos botões da prévia para branco quando cor secundária for escura', () => {
+      render(
+        <PreviewModal
+          isOpen={true}
+          onClose={vi.fn()}
+          formData={{ corSecundaria: '#0F172A' }}
+        />
+      );
+
+      const navBtn = screen.getByRole('button', { name: 'Acessar Painel' });
+      const heroBtn = screen.getByRole('button', {
+        name: 'Solicitar Atendimento',
+      });
+      expect(navBtn).toHaveStyle({
+        backgroundColor: '#0F172A',
+        color: '#ffffff',
+      });
+      expect(heroBtn).toHaveStyle({
+        backgroundColor: '#0F172A',
+        color: '#ffffff',
+      });
+    });
+
+    it('contrasta a cor do texto dos botões da prévia para escuro quando cor secundária for clara', () => {
+      render(
+        <PreviewModal
+          isOpen={true}
+          onClose={vi.fn()}
+          formData={{ corSecundaria: '#B79A63' }}
+        />
+      );
+
+      const navBtn = screen.getByRole('button', { name: 'Acessar Painel' });
+      const heroBtn = screen.getByRole('button', {
+        name: 'Solicitar Atendimento',
+      });
+      expect(navBtn).toHaveStyle({
+        backgroundColor: '#B79A63',
+        color: '#172133',
+      });
+      expect(heroBtn).toHaveStyle({
+        backgroundColor: '#B79A63',
+        color: '#172133',
+      });
     });
 
     it('chama onClose ao clicar no botão fechar ou pressionar Escape', () => {
@@ -752,7 +876,7 @@ describe('Componentes UI do Módulo Site', () => {
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
 
-    it('renderiza imagemSobre, textoAdicionalSobre, áreas de atuação e advogados visíveis', () => {
+    it('renderiza imagemSobre, áreas de atuação e advogados visíveis', () => {
       const mockTeam = [
         {
           funcionario_id: 1,
@@ -818,7 +942,6 @@ describe('Componentes UI do Módulo Site', () => {
           onClose={vi.fn()}
           formData={{
             imagemSobre: 'http://minio/sobre.jpg',
-            textoAdicionalSobre: 'Mais de 500 casos atendidos',
           }}
           team={mockTeam}
           areas={mockAreas}
@@ -830,9 +953,6 @@ describe('Componentes UI do Módulo Site', () => {
         'src',
         'http://localhost:9000/sobre.jpg'
       );
-      expect(
-        screen.getByText('Mais de 500 casos atendidos')
-      ).toBeInTheDocument();
 
       expect(screen.getByText('Áreas de Atuação')).toBeInTheDocument();
       expect(screen.getByText('Direito Civil')).toBeInTheDocument();

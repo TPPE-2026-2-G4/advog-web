@@ -5,8 +5,10 @@ import styles from './ProcessDetailsModal.module.css';
 
 vi.mock('@/services/processos', () => ({
   listarDocumentos: vi.fn().mockResolvedValue([]),
+  listarMovimentacoes: vi.fn().mockResolvedValue([]),
   uploadDocumento: vi.fn().mockResolvedValue({}),
   obterUrlDocumento: vi.fn().mockResolvedValue({ url: 'http://test.url/doc' }),
+  excluirDocumento: vi.fn().mockResolvedValue({}),
 }));
 
 const processData = {
@@ -83,7 +85,29 @@ describe('ProcessDetailsModal', () => {
     }
   );
 
-  it('permite alternar entre as abas Resumo, Movimentações e Documentos exibindo DataJud e upload', async () => {
+  it('permite alternar entre as abas Resumo, Movimentações e Documentos exibindo movimentações reais da API e upload', async () => {
+    const { listarMovimentacoes } = await import('@/services/processos');
+    listarMovimentacoes.mockResolvedValueOnce([
+      {
+        movimentacao_id: 2,
+        processo_id: 1,
+        funcionario_id: null,
+        tipo_movimentacao: 'SINCRONIZACAO_TRIBUNAL',
+        descricao:
+          "Status sincronizado via Datajud de 'Ativo' para 'Concluído'.",
+        data_movimentacao: '2026-10-15T10:00:00',
+      },
+      {
+        movimentacao_id: 1,
+        processo_id: 1,
+        funcionario_id: 2,
+        tipo_movimentacao: 'CRIACAO_PROCESSO',
+        descricao:
+          "Processo 'Caso Teste' (CNJ 0061234-56.2026.8.26.0100) criado.",
+        data_movimentacao: '2026-01-01T00:00:00',
+      },
+    ]);
+
     const processWithSync = {
       ...processData,
       data_realizado: '2026-10-15T10:00:00',
@@ -94,9 +118,17 @@ describe('ProcessDetailsModal', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Movimentações' }));
     expect(
-      screen.getByText('Atualização de Movimentação Sincronizada')
+      await screen.findByText(
+        "Status sincronizado via Datajud de 'Ativo' para 'Concluído'."
+      )
     ).toBeInTheDocument();
     expect(screen.getByText('DataJud')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Processo 'Caso Teste' (CNJ 0061234-56.2026.8.26.0100) criado."
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText('Criação do Processo')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Resumo' }));
     expect(screen.getByText('15/10/2026')).toBeInTheDocument();
@@ -110,7 +142,24 @@ describe('ProcessDetailsModal', () => {
     ).toBeInTheDocument();
   });
 
-  it('conecta tabs ao painel e permite navegação por teclado', () => {
+  it('exibe estado vazio e alerta de erro quando falha ao carregar movimentações', async () => {
+    const { listarMovimentacoes } = await import('@/services/processos');
+    listarMovimentacoes.mockRejectedValueOnce(
+      new Error('Não foi possível carregar as movimentações.')
+    );
+
+    render(<ProcessDetailsModal process={processData} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Movimentações' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Não foi possível carregar as movimentações.'
+    );
+    expect(
+      screen.getByText('Nenhuma movimentação registrada para este processo.')
+    ).toBeInTheDocument();
+  });
+
+  it('conecta tabs ao painel e permite navegação por teclado', async () => {
     render(<ProcessDetailsModal process={processData} onClose={vi.fn()} />);
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Resumo' }), {
       key: 'ArrowRight',
@@ -139,6 +188,9 @@ describe('ProcessDetailsModal', () => {
       'aria-selected',
       'true'
     );
+    expect(
+      await screen.findByText('Nenhum documento anexado.')
+    ).toBeInTheDocument();
   });
 
   it('avisa sobre detalhe desatualizado e permite nova consulta', () => {
@@ -156,5 +208,111 @@ describe('ProcessDetailsModal', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('exibe documentos do processo e permite excluir pelo modal de confirmação quando canEdit for true', async () => {
+    const { listarDocumentos, excluirDocumento } =
+      await import('@/services/processos');
+    listarDocumentos.mockResolvedValueOnce([
+      {
+        documento_id: 10,
+        nome_original: 'procuracao.pdf',
+        tamanho_bytes: 10240,
+        data_upload: '2026-05-10T12:00:00',
+      },
+    ]);
+
+    render(
+      <ProcessDetailsModal
+        process={processData}
+        onClose={vi.fn()}
+        canEdit={true}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Documentos' }));
+    expect(await screen.findByText('procuracao.pdf')).toBeInTheDocument();
+    expect(screen.getByText('10.0 KB')).toBeInTheDocument();
+    expect(screen.getByText('10/05/2026')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Adicionar Documento' })
+    ).toBeInTheDocument();
+
+    const deleteBtn = screen.getByRole('button', {
+      name: 'Excluir documento procuracao.pdf',
+    });
+    expect(deleteBtn).toBeInTheDocument();
+
+    // Clica no ícone de lixeira -> abre o modal de confirmação
+    fireEvent.click(deleteBtn);
+    expect(
+      await screen.findByRole('heading', { name: 'Excluir documento?' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Tem certeza que deseja excluir o documento/)
+    ).toBeInTheDocument();
+
+    // Testa cancelar
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(
+      screen.queryByRole('heading', { name: 'Excluir documento?' })
+    ).not.toBeInTheDocument();
+
+    // Abre novamente e confirma a exclusão
+    fireEvent.click(deleteBtn);
+    const confirmDeleteBtn = screen.getByRole('button', { name: 'Excluir' });
+    fireEvent.click(confirmDeleteBtn);
+    expect(excluirDocumento).toHaveBeenCalledWith(1, 10);
+  });
+
+  it('oculta botões de upload e exclusão quando canEdit for false', async () => {
+    const { listarDocumentos } = await import('@/services/processos');
+    listarDocumentos.mockResolvedValueOnce([
+      {
+        documento_id: 20,
+        nome_original: 'contrato.pdf',
+        tamanho_bytes: 5120,
+        data_upload: '2026-06-01T12:00:00',
+      },
+    ]);
+
+    render(
+      <ProcessDetailsModal
+        process={processData}
+        onClose={vi.fn()}
+        canEdit={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Documentos' }));
+    expect(await screen.findByText('contrato.pdf')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Visualizar' })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Adicionar Documento' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Excluir documento contrato.pdf' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('valida formato inválido de arquivo no upload', async () => {
+    render(<ProcessDetailsModal process={processData} onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Documentos' }));
+    await screen.findByText('Nenhum documento anexado.');
+
+    const fileInput = screen.getByTestId('file-upload-input');
+    const invalidFile = new File(['executavel'], 'malware.exe', {
+      type: 'application/x-msdownload',
+    });
+
+    fireEvent.change(fileInput, { target: { files: [invalidFile] } });
+    expect(
+      await screen.findByText(
+        'Formato inválido. Envie arquivos PDF, DOCX, DOC, PNG ou JPG.'
+      )
+    ).toBeInTheDocument();
   });
 });

@@ -8,6 +8,7 @@ import {
   exportarProcessos,
   getProcessosData,
   listarDocumentos,
+  listarMovimentacoes,
   listarProcessos,
   listarProcessosCriticos,
   obterResumoProcessos,
@@ -351,6 +352,32 @@ describe('serviço de processos', () => {
 
       fetch.mockResolvedValueOnce(jsonResponse(null, { status: 204 }));
       await expect(excluirDocumento(1, 1)).resolves.toBeUndefined();
+
+      fetch.mockResolvedValueOnce(
+        jsonResponse([
+          {
+            movimentacao_id: 1,
+            processo_id: 1,
+            tipo_movimentacao: 'CRIACAO_PROCESSO',
+            descricao: 'Processo criado.',
+          },
+        ])
+      );
+      await expect(listarMovimentacoes(1)).resolves.toEqual([
+        {
+          movimentacao_id: 1,
+          processo_id: 1,
+          tipo_movimentacao: 'CRIACAO_PROCESSO',
+          descricao: 'Processo criado.',
+        },
+      ]);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/processos/1/movimentacoes',
+        {
+          method: 'GET',
+          headers: authorization,
+        }
+      );
     });
 
     it('consulta resumo de processos com parâmetros opcionais', async () => {
