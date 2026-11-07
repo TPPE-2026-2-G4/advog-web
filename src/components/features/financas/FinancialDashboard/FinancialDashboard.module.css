@@ -1,0 +1,425 @@
+.dashboardWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.kpiCard {
+  background-color: #ffffff;
+  border: 1px solid #f0ede6;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 6px rgba(23, 33, 51, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kpiLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  margin: 0;
+}
+
+.kpiValueRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kpiValue {
+  font-family: var(--font-cormorant), serif;
+  font-size: clamp(22px, 2.4vw, 28px);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.kpiValue::before {
+  content: 'R$\00a0';
+}
+
+.kpiGreen {
+  color: #34785f;
+}
+
+.kpiRed {
+  color: #a8283a;
+}
+
+.kpiDark {
+  color: #172133;
+}
+
+.kpiAmber {
+  color: #d49b27;
+}
+
+.trendIconPositive {
+  color: #34785f;
+  flex-shrink: 0;
+}
+
+.trendIconNegative {
+  color: #a8283a;
+  flex-shrink: 0;
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1.85fr 1fr;
+  gap: 20px;
+}
+
+.chartCard {
+  background-color: #ffffff;
+  border: 1px solid #f0ede6;
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: 0 2px 6px rgba(23, 33, 51, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.chartTitle {
+  font-family: var(--font-cormorant), serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #172133;
+  margin: 0;
+}
+
+.chartControls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.valueFilters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.valueInput {
+  width: 96px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: #374151;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.valueInput:focus {
+  border-color: #c1a077;
+  background-color: #ffffff;
+}
+
+.periodSelector {
+  display: inline-flex;
+  align-items: center;
+  background-color: #f5f3ef;
+  border-radius: 9999px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.periodBtn {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.periodBtn:hover {
+  color: #172133;
+}
+
+.periodBtnActive {
+  background-color: #ffffff;
+  color: #172133;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.areaChartContainer {
+  position: relative;
+  width: 100%;
+}
+
+.areaSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  cursor: crosshair;
+}
+
+.axisTickText {
+  font-size: 11px;
+  fill: #6b7280;
+  font-family: inherit;
+  user-select: none;
+}
+
+.gridLine {
+  stroke: #e5e7eb;
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+
+.axisLine {
+  stroke: #d1d5db;
+  stroke-width: 1;
+}
+
+.crosshairLine {
+  stroke: #d1d5db;
+  stroke-width: 1.4;
+  pointer-events: none;
+}
+
+.hoverBand {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.activeDot {
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+}
+
+.floatingTooltip {
+  position: absolute;
+  top: 12%;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+  transition: left 0.08s ease-out;
+}
+
+.floatingTooltipRight {
+  transform: translate(12px, 0);
+}
+
+.floatingTooltipLeft {
+  transform: translate(calc(-100% - 12px), 0);
+}
+
+.tooltipMonth {
+  font-size: 14px;
+  font-weight: 500;
+  color: #172133;
+  margin-bottom: 2px;
+}
+
+.tooltipEntrada {
+  font-size: 13px;
+  color: #34785f;
+  font-weight: 500;
+}
+
+.tooltipSaida {
+  font-size: 13px;
+  color: #a8283a;
+  font-weight: 500;
+}
+
+.areaLegend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.legendEntrada {
+  color: #34785f;
+}
+
+.legendSaida {
+  color: #a8283a;
+}
+
+.legendLineIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 10px;
+}
+
+.donutBody {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 16px;
+}
+
+.donutChartWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.donutSvg {
+  width: 185px;
+  height: 185px;
+  display: block;
+}
+
+.donutSegment {
+  transition:
+    opacity 0.2s ease,
+    stroke-width 0.15s ease;
+  cursor: pointer;
+}
+
+.donutSegment:hover {
+  opacity: 0.9;
+}
+
+.donutCenterTooltip {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  max-width: 105px;
+}
+
+.donutCenterCategory {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4b5563;
+  line-height: 1.2;
+}
+
+.donutCenterValue {
+  font-family: var(--font-cormorant), serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #172133;
+  margin-top: 2px;
+}
+
+.donutCenterValue::before {
+  content: 'R$\00a0';
+}
+
+.donutCenterPercent {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.donutLegend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.donutLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.donutColorSwatch {
+  width: 12px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.donutLegendLabel {
+  font-weight: 500;
+}
+
+.emptyCategoryText {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .kpiGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .chartHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chartControls {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
