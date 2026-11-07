@@ -577,7 +577,7 @@
   position: relative;
   background-size: cover;
   background-position: center;
-  color: #ffffff;
+  color: var(--cor-primaria-texto, #ffffff);
 }
 
 .previewHeroOverlay {
@@ -585,8 +585,8 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(15, 23, 42, 0.72) 0%,
-    rgba(15, 23, 42, 0.88) 100%
+    color-mix(in srgb, var(--cor-primaria, #172133) 72%, transparent) 0%,
+    color-mix(in srgb, var(--cor-primaria, #172133) 65%, #000000) 100%
   );
   z-index: 1;
 }
@@ -608,13 +608,14 @@
   font-weight: 700;
   margin: 0;
   line-height: 1.15;
-  color: #ffffff;
+  color: var(--cor-primaria-texto, #ffffff);
 }
 
 .previewHeroSubtitle {
   font-family: var(--font-inter), sans-serif;
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--cor-primaria-texto, #ffffff);
+  opacity: 0.9;
   max-width: 580px;
   margin: 0;
   line-height: 1.6;
@@ -641,13 +642,18 @@
 }
 
 .previewHeroSecondaryBtn {
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  background-color: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid
+    color-mix(in srgb, var(--cor-primaria-texto, #ffffff) 45%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--cor-primaria-texto, #ffffff) 8%,
+    transparent
+  );
   border-radius: 6px;
   padding: 10px 20px;
   font-size: 13px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--cor-primaria-texto, #ffffff);
   cursor: pointer;
 }
 

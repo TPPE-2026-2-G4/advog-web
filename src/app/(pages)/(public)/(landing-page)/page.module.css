@@ -15,7 +15,7 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  color: #ffffff;
+  color: var(--cor-primaria-texto, #ffffff);
   overflow: hidden;
   transition: background-color 0.3s ease;
 }
@@ -25,8 +25,8 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(15, 23, 42, 0.72) 0%,
-    rgba(15, 23, 42, 0.88) 100%
+    color-mix(in srgb, var(--cor-primaria, #172133) 72%, transparent) 0%,
+    color-mix(in srgb, var(--cor-primaria, #172133) 65%, #000000) 100%
   );
   z-index: 1;
 }
@@ -47,7 +47,7 @@
   font-family: var(--font-cormorant), Georgia, serif;
   font-size: clamp(38px, 5.5vw, 60px);
   font-weight: 700;
-  color: #ffffff;
+  color: var(--cor-primaria-texto, #ffffff);
   margin: 0;
   line-height: 1.15;
   letter-spacing: -0.5px;
@@ -57,7 +57,8 @@
   font-family: var(--font-inter), sans-serif;
   font-size: clamp(16px, 2vw, 20px);
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--cor-primaria-texto, #ffffff);
+  opacity: 0.9;
   max-width: 700px;
   margin: 0 auto;
   line-height: 1.6;
@@ -111,10 +112,15 @@
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: color-mix(
+    in srgb,
+    var(--cor-primaria-texto, #ffffff) 8%,
+    transparent
+  );
   backdrop-filter: blur(4px);
-  color: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.4);
+  color: var(--cor-primaria-texto, #ffffff);
+  border: 2px solid
+    color-mix(in srgb, var(--cor-primaria-texto, #ffffff) 40%, transparent);
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
@@ -122,8 +128,12 @@
 }
 
 .heroSecondaryBtn:hover {
-  background-color: rgba(255, 255, 255, 0.16);
-  border-color: #ffffff;
+  background-color: color-mix(
+    in srgb,
+    var(--cor-primaria-texto, #ffffff) 16%,
+    transparent
+  );
+  border-color: var(--cor-primaria-texto, #ffffff);
   transform: translateY(-2px);
 }
 

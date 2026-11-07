@@ -109,6 +109,27 @@ describe('Landing Page', () => {
         screen.getByText('Tradição e excelência na defesa dos seus direitos')
       ).toBeInTheDocument();
     });
+
+    it('aplica a cor primária dinâmica no container e hero section quando configurada', async () => {
+      buscarDadosInstitucionais.mockResolvedValue({
+        nomeEscritorio: 'Silva Advocacia',
+        corPrimaria: '#800020',
+        corSecundaria: '#D4AF37',
+      });
+
+      const { container } = render(await Home());
+
+      const hero = screen.getByTestId('hero-section');
+      expect(hero).toHaveStyle({
+        backgroundColor: '#800020',
+      });
+
+      const pageWrapper = container.firstChild;
+      expect(pageWrapper).toHaveStyle({
+        '--cor-primaria': '#800020',
+        '--cor-primaria-texto': '#ffffff',
+      });
+    });
   });
 
   beforeEach(() => {
