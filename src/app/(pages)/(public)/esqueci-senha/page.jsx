@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Auth from '@/components/layout/auth/auth';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import { useForgotPassword } from '@/hooks/useForgotPassword';
+import { useInstitucionalContext } from '@/contexts/InstitucionalContext';
+import { getContrastTextColor } from '@/utils/institucional';
 import styles from './forgotPassword.module.css';
 
 export function ForgotPasswordContent({ resetMode = false }) {
@@ -21,19 +23,27 @@ export function ForgotPasswordContent({ resetMode = false }) {
     isSubmitting,
     handleSubmit,
   } = useForgotPassword({ resetMode });
+  const { institucional } = useInstitucionalContext();
+  const corSecundaria = institucional?.corSecundaria || '#B79A63';
+  const corSecundariaTexto = getContrastTextColor(corSecundaria);
 
   if (!token && enviado) {
     return (
       <Auth
         title="Verifique seu e-mail"
         subtitle="Enviamos as instruções para redefinir sua senha"
+        institucional={institucional}
       >
         <div className={styles.feedback} role="status">
           <p>
             Se o e-mail estiver cadastrado, você irá receber um link em
             instantes.
           </p>
-          <Link className={styles.backLink} href="/login">
+          <Link
+            className={styles.backLink}
+            href="/login"
+            style={{ color: corSecundaria }}
+          >
             Voltar para o login
           </Link>
         </div>
@@ -49,6 +59,7 @@ export function ForgotPasswordContent({ resetMode = false }) {
           ? 'Crie uma nova senha para acessar o sistema'
           : 'Informe seu e-mail para receber o link de redefinição'
       }
+      institucional={institucional}
     >
       <form className={styles.form} onSubmit={handleSubmit}>
         {resetMode ? (
@@ -96,7 +107,12 @@ export function ForgotPasswordContent({ resetMode = false }) {
           </>
         )}
 
-        <button className={styles.button} type="submit" disabled={isSubmitting}>
+        <button
+          className={styles.button}
+          type="submit"
+          disabled={isSubmitting}
+          style={{ backgroundColor: corSecundaria, color: corSecundariaTexto }}
+        >
           {isSubmitting ? (
             <>
               {resetMode ? 'Redefinindo' : 'Enviando'} <LoadingDots />
@@ -109,7 +125,11 @@ export function ForgotPasswordContent({ resetMode = false }) {
         </button>
 
         {erro && <span className={styles.error}>{erro}</span>}
-        <Link className={styles.backLink} href="/login">
+        <Link
+          className={styles.backLink}
+          href="/login"
+          style={{ color: corSecundaria }}
+        >
           Voltar para o login
         </Link>
       </form>
