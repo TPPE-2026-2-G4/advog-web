@@ -75,3 +75,22 @@ export const formatActivityResponsibles = (responsaveis = []) =>
   responsaveis.length > 0
     ? responsaveis.map((responsavel) => responsavel.nome).join(', ')
     : 'Sem responsável';
+
+export const distributeActivitiesIntoStages = (
+  stages = [],
+  activities = []
+) => {
+  const activitiesByStage = new Map();
+  stages.forEach((stage) => activitiesByStage.set(stage.etapa_id, []));
+
+  activities.forEach((activity) => {
+    if (activitiesByStage.has(activity.etapa_id)) {
+      activitiesByStage.get(activity.etapa_id).push(activity);
+    }
+  });
+
+  return stages.map((stage) => ({
+    ...stage,
+    atividades: activitiesByStage.get(stage.etapa_id) ?? [],
+  }));
+};
