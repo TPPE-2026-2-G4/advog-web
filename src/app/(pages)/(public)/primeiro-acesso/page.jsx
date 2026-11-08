@@ -2,11 +2,14 @@
 
 import { Suspense } from 'react';
 import Auth from '@/components/layout/auth/auth';
+import { useInstitucionalContext } from '@/contexts/InstitucionalContext';
+import { getContrastTextColor } from '@/utils/institucional';
 import styles from './firstLogin.module.css';
 import { useFirstLogin } from '@/hooks/useFirstLogin';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 
 function FirstLoginContent() {
+  const { institucional } = useInstitucionalContext();
   const {
     nome,
     setNome,
@@ -25,10 +28,14 @@ function FirstLoginContent() {
     handleSubmit,
   } = useFirstLogin();
 
+  const corSecundaria = institucional?.corSecundaria || '#B79A63';
+  const corSecundariaTexto = getContrastTextColor(corSecundaria);
+
   return (
     <Auth
       title="Primeiro acesso"
       subtitle="Complete seus dados para finalizar seu cadastro e acessar a plataforma"
+      institucional={institucional}
     >
       <form className={styles.form} onSubmit={handleSubmit}>
         <label className={styles.label} htmlFor="nome">
@@ -155,7 +162,15 @@ function FirstLoginContent() {
           </div>
         )}
 
-        <button className={styles.button} type="submit" disabled={isSubmitting}>
+        <button
+          className={styles.button}
+          type="submit"
+          disabled={isSubmitting}
+          style={{
+            backgroundColor: corSecundaria,
+            color: corSecundariaTexto,
+          }}
+        >
           {isSubmitting ? (
             <>
               Salvando

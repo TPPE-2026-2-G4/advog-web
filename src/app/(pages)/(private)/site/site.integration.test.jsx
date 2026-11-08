@@ -22,7 +22,6 @@ const mockInitialData = {
   descricao: 'Slogan teste',
   sobreEscritorio: 'História teste',
   imagemSobre: null,
-  textoAdicionalSobre: 'Texto adicional teste',
   email: 'contato@carreiro.adv.br',
   telefone: '(61) 98765-4321',
   endereco: 'Brasília, DF',
@@ -341,7 +340,6 @@ describe('Integração: Módulo de Personalização do Site', () => {
         descricao: '',
         sobreEscritorio: '',
         imagemSobre: null,
-        textoAdicionalSobre: '',
         email: '',
         telefone: '',
         endereco: '',
@@ -529,12 +527,6 @@ describe('Integração: Módulo de Personalização do Site', () => {
     fireEvent.change(screen.getByLabelText('Sobre o escritório'), {
       target: { value: 'Nova história' },
     });
-    fireEvent.change(
-      screen.getByLabelText(
-        'Informações adicionais (exibidas abaixo da descrição)'
-      ),
-      { target: { value: 'Novos dados adicionais' } }
-    );
     fireEvent.change(screen.getByLabelText('Telefone'), {
       target: { value: '(61) 3333-4444' },
     });

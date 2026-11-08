@@ -6,6 +6,7 @@ import {
   salvarDadosInstitucionais,
   uploadImagemInstitucional,
 } from '@/services/institucional';
+import { validarDadosInstitucionais } from '@/utils/institucional';
 import {
   listarFuncionarios,
   mudarExibicaoInstitucional,
@@ -240,9 +241,27 @@ export function useInstitucional(initialData, options = {}) {
     setSaveError('');
     setSaveSuccess(false);
 
+    const erroValidacao = validarDadosInstitucionais(formData);
+    if (erroValidacao) {
+      setSaveError(erroValidacao);
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const saved = await salvarDadosInstitucionais(formData);
       setFormData(saved);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('institucional-updated', { detail: saved })
+        );
+        try {
+          localStorage.setItem('institucional_data', JSON.stringify(saved));
+        } catch {
+          // Ignora erro no localStorage
+        }
+      }
 
       if (team && team.length > 0) {
         await Promise.allSettled(

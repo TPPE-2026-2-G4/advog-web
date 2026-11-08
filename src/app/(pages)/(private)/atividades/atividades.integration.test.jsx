@@ -70,6 +70,11 @@ describe('AtividadesClient integration', () => {
     obterKanbanAtividades.mockResolvedValue(kanban);
   });
 
+  it('renderiza AtividadesPage como wrapper de AtividadesClient', () => {
+    const page = AtividadesPage();
+    expect(page).toBeTruthy();
+  });
+
   it('exibe o total e a contagem de cada etapa na ordem do quadro', async () => {
     render(<AtividadesClient />);
 

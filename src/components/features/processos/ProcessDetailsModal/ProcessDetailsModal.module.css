@@ -1,6 +1,8 @@
 .modal {
   width: 100%;
   max-width: 640px;
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
 }
 
 .header {
@@ -58,7 +60,7 @@
 }
 
 .body {
-  padding: 16px 24px 24px;
+  padding: 16px 24px 32px;
 }
 
 .title {
@@ -88,11 +90,46 @@
   margin-top: 8px;
 }
 
+.tabsHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 12px;
+}
+
 .tabsList {
   display: flex;
-  border-bottom: 1px solid #e2e8f0;
   overflow-x: auto;
   gap: 4px;
+}
+
+.tabAddDocButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+.tabAddDocButton:hover:not(:disabled) {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.tabAddDocButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .tabButton {
@@ -103,6 +140,7 @@
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -156,6 +194,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-bottom: 8px;
 }
 
 .movementItem {
@@ -221,6 +260,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding-bottom: 8px;
 }
 
 .documentsHeader {
@@ -231,35 +271,53 @@
 .documentsList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .documentItem {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
   gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.documentItem:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .documentMain {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  min-width: 0;
   overflow: hidden;
 }
 
-.documentIcon {
-  color: #64748b;
+.documentIconWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background-color: rgba(15, 23, 42, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  color: #0f172a;
+}
+
+.documentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .documentName {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: #0f172a;
   white-space: nowrap;
@@ -269,8 +327,12 @@
 
 .documentMeta {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: #64748b;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .documentActions {
@@ -280,33 +342,144 @@
   flex-shrink: 0;
 }
 
-.docActionBtn {
+.docIconButton {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 500;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   color: #1e3a8a;
   background-color: #eff6ff;
   border: 1px solid #bfdbfe;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.docActionBtn:hover {
+.docIconButton:hover:not(:disabled) {
   background-color: #dbeafe;
+  color: #1d4ed8;
 }
 
-.docDeleteBtn {
+.docDeleteIconButton {
   color: #dc2626;
   background-color: #fef2f2;
   border-color: #fecaca;
 }
 
-.docDeleteBtn:hover {
+.docDeleteIconButton:hover:not(:disabled) {
   background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.docIconButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.deleteConfirmOverlay {
+  z-index: 1100;
+}
+
+.deleteConfirmModal {
+  max-width: 440px;
+}
+
+.deleteConfirmHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 20px 0;
+}
+
+.deleteConfirmIconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: #b91c1c;
+  background-color: #fef2f2;
+  border-radius: 50%;
+}
+
+.deleteConfirmBody {
+  padding: 16px 20px 20px;
+}
+
+.deleteConfirmTitle {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.deleteConfirmMessage {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.deleteConfirmError {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  color: #b91c1c;
+  font-size: 13px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+}
+
+.deleteConfirmFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.deleteConfirmCancelBtn,
+.deleteConfirmDeleteBtn {
+  min-height: 38px;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.deleteConfirmCancelBtn {
+  color: #172133;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+}
+
+.deleteConfirmCancelBtn:hover:not(:disabled) {
+  background-color: #f9fafb;
+}
+
+.deleteConfirmDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 90px;
+  color: #ffffff;
+  background-color: #b91c1c;
+  border: 1px solid #b91c1c;
+}
+
+.deleteConfirmDeleteBtn:hover:not(:disabled) {
+  background-color: #991b1b;
+  border-color: #991b1b;
+}
+
+.deleteConfirmCancelBtn:disabled,
+.deleteConfirmDeleteBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .emptyDocuments {

@@ -206,6 +206,14 @@ export function listarDocumentos(processoId) {
   );
 }
 
+export function listarMovimentacoes(processoId) {
+  return request(
+    `/processos/${encodeURIComponent(processoId)}/movimentacoes`,
+    { method: 'GET' },
+    'Não foi possível carregar as movimentações.'
+  );
+}
+
 export function uploadDocumento(processoId, file) {
   const formData = new FormData();
   formData.append('file', file);

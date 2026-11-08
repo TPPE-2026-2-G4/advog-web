@@ -671,6 +671,68 @@ describe('CalendarioClient', () => {
     });
   });
 
+  it('lida com lançamentos com data em formato BR (DD/MM/YYYY), tipos e e despesa, sem título e sem categoria', () => {
+    const customItems = [
+      {
+        id: 301,
+        titulo: '',
+        descricao: 'Descrição sem título',
+        tipo: 'e',
+        valor: 1200,
+        status: 'pendente',
+        data_vencimento: '15/08/2026',
+        categoria: null,
+      },
+      {
+        id: 302,
+        titulo: 'Despesa Operacional',
+        descricao: '',
+        tipo: 'despesa',
+        valor: 800,
+        status: 'pendente',
+        data_vencimento: '15/08/2026',
+        categoria: '',
+      },
+    ];
+
+    render(
+      <CalendarioClient
+        initialData={customItems}
+        initialDate={new Date(2026, 7, 1)}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('day-15'));
+    expect(screen.getByText('Descrição sem título')).toBeInTheDocument();
+    expect(screen.getByText('Despesa Operacional')).toBeInTheDocument();
+  });
+
+  it('mostra mensagem quando o dia selecionado não tem lançamentos e trata erro ao exportar ics', async () => {
+    exportarCalendarioIcs.mockRejectedValueOnce(
+      new Error('Falha no servidor ao gerar ICS')
+    );
+
+    render(
+      <CalendarioClient
+        initialData={mockEventosAgosto}
+        initialDate={new Date(2026, 7, 1)}
+      />
+    );
+
+    // Dia 25 não tem eventos em agosto
+    fireEvent.click(screen.getByTestId('day-25'));
+    expect(screen.getByText('Sem lançamentos neste dia.')).toBeInTheDocument();
+
+    // Exportar ICS falhando
+    fireEvent.click(screen.getByRole('button', { name: /Exportar/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Falha no servidor ao gerar ICS')
+      ).toBeInTheDocument();
+    });
+  });
+
   describe('data inicial, mês sem lançamentos e exportação', () => {
     const withDate = (overrides) => ({
       id: 301,
