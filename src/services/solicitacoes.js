@@ -15,7 +15,7 @@ export const ERROS_SOLICITACAO = {
 export async function enviarSolicitacaoServico(dados) {
   let response;
   try {
-    response = await fetch(`${API_URL.replace(/\/$/, '')}/solicitacoes`, {
+    response = await fetch(`${API_URL.replace(/\/$/, '')}/clientes/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados),

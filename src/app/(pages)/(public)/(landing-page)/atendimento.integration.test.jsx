@@ -178,7 +178,7 @@ describe('Integração: Landing Page Institucional e Solicitação Pública de A
     }
     fireEvent.click(screen.getByRole('button', { name: 'Enviar Solicitação' }));
 
-    expect(fetch).toHaveBeenLastCalledWith(`${API_URL}/solicitacoes`, {
+    expect(fetch).toHaveBeenLastCalledWith(`${API_URL}/clientes/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados),
