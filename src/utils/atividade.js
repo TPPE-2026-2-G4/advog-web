@@ -80,17 +80,20 @@ export const distributeActivitiesIntoStages = (
   stages = [],
   activities = []
 ) => {
-  const activitiesByStage = new Map();
-  stages.forEach((stage) => activitiesByStage.set(stage.etapa_id, []));
+  const safeStages = Array.isArray(stages) ? stages : [];
+  const safeActivities = Array.isArray(activities) ? activities : [];
 
-  activities.forEach((activity) => {
-    if (activitiesByStage.has(activity.etapa_id)) {
+  const activitiesByStage = new Map();
+  safeStages.forEach((stage) => activitiesByStage.set(stage?.etapa_id, []));
+
+  safeActivities.forEach((activity) => {
+    if (activity && activitiesByStage.has(activity.etapa_id)) {
       activitiesByStage.get(activity.etapa_id).push(activity);
     }
   });
 
-  return stages.map((stage) => ({
+  return safeStages.map((stage) => ({
     ...stage,
-    atividades: activitiesByStage.get(stage.etapa_id) ?? [],
+    atividades: activitiesByStage.get(stage?.etapa_id) ?? [],
   }));
 };

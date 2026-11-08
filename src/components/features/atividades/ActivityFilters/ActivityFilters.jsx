@@ -2,14 +2,14 @@ import { RotateCcw, Search } from 'lucide-react';
 import styles from './ActivityFilters.module.css';
 
 export default function ActivityFilters({
-  filters,
+  filters = {},
   responsaveis = [],
   onFilterChange,
   onClear,
 }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
-    onFilterChange(name, value);
+    onFilterChange?.(name, value);
   };
 
   const hasActiveFilters = Boolean(
@@ -19,13 +19,14 @@ export default function ActivityFilters({
   return (
     <section className={styles.container} aria-label="Filtrar atividades">
       <div className={styles.searchContainer}>
-        <Search size={18} className={styles.seachIcon} aria-hidden="true" />
+        <Search size={18} className={styles.searchIcon} aria-hidden="true" />
         <input
           type="search"
           name="busca"
+          aria-label="buscar atividades"
           className={styles.searchInput}
           placeholder="Buscar por título, categoria ou responsável..."
-          value={filters.busca}
+          value={filters.busca ?? ''}
           onChange={handleChange}
         />
       </div>
@@ -35,7 +36,7 @@ export default function ActivityFilters({
           name="funcionarioId"
           aria-label="Filtrar por responsável"
           className={styles.pillSelect}
-          value={filters.funcionarioId}
+          value={filters.funcionarioId ?? ''}
           onChange={handleChange}
         >
           <option value="">Todos os responsáveis</option>
@@ -53,7 +54,7 @@ export default function ActivityFilters({
             name="prazoFim"
             aria-label="Prazo até"
             className={styles.pillDate}
-            value={filters.prazoFim}
+            value={filters.prazoFim ?? ''}
             onChange={handleChange}
           />
         </label>

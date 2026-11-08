@@ -109,7 +109,7 @@ export function excluirAtividade(atividadeId) {
 export function filtrarAtividades(filtros = {}) {
   const params = new URLSearchParams();
 
-  if (filtros.busca_textual) {
+  if (filtros.busca_textual?.trim()) {
     params.set('busca_textual', filtros.busca_textual.trim());
   }
   if (filtros.funcionario_id) {
@@ -132,6 +132,6 @@ export function filtrarAtividades(filtros = {}) {
     path,
     { method: 'GET', cache: 'no-store' },
     'Não foi possível filtrar as atividades.',
-    'Você não posui permissão para visualizar estas atividades.'
+    'Você não possui permissão para visualizar estas atividades.'
   );
 }
