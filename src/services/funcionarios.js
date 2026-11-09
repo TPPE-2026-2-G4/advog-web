@@ -159,3 +159,69 @@ export async function mudarExibicaoInstitucional(
 
   return response.json();
 }
+
+export async function atualizarPerfilFuncionario(dados) {
+  const token = getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+  const response = await fetch(`${API_URL}/funcionarios/perfil`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(dados),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, 'Não foi possível atualizar seu perfil.')
+    );
+  }
+
+  return response.json();
+}
+
+export async function obterMeuPerfil() {
+  const token = getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+  const response = await fetch(`${API_URL}/funcionarios/perfil`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, 'Não foi possível carregar seu perfil.')
+    );
+  }
+
+  return response.json();
+}
+
+export async function uploadFotoPerfilFuncionario(arquivo) {
+  const token = getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+  const formData = new FormData();
+  formData.append('file', arquivo);
+
+  const response = await fetch(`${API_URL}/funcionarios/perfil/foto`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, 'Não foi possível atualizar sua foto.')
+    );
+  }
+
+  return response.json();
+}

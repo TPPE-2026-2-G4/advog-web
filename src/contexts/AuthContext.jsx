@@ -2,6 +2,7 @@
 
 import { createContext, useState, useEffect } from 'react';
 import { login as loginService } from '@/services/auth';
+import { obterMeuPerfil } from '@/services/funcionarios';
 import { clearAuthSession, getCurrentUser } from '@/utils/authSession';
 
 export const AuthContext = createContext(undefined);
@@ -20,9 +21,7 @@ export function AuthProvider({ children }) {
     const data = await loginService(email, senha);
 
     const token = data.access_token || data.token;
-    const currentUser = data.funcionario || data.user;
-
-    setUser(currentUser);
+    let currentUser = data.funcionario || data.user;
 
     if (token) {
       localStorage.setItem('token', token);
@@ -32,12 +31,28 @@ export function AuthProvider({ children }) {
     }
 
     if (currentUser) {
+      if (token) {
+        const perfilAtualizado = await obterMeuPerfil();
+        currentUser = { ...currentUser, ...perfilAtualizado };
+      }
+
+      setUser(currentUser);
       const serialized = JSON.stringify(currentUser);
       localStorage.setItem('current_user', serialized);
       sessionStorage.setItem('current_user', serialized);
+    } else {
+      setUser(currentUser);
     }
 
     return data;
+  }
+
+  function updateUser(updatedUser) {
+    const nextUser = { ...user, ...updatedUser };
+    const serialized = JSON.stringify(nextUser);
+    setUser(nextUser);
+    localStorage.setItem('current_user', serialized);
+    sessionStorage.setItem('current_user', serialized);
   }
 
   function logout() {
@@ -50,6 +65,7 @@ export function AuthProvider({ children }) {
       value={{
         user,
         login,
+        updateUser,
         logout,
       }}
     >
