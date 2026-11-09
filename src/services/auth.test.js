@@ -173,21 +173,151 @@ describe('serviço de autenticação', () => {
     );
   });
 
-  it.each(['login', 'firstLogin'])(
+  describe('requestPasswordReset', () => {
+    it('solicita a recuperação por POST /auth/esqueci-senha', async () => {
+      const dados = {
+        mensagem: 'Se o e-mail estiver cadastrado, você receberá um link.',
+      };
+      fetch.mockResolvedValue(respostaJson(dados));
+      const { requestPasswordReset } = await import('./auth');
+
+      await expect(requestPasswordReset('ana@exemplo.com')).resolves.toEqual(
+        dados
+      );
+      expect(fetch).toHaveBeenCalledWith(`${apiUrl}/auth/esqueci-senha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'ana@exemplo.com' }),
+      });
+    });
+
+    it.each([
+      [
+        'detail da API',
+        respostaComErro({
+          detail: 'Não foi possível solicitar a recuperação.',
+        }),
+        'Não foi possível solicitar a recuperação.',
+      ],
+      [
+        'message da API',
+        respostaComErro({ message: 'Serviço indisponível' }),
+        'Serviço indisponível',
+      ],
+      [
+        'resposta sem mensagem',
+        respostaComErro({}),
+        'Não foi possível enviar o link de redefinição.',
+      ],
+      [
+        'JSON inválido',
+        respostaComErroSemJson(),
+        'Não foi possível enviar o link de redefinição.',
+      ],
+    ])(
+      'traduz o erro de solicitação usando %s',
+      async (_cenario, resposta, mensagemEsperada) => {
+        fetch.mockResolvedValue(resposta);
+        const { requestPasswordReset } = await import('./auth');
+
+        await expect(requestPasswordReset('ana@exemplo.com')).rejects.toThrow(
+          mensagemEsperada
+        );
+      }
+    );
+  });
+
+  describe('resetPassword', () => {
+    it('redefine a senha por POST /auth/redefinir-senha', async () => {
+      const dados = { mensagem: 'Senha redefinida com sucesso.' };
+      fetch.mockResolvedValue(respostaJson(dados));
+      const { resetPassword } = await import('./auth');
+
+      await expect(
+        resetPassword({ token: 'token-reset', senha: 'senha-nova-segura' })
+      ).resolves.toEqual(dados);
+      expect(fetch).toHaveBeenCalledWith(`${apiUrl}/auth/redefinir-senha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: 'token-reset',
+          senha: 'senha-nova-segura',
+        }),
+      });
+    });
+
+    it.each([
+      [
+        'detail da API',
+        respostaComErro({ detail: 'Token inválido ou expirado' }),
+        'Token inválido ou expirado',
+      ],
+      [
+        'message da API',
+        respostaComErro({ message: 'Senha fraca' }),
+        'Senha fraca',
+      ],
+      [
+        'resposta sem mensagem',
+        respostaComErro({}),
+        'Não foi possível redefinir sua senha.',
+      ],
+      [
+        'lista de validações da API',
+        respostaComErro({
+          detail: [{ msg: 'Token obrigatório' }, { msg: 'Senha inválida' }],
+        }),
+        'Token obrigatório Senha inválida',
+      ],
+      [
+        'senha com menos de 8 caracteres',
+        respostaComErro({
+          detail: [
+            {
+              loc: ['body', 'senha'],
+              type: 'string_too_short',
+              msg: 'String should have at least 8 characters',
+              ctx: { min_length: 8 },
+            },
+          ],
+        }),
+        'A nova senha deve conter pelo menos 8 caracteres.',
+      ],
+      [
+        'JSON inválido',
+        respostaComErroSemJson(),
+        'Não foi possível redefinir sua senha.',
+      ],
+    ])(
+      'propaga o erro de redefinição informado por %s',
+      async (_cenario, resposta, mensagemEsperada) => {
+        fetch.mockResolvedValue(resposta);
+        const { resetPassword } = await import('./auth');
+
+        await expect(
+          resetPassword({ token: 'token-reset', senha: 'senha' })
+        ).rejects.toThrow(mensagemEsperada);
+      }
+    );
+  });
+
+  it.each(['login', 'firstLogin', 'requestPasswordReset', 'resetPassword'])(
     'lança erro quando a URL da API não está configurada (%s)',
     async (funcao) => {
       delete process.env.NEXT_PUBLIC_API_URL;
       delete process.env.API_URL;
       const auth = await import('./auth');
 
-      const chamada =
-        funcao === 'login'
-          ? auth.login('ana@exemplo.com', 'senha')
-          : auth.firstLogin({
-              token: 'token',
-              nome: 'Ana',
-              senha: 'senha',
-            });
+      const chamadas = {
+        login: () => auth.login('ana@exemplo.com', 'senha'),
+        firstLogin: () =>
+          auth.firstLogin({ token: 'token', nome: 'Ana', senha: 'senha' }),
+        requestPasswordReset: () =>
+          auth.requestPasswordReset('ana@exemplo.com'),
+        resetPassword: () =>
+          auth.resetPassword({ token: 'token', senha: 'senha' }),
+      };
+      const chamada = chamadas[funcao]();
 
       await expect(chamada).rejects.toThrow('URL da API não configurada');
       expect(fetch).not.toHaveBeenCalled();
