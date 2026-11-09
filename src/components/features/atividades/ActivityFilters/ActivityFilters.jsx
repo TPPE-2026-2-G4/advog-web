@@ -25,7 +25,7 @@ export default function ActivityFilters({
           name="busca"
           aria-label="buscar atividades"
           className={styles.searchInput}
-          placeholder="Buscar por título, categoria ou responsável..."
+          placeholder="Buscar por título, descrição ou responsável..."
           value={filters.busca ?? ''}
           onChange={handleChange}
         />

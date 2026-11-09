@@ -620,7 +620,7 @@ describe('Integração de Filtros no Quadro de Atividades', () => {
     expect(screen.getByText('Finalizado').nextSibling).toHaveTextContent('1');
 
     const inputBusca = screen.getByPlaceholderText(
-      'Buscar por título, categoria ou responsável...'
+      'Buscar por título, descrição ou responsável...'
     );
     fireEvent.change(inputBusca, { target: { value: 'Petição' } });
 
