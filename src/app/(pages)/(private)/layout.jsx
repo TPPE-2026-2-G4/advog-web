@@ -17,6 +17,7 @@ export default function PrivateLayout({ children }) {
   return (
     <div
       className={styles.layout}
+      suppressHydrationWarning
       style={{
         '--cor-primaria': corPrimaria,
         '--cor-primaria-texto': corPrimariaTexto,

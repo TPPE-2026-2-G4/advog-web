@@ -18,12 +18,18 @@ function LoginContent() {
   const [cadastroConcluido, setCadastroConcluido] = useState(
     () => searchParams.get('cadastro') === 'sucesso'
   );
+  const [senhaRedefinida, setSenhaRedefinida] = useState(
+    () => searchParams.get('senha') === 'sucesso'
+  );
 
   const corSecundaria = institucional?.corSecundaria || '#B79A63';
   const corSecundariaTexto = getContrastTextColor(corSecundaria);
 
   useEffect(() => {
-    if (searchParams.get('cadastro') !== 'sucesso') {
+    if (
+      searchParams.get('cadastro') !== 'sucesso' &&
+      searchParams.get('senha') !== 'sucesso'
+    ) {
       return;
     }
 
@@ -31,6 +37,7 @@ function LoginContent() {
 
     const timeoutId = setTimeout(() => {
       setCadastroConcluido(false);
+      setSenhaRedefinida(false);
     }, 4000);
 
     return () => clearTimeout(timeoutId);
@@ -49,6 +56,16 @@ function LoginContent() {
           aria-label="Cadastro finalizado com sucesso!"
         >
           Cadastro finalizado com sucesso!
+        </div>
+      )}
+
+      {senhaRedefinida && (
+        <div
+          className={styles.success}
+          role="status"
+          aria-label="Senha redefinida com sucesso!"
+        >
+          Senha redefinida com sucesso!
         </div>
       )}
 

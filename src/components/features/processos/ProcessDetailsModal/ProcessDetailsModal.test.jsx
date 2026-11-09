@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ProcessDetailsModal from './ProcessDetailsModal';
 import styles from './ProcessDetailsModal.module.css';
 
@@ -27,6 +27,23 @@ const processData = {
 };
 
 describe('ProcessDetailsModal', () => {
+  beforeEach(async () => {
+    const {
+      listarDocumentos,
+      listarMovimentacoes,
+      obterUrlDocumento,
+      excluirDocumento,
+      uploadDocumento,
+    } = await import('@/services/processos');
+    listarDocumentos.mockReset().mockResolvedValue([]);
+    listarMovimentacoes.mockReset().mockResolvedValue([]);
+    obterUrlDocumento
+      .mockReset()
+      .mockResolvedValue({ url: 'http://test.url/doc' });
+    excluirDocumento.mockReset().mockResolvedValue({});
+    uploadDocumento.mockReset().mockResolvedValue({});
+  });
+
   it('não renderiza sem processo', () => {
     render(<ProcessDetailsModal process={null} onClose={vi.fn()} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -140,9 +157,12 @@ describe('ProcessDetailsModal', () => {
     expect(
       screen.getByRole('button', { name: 'Fazer Upload' })
     ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Fazer Upload' })
+    ).toHaveLength(1);
   });
 
-  it('exibe estado vazio e alerta de erro quando falha ao carregar movimentações', async () => {
+  it('exibe alerta de erro e opção de tentar novamente quando falha ao carregar movimentações, sem exibir estado vazio', async () => {
     const { listarMovimentacoes } = await import('@/services/processos');
     listarMovimentacoes.mockRejectedValueOnce(
       new Error('Não foi possível carregar as movimentações.')
@@ -155,8 +175,187 @@ describe('ProcessDetailsModal', () => {
       'Não foi possível carregar as movimentações.'
     );
     expect(
-      screen.getByText('Nenhuma movimentação registrada para este processo.')
+      screen.queryByText('Nenhuma movimentação registrada para este processo.')
+    ).not.toBeInTheDocument();
+
+    const retryBtn = screen.getByRole('button', { name: 'Tentar novamente' });
+    expect(retryBtn).toBeInTheDocument();
+
+    listarMovimentacoes.mockResolvedValueOnce([]);
+    fireEvent.click(retryBtn);
+
+    expect(
+      await screen.findByText(
+        'Nenhuma movimentação registrada para este processo.'
+      )
     ).toBeInTheDocument();
+  });
+
+  it('recarrega movimentações ao clicar novamente na aba Movimentações selecionada sem travar o carregamento', async () => {
+    const { listarMovimentacoes } = await import('@/services/processos');
+    listarMovimentacoes.mockResolvedValue([
+      {
+        movimentacao_id: 1,
+        processo_id: 1,
+        tipo_movimentacao: 'CRIACAO_PROCESSO',
+        descricao: 'Processo inicial criado.',
+        data_movimentacao: '2026-01-01T00:00:00',
+      },
+    ]);
+
+    render(<ProcessDetailsModal process={processData} onClose={vi.fn()} />);
+    const movTab = screen.getByRole('tab', { name: 'Movimentações' });
+    fireEvent.click(movTab);
+
+    expect(
+      await screen.findByText('Processo inicial criado.')
+    ).toBeInTheDocument();
+    expect(listarMovimentacoes).toHaveBeenCalledTimes(1);
+
+    // Clica novamente na aba já selecionada
+    fireEvent.click(movTab);
+    await waitFor(() => {
+      expect(listarMovimentacoes).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      screen.queryByText('Carregando movimentações…')
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Processo inicial criado.')).toBeInTheDocument();
+  });
+
+  it('recarrega documentos ao clicar novamente na aba Documentos selecionada sem travar o carregamento', async () => {
+    const { listarDocumentos } = await import('@/services/processos');
+    listarDocumentos.mockResolvedValue([
+      {
+        documento_id: 1,
+        nome_original: 'doc_teste.pdf',
+        tamanho_bytes: 2048,
+        data_upload: '2026-02-01T10:00:00',
+      },
+    ]);
+
+    render(<ProcessDetailsModal process={processData} onClose={vi.fn()} />);
+    const docTab = screen.getByRole('tab', { name: 'Documentos' });
+    fireEvent.click(docTab);
+
+    expect(await screen.findByText('doc_teste.pdf')).toBeInTheDocument();
+    expect(listarDocumentos).toHaveBeenCalledTimes(1);
+
+    // Clica novamente na aba Documentos já selecionada
+    fireEvent.click(docTab);
+    await waitFor(() => {
+      expect(listarDocumentos).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      screen.queryByText('Carregando documentos…')
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('doc_teste.pdf')).toBeInTheDocument();
+  });
+
+  it('diferencia falha de listagem de lista vazia na aba Documentos e permite tentar novamente', async () => {
+    const { listarDocumentos } = await import('@/services/processos');
+    listarDocumentos.mockRejectedValueOnce(
+      new Error('Erro ao listar documentos.')
+    );
+
+    render(<ProcessDetailsModal process={processData} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Documentos' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Erro ao listar documentos.'
+    );
+    expect(
+      screen.queryByText('Nenhum documento anexado.')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Fazer Upload' })
+    ).not.toBeInTheDocument();
+
+    const retryBtn = screen.getByRole('button', { name: 'Tentar novamente' });
+    expect(retryBtn).toBeInTheDocument();
+
+    listarDocumentos.mockResolvedValueOnce([]);
+    fireEvent.click(retryBtn);
+
+    expect(
+      await screen.findByText('Nenhum documento anexado.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Fazer Upload' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Fazer Upload' })
+    ).toHaveLength(1);
+  });
+
+  it('solicita sempre uma URL atualizada ao visualizar documento, mesmo que o documento já traga uma URL prévia', async () => {
+    const { listarDocumentos, obterUrlDocumento } =
+      await import('@/services/processos');
+    listarDocumentos.mockResolvedValueOnce([
+      {
+        documento_id: 99,
+        nome_original: 'arquivo_antigo.pdf',
+        tamanho_bytes: 4096,
+        data_upload: '2026-03-01T10:00:00',
+        url: 'http://url-expirada.com/arquivo_antigo.pdf',
+      },
+    ]);
+    obterUrlDocumento.mockResolvedValueOnce({
+      url: 'http://url-assinada-fresca.com/arquivo_antigo.pdf',
+    });
+
+    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => {});
+
+    render(<ProcessDetailsModal process={processData} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Documentos' }));
+
+    expect(await screen.findByText('arquivo_antigo.pdf')).toBeInTheDocument();
+
+    const viewBtn = screen.getByRole('button', { name: 'Visualizar' });
+    fireEvent.click(viewBtn);
+
+    await waitFor(() => {
+      expect(obterUrlDocumento).toHaveBeenCalledWith(1, 99);
+      expect(windowOpenSpy).toHaveBeenCalledWith(
+        'http://url-assinada-fresca.com/arquivo_antigo.pdf',
+        '_blank'
+      );
+    });
+
+    windowOpenSpy.mockRestore();
+  });
+
+  it('exibe mensagem de erro na aba de documentos caso a obtenção da URL falhe', async () => {
+    const { listarDocumentos, obterUrlDocumento } =
+      await import('@/services/processos');
+    listarDocumentos.mockResolvedValueOnce([
+      {
+        documento_id: 101,
+        nome_original: 'arquivo_falha.pdf',
+        tamanho_bytes: 4096,
+        data_upload: '2026-03-01T10:00:00',
+      },
+    ]);
+    obterUrlDocumento.mockRejectedValueOnce(
+      new Error('Link expirado ou inacessível.')
+    );
+
+    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => {});
+
+    render(<ProcessDetailsModal process={processData} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Documentos' }));
+
+    expect(await screen.findByText('arquivo_falha.pdf')).toBeInTheDocument();
+
+    const viewBtn = screen.getByRole('button', { name: 'Visualizar' });
+    fireEvent.click(viewBtn);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Link expirado ou inacessível.'
+    );
+    expect(windowOpenSpy).not.toHaveBeenCalled();
+
+    windowOpenSpy.mockRestore();
   });
 
   it('conecta tabs ao painel e permite navegação por teclado', async () => {
@@ -232,11 +431,16 @@ describe('ProcessDetailsModal', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Documentos' }));
     expect(await screen.findByText('procuracao.pdf')).toBeInTheDocument();
-    expect(screen.getByText('10.0 KB')).toBeInTheDocument();
-    expect(screen.getByText('10/05/2026')).toBeInTheDocument();
+    expect(screen.getByText('10.0 KB •', { exact: false })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Adicionar Documento' })
+      screen.getByText('10/05/2026', { exact: false })
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Fazer Upload' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Fazer Upload' })
+    ).toHaveLength(1);
 
     const deleteBtn = screen.getByRole('button', {
       name: 'Excluir documento procuracao.pdf',
@@ -290,7 +494,7 @@ describe('ProcessDetailsModal', () => {
       screen.getByRole('button', { name: 'Visualizar' })
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Adicionar Documento' })
+      screen.queryByRole('button', { name: 'Fazer Upload' })
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Excluir documento contrato.pdf' })

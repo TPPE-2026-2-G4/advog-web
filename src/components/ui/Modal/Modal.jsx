@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import styles from './Modal.module.css';
 
@@ -40,6 +40,8 @@ export default function Modal({
   ariaLabel,
   ariaLabelledBy,
 }) {
+  const pointerStartedOnOverlay = useRef(null);
+
   useEffect(() => {
     if (!isOpen) return undefined;
 
@@ -56,14 +58,24 @@ export default function Modal({
   if (!isOpen) return null;
 
   const handleOverlayClick = (event) => {
-    if (event.target === event.currentTarget && !preventClose) {
+    const clickedOverlay = event.target === event.currentTarget;
+    const clickStartedOnOverlay = pointerStartedOnOverlay.current !== false;
+
+    pointerStartedOnOverlay.current = null;
+
+    if (clickedOverlay && clickStartedOnOverlay && !preventClose) {
       onClose();
     }
+  };
+
+  const handleOverlayPointerDown = (event) => {
+    pointerStartedOnOverlay.current = event.target === event.currentTarget;
   };
 
   return (
     <div
       className={`${styles.overlay} ${overlayClassName}`.trim()}
+      onPointerDown={handleOverlayPointerDown}
       onClick={handleOverlayClick}
     >
       <Component
