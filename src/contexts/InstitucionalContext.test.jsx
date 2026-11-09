@@ -13,6 +13,7 @@ function ConsumerComponent() {
       <span data-testid="nome">{institucional?.nomeEscritorio}</span>
       <span data-testid="primaria">{institucional?.corPrimaria}</span>
       <span data-testid="secundaria">{institucional?.corSecundaria}</span>
+      <span data-testid="logo">{institucional?.logotipo}</span>
     </div>
   );
 }
@@ -91,5 +92,52 @@ describe('InstitucionalContext', () => {
     expect(
       document.documentElement.style.getPropertyValue('--cor-secundaria-texto')
     ).toBe('#172133');
+  });
+
+  it('inicializa imediatamente com dados do localStorage prevenindo flash de cores e logotipo padrões', async () => {
+    vi.spyOn(
+      institucionalService,
+      'buscarDadosInstitucionais'
+    ).mockResolvedValue(null);
+
+    localStorage.setItem(
+      'institucional_data',
+      JSON.stringify({
+        nomeEscritorio: 'Escritório Sem Flash',
+        corPrimaria: '#123456',
+        corSecundaria: '#654321',
+        logotipo: 'https://exemplo.com/logo-custom.png',
+      })
+    );
+
+    render(
+      <InstitucionalProvider>
+        <ConsumerComponent />
+      </InstitucionalProvider>
+    );
+
+    // Deve carregar os dados do localStorage e sincronizar o estado prevenindo flash
+    expect(await screen.findByText('Escritório Sem Flash')).toBeInTheDocument();
+    expect(screen.getByTestId('primaria')).toHaveTextContent('#123456');
+    expect(screen.getByTestId('secundaria')).toHaveTextContent('#654321');
+    expect(screen.getByTestId('logo')).toHaveTextContent(
+      'https://exemplo.com/logo-custom.png'
+    );
+
+    expect(
+      document.documentElement.style.getPropertyValue('--cor-primaria')
+    ).toBe('#123456');
+    expect(
+      document.documentElement.style.getPropertyValue('--cor-secundaria')
+    ).toBe('#654321');
+
+    const styleEl = document.getElementById('theme-injected-overrides');
+    expect(styleEl).toBeInTheDocument();
+    expect(styleEl?.textContent).toContain(
+      '--cor-primaria: #123456 !important'
+    );
+    expect(styleEl?.textContent).toContain(
+      '[data-testid="sidebar-logo-icon"] { display: none !important; }'
+    );
   });
 });
