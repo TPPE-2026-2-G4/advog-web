@@ -21,6 +21,9 @@ function LoginContent() {
   const [senhaRedefinida, setSenhaRedefinida] = useState(
     () => searchParams.get('senha') === 'sucesso'
   );
+  const [sessaoExpirada, setSessaoExpirada] = useState(
+    () => searchParams.get('sessao') === 'expirada'
+  );
 
   const corSecundaria = institucional?.corSecundaria || '#B79A63';
   const corSecundariaTexto = getContrastTextColor(corSecundaria);
@@ -28,7 +31,8 @@ function LoginContent() {
   useEffect(() => {
     if (
       searchParams.get('cadastro') !== 'sucesso' &&
-      searchParams.get('senha') !== 'sucesso'
+      searchParams.get('senha') !== 'sucesso' &&
+      searchParams.get('sessao') !== 'expirada'
     ) {
       return;
     }
@@ -38,6 +42,7 @@ function LoginContent() {
     const timeoutId = setTimeout(() => {
       setCadastroConcluido(false);
       setSenhaRedefinida(false);
+      setSessaoExpirada(false);
     }, 4000);
 
     return () => clearTimeout(timeoutId);
@@ -66,6 +71,16 @@ function LoginContent() {
           aria-label="Senha redefinida com sucesso!"
         >
           Senha redefinida com sucesso!
+        </div>
+      )}
+
+      {sessaoExpirada && (
+        <div
+          className={styles.warning}
+          role="status"
+          aria-label="Sua sessão expirou"
+        >
+          Sua sessão expirou. Faça login novamente para continuar.
         </div>
       )}
 
