@@ -7,11 +7,17 @@ import {
   toResponsavelNames,
   toResponsavelOptions,
   CNJ_REGEX,
+  EMPTY_PROCESS_SUMMARY,
+  formatarResumoProcessos,
+  formatDeadlineCountdown,
   calculateDaysSince,
   calculateRemainingDays,
   enrichProcess,
   formatCnjInput,
   formatProcessDate,
+  getDeadlineTone,
+  getUpcomingDeadlineWindow,
+  getUpcomingProcesses,
   isOverdueDeadline,
   normalizeProcessDate,
   sortCriticalProcesses,
@@ -560,5 +566,119 @@ describe('enrichProcess', () => {
     const enriched = enrichProcess(raw);
     expect(enriched.cliente).toBe('Sem cliente');
     expect(enriched.responsavel).toBe('Sem responsável');
+  });
+
+  it('formata o resumo de processos e usa zeros para valores ausentes', () => {
+    expect(formatarResumoProcessos()).toEqual(EMPTY_PROCESS_SUMMARY);
+    expect(
+      formatarResumoProcessos({
+        total: '7',
+        em_andamento: 4,
+        em_analise: '2',
+        finalizados: 1,
+        proximos_do_prazo: '2',
+        atrasados: 1,
+      })
+    ).toEqual({
+      total: 7,
+      em_andamento: 4,
+      em_analise: 2,
+      finalizados: 1,
+      proximos_do_prazo: 2,
+      atrasados: 1,
+    });
+  });
+});
+
+describe('prazos próximos (getUpcomingDeadlineWindow, getDeadlineTone, formatDeadlineCountdown e getUpcomingProcesses)', () => {
+  it('calcula a janela de datas ISO em UTC para os próximos dias', () => {
+    const now = new Date('2026-11-01T15:00:00.000Z');
+    expect(getUpcomingDeadlineWindow(15, now)).toEqual({
+      prazoInicio: '2026-11-01',
+      prazoFim: '2026-11-16',
+    });
+    expect(getUpcomingDeadlineWindow(0, now)).toEqual({
+      prazoInicio: '2026-11-01',
+      prazoFim: '2026-11-01',
+    });
+  });
+
+  it('define o tom visual e o texto de contagem conforme os dias restantes', () => {
+    expect(getDeadlineTone(0)).toBe('danger');
+    expect(getDeadlineTone(2)).toBe('danger');
+    expect(getDeadlineTone(3)).toBe('danger');
+    expect(getDeadlineTone(4)).toBe('warning');
+    expect(getDeadlineTone(5)).toBe('warning');
+    expect(getDeadlineTone(6)).toBe('success');
+    expect(getDeadlineTone(13)).toBe('success');
+
+    expect(formatDeadlineCountdown(0)).toBe('Vence hoje');
+    expect(formatDeadlineCountdown(2)).toBe('Vence em: 2 dia(s)');
+    expect(formatDeadlineCountdown(10)).toBe('Vence em: 10 dia(s)');
+  });
+
+  it('filtra processos finalizados/vencidos/fora da janela, ordena pelo vencimento mais próximo e respeita o limite', () => {
+    const now = new Date('2026-11-01T12:00:00.000Z');
+    const items = [
+      null,
+      {
+        processo_id: 20,
+        titulo: 'Prazo em 4 dias B',
+        status: 'Ativo',
+        data_prazo: '2026-11-05',
+      },
+      {
+        processo_id: 10,
+        titulo: 'Prazo em 4 dias A',
+        status: 'Em Análise',
+        data_prazo: '2026-11-05',
+      },
+      {
+        processo_id: 3,
+        titulo: 'Prazo em 2 dias',
+        status: 'Ativo',
+        data_prazo: '2026-11-03',
+      },
+      {
+        processo_id: 4,
+        titulo: 'Já concluído',
+        status: 'Concluído',
+        data_prazo: '2026-11-02',
+      },
+      {
+        processo_id: 5,
+        titulo: 'Arquivado',
+        status: 'Arquivado',
+        data_prazo: '2026-11-02',
+      },
+      {
+        processo_id: 6,
+        titulo: 'Atrasado',
+        status: 'Ativo',
+        data_prazo: '2026-10-30',
+      },
+      {
+        processo_id: 7,
+        titulo: 'Fora da janela de 15 dias',
+        status: 'Ativo',
+        data_prazo: '2026-11-25',
+      },
+      {
+        id: 8,
+        titulo: 'Prazo hoje',
+        status: 'Ativo',
+        data_prazo: '2026-11-01',
+      },
+    ];
+
+    const result = getUpcomingProcesses(items, { days: 15, limit: 3, now });
+    expect(result.map((p) => p.titulo)).toEqual([
+      'Prazo hoje',
+      'Prazo em 2 dias',
+      'Prazo em 4 dias A',
+    ]);
+    expect(result.map((p) => p.dias_restantes)).toEqual([0, 2, 4]);
+
+    expect(getUpcomingProcesses(null, { now })).toEqual([]);
   });
 });

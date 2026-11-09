@@ -4,6 +4,7 @@ import { CheckCircle, Send } from 'lucide-react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import { useSolicitarAtendimento } from '@/hooks/useSolicitarAtendimento';
 import { LIMITES_SOLICITACAO } from '@/services/solicitacoes';
+import { formatarTelefone } from '@/utils/cliente';
 import styles from './SolicitarAtendimento.module.css';
 
 const fields = [
@@ -90,6 +91,17 @@ export default function SolicitarAtendimento() {
               {fields.map(
                 ({ name, label, type, autoComplete, placeholder }) => {
                   const id = `atendimento-${name}`;
+                  const isTelefone = name === 'telefone';
+                  const isEmail = name === 'email';
+                  const handleInputChange = isTelefone
+                    ? (e) => {
+                        const formatted = formatarTelefone(e.target.value);
+                        handleChange({
+                          target: { name: 'telefone', value: formatted },
+                        });
+                      }
+                    : handleChange;
+
                   const inputProps = {
                     id,
                     name,
@@ -97,8 +109,10 @@ export default function SolicitarAtendimento() {
                     placeholder,
                     className: styles.input,
                     value: formData[name],
-                    onChange: handleChange,
+                    onChange: handleInputChange,
                     required: true,
+                    ...(isTelefone ? { maxLength: 15 } : {}),
+                    ...(isEmail ? { maxLength: 100 } : {}),
                     ...LIMITES_SOLICITACAO[name],
                     disabled: isSubmitting,
                     'aria-invalid': Boolean(errors[name]),

@@ -15,6 +15,7 @@ import {
   mudarStatusLancamento,
   obterCalendario,
   exportarCalendarioIcs,
+  obterGraficoFinancas,
   obterResumoFinancas,
 } from './financas';
 
@@ -1355,6 +1356,80 @@ describe('serviço de finanças', () => {
       await expect(
         exportarCalendarioIcs({ inicio: '2026-08-01', fim: '2026-08-31' })
       ).rejects.toThrow('Falha na exportação');
+    });
+  });
+
+  describe('obterGraficoFinancas', () => {
+    it('busca dados do gráfico de entradas e saídas aplicando todos os filtros e Bearer token', async () => {
+      localStorage.setItem('token', 'token-grafico-123');
+      const mockGrafico = {
+        inicio: '2026-03-01',
+        fim: '2026-08-31',
+        valor_min: 100,
+        valor_max: 25000,
+        total_entradas: 45000,
+        total_saidas: 12000,
+        saldo: 33000,
+        itens: [
+          {
+            data: '2026-08-10',
+            entradas: 13500,
+            saidas: 4230,
+            saldo_dia: 9270,
+          },
+        ],
+      };
+      fetch.mockResolvedValueOnce(respostaJson(mockGrafico));
+
+      const res = await obterGraficoFinancas({
+        inicio: '2026-03-01',
+        fim: '2026-08-31',
+        dias: 180,
+        valor_min: 100,
+        valor_max: 25000,
+        status: 'Realizado',
+        tipo: 'e',
+        categoria_id: 10,
+        cliente_id: 5,
+      });
+
+      expect(res).toEqual(mockGrafico);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/lancamentos/grafico?inicio=2026-03-01&fim=2026-08-31&dias=180&valor_min=100&valor_max=25000&status=Realizado&tipo=e&categoria_id=10&cliente_id=5',
+        {
+          cache: 'no-store',
+          headers: { Authorization: 'Bearer token-grafico-123' },
+        }
+      );
+    });
+
+    it('normaliza itens para array vazio quando itens não é array na resposta', async () => {
+      fetch.mockResolvedValueOnce(
+        respostaJson({ total_entradas: 0, total_saidas: 0, itens: null })
+      );
+
+      const res = await obterGraficoFinancas();
+      expect(res).toEqual({
+        total_entradas: 0,
+        total_saidas: 0,
+        itens: [],
+      });
+    });
+
+    it.each([
+      ['resposta HTTP com erro', { ok: false, status: 500 }],
+      ['corpo em formato de array inesperado', respostaJson([{ id: 1 }])],
+      ['corpo nulo', respostaJson(null)],
+      ['exceção de rede', new Error('NetworkError')],
+    ])('retorna null quando ocorre %s', async (_cenario, mockRes) => {
+      if (mockRes instanceof Error) {
+        fetch.mockRejectedValueOnce(mockRes);
+      } else {
+        fetch.mockResolvedValueOnce(mockRes);
+      }
+
+      const res = await obterGraficoFinancas();
+      expect(res).toBeNull();
     });
   });
 });

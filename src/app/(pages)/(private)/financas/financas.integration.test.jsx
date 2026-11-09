@@ -10,6 +10,10 @@ import {
 } from '@testing-library/react';
 import FinancasPage from './page';
 import FinancasClient from './financasClient';
+import FinancialDashboard, {
+  buildSmoothAreaPath,
+  buildSmoothLinePath,
+} from '@/components/features/financas/FinancialDashboard/FinancialDashboard';
 import * as financasService from '@/services/financas';
 import { useFinancas } from '@/hooks/useFinancas';
 import LancamentosTable from '@/components/features/financas/LancamentosTable/LancamentosTable';
@@ -17,6 +21,9 @@ import LancamentoModal from '@/components/features/financas/LancamentoModal/Lanc
 import {
   listarFinancas,
   obterResumoFinancas,
+  obterGraficoFinancas,
+  obterCalendario,
+  exportarCalendarioIcs,
   criarFinancas,
   atualizarFinancas,
   excluirFinancas,
@@ -26,11 +33,18 @@ import {
   listarCategorias,
 } from '@/services/financas';
 import {
+  MESES_ABREV,
   formatCurrency,
+  formatCurrencyNumber,
+  formatCompactCurrency,
   formatDateToBr,
   formatDateToIso,
   verificarStatusPorVencimento,
   calcularResumoFinanceiro,
+  calcularIndicadoresFinanceiros,
+  agruparFluxoCaixaPorMes,
+  agruparDespesasPorCategoria,
+  obterDataEfetivaIso,
   parseApiError,
   toLancamento,
   toApiLancamento,
@@ -85,6 +99,14 @@ function createJsonResponse(data, status = 200) {
   };
 }
 
+const invalidJsonErrorResponse = (status = 500) => ({
+  ok: false,
+  status,
+  json: async () => {
+    throw new Error('Invalid JSON');
+  },
+});
+
 describe('Financas Integration Tests (Full Frontend Stack)', () => {
   let fetchMock;
   let dbCategorias;
@@ -135,10 +157,61 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
         return createJsonResponse(initialResumoResponse, 200);
       }
 
+      if (method === 'GET' && url.includes('/lancamentos/grafico')) {
+        const parsedUrl = new URL(url);
+        const minStr = parsedUrl.searchParams.get('valor_min');
+        const maxStr = parsedUrl.searchParams.get('valor_max');
+        const statusStr = parsedUrl.searchParams.get('status');
+        const minVal = minStr !== null ? Number(minStr) : null;
+        const maxVal = maxStr !== null ? Number(maxStr) : null;
+
+        const itensFiltrados = dbLancamentos.filter((l) => {
+          if (
+            statusStr &&
+            String(l.status || '').toLowerCase() !== statusStr.toLowerCase()
+          ) {
+            return false;
+          }
+          const val = Number(l.valor) || 0;
+          if (minVal !== null && !isNaN(minVal) && val < minVal) return false;
+          if (maxVal !== null && !isNaN(maxVal) && val > maxVal) return false;
+          return true;
+        });
+
+        const itensGrafico = itensFiltrados.map((l) => {
+          const isSaida = String(l.tipo || '')
+            .toLowerCase()
+            .startsWith('s');
+          const valor = Number(l.valor) || 0;
+          return {
+            data: l.data_vencimento || '2026-08-10',
+            entradas: isSaida ? 0 : valor,
+            saidas: isSaida ? valor : 0,
+            saldo_dia: isSaida ? -valor : valor,
+          };
+        });
+
+        return createJsonResponse(
+          {
+            inicio: '2026-03-01',
+            fim: '2026-08-31',
+            valor_min: minVal,
+            valor_max: maxVal,
+            total_entradas: 5000,
+            total_saidas: 3200,
+            saldo: 1800,
+            itens: itensGrafico,
+          },
+          200
+        );
+      }
+
       if (method === 'GET' && url.includes('/lancamentos/paginado')) {
         const parsedUrl = new URL(url);
         const statusFilter = parsedUrl.searchParams.get('status');
         const catIdFilter = parsedUrl.searchParams.get('categoria_id');
+        const page = Number(parsedUrl.searchParams.get('page')) || 1;
+        const pageSize = Number(parsedUrl.searchParams.get('page_size')) || 5;
 
         let filtered = [...dbLancamentos];
         if (statusFilter) {
@@ -152,16 +225,35 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
           );
         }
 
+        const start = (page - 1) * pageSize;
         return createJsonResponse(
           {
-            itens: filtered,
+            itens: filtered.slice(start, start + pageSize),
             total: filtered.length,
-            page: Number(parsedUrl.searchParams.get('page')) || 1,
-            page_size: Number(parsedUrl.searchParams.get('page_size')) || 5,
-            total_pages: 1,
+            page,
+            page_size: pageSize,
+            total_pages: Math.max(1, Math.ceil(filtered.length / pageSize)),
           },
           200
         );
+      }
+
+      if (
+        method === 'GET' &&
+        url.includes('/lancamentos/calendario/exportar')
+      ) {
+        return {
+          ok: true,
+          status: 200,
+          blob: async () =>
+            new Blob(['BEGIN:VCALENDAR...END:VCALENDAR'], {
+              type: 'text/calendar',
+            }),
+        };
+      }
+
+      if (method === 'GET' && url.includes('/lancamentos/calendario')) {
+        return createJsonResponse(dbLancamentos, 200);
       }
 
       if (method === 'GET' && url.includes('/lancamentos/')) {
@@ -191,9 +283,12 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
           target && target.status.toLowerCase() === 'realizado'
             ? 'Pendente'
             : 'Realizado';
+        const agora = new Date();
+        const hojeIso = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
         const updated = {
           ...(target || { lancamento_id: id }),
           status: nextStatus,
+          data_pagamento: nextStatus === 'Realizado' ? hojeIso : null,
         };
         dbLancamentos = dbLancamentos.map((l) =>
           (l.lancamento_id ?? l.id) === id ? updated : l
@@ -1363,6 +1458,15 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     expect(formatDateToIso('10/08')).toBe('10/08');
     expect(formatDateToIso('10/08/2026')).toBe('2026-08-10');
 
+    expect(obterDataEfetivaIso(null)).toBe('');
+    expect(
+      obterDataEfetivaIso({
+        status: 'realizado',
+        data_vencimento: '2026-03-10',
+        data_pagamento: '2026-11-07',
+      })
+    ).toBe('2026-11-07');
+
     expect(verificarStatusPorVencimento(null)).toBe('pendente');
     expect(verificarStatusPorVencimento({})).toBe('pendente');
     expect(
@@ -1608,6 +1712,487 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       throw new Error('Network fail');
     };
     expect(await obterResumoFinancas()).toBeNull();
+  });
+
+  it('integra o Dashboard Financeiro (US06) em regime de caixa por data_pagamento, sem depender da paginação da tabela e atualizando em tempo real', async () => {
+    const agora = new Date();
+    const anoAtual = agora.getFullYear();
+    const mesIdxAtual = agora.getMonth();
+    const mesAtualStr = String(mesIdxAtual + 1).padStart(2, '0');
+    const dataMesAtual = `${anoAtual}-${mesAtualStr}-10`;
+    const mesAnteriorDate = new Date(anoAtual, mesIdxAtual - 1, 10);
+    const labelMesAtual = MESES_ABREV[mesIdxAtual];
+    const labelMesAnterior = MESES_ABREV[mesAnteriorDate.getMonth()];
+
+    dbCategorias = [
+      ...initialApiCategorias,
+      { categoria_id: 40, nome_categoria: 'Perícia Técnica' },
+    ];
+
+    // 7 lançamentos (> page_size 5) para validar que a rosquinha pega todos os itens sem depender da paginação
+    dbLancamentos = [
+      {
+        lancamento_id: 301,
+        tipo: 'e',
+        titulo: 'Honorários Recebidos Mês Atual',
+        descricao: 'Parcela recebida',
+        valor: 5000,
+        data_vencimento: dataMesAtual,
+        data_pagamento: dataMesAtual,
+        categoria_id: 10,
+        status: 'Realizado',
+        recorrente: false,
+      },
+      {
+        lancamento_id: 302,
+        tipo: 's',
+        titulo: 'Despesa Atrasada de Março',
+        descricao: 'Conta antiga atrasada',
+        valor: 1500,
+        data_vencimento: '2026-03-10',
+        data_pagamento: null,
+        categoria_id: 30,
+        status: 'Atrasado',
+        recorrente: false,
+      },
+      {
+        lancamento_id: 303,
+        tipo: 's',
+        titulo: 'Aluguel Pago no Mês',
+        descricao: 'Locação',
+        valor: 3200,
+        data_vencimento: dataMesAtual,
+        data_pagamento: dataMesAtual,
+        categoria_id: 30,
+        status: 'Realizado',
+        recorrente: true,
+      },
+      {
+        lancamento_id: 304,
+        tipo: 's',
+        titulo: 'Custas Pagas no Mês',
+        descricao: 'Custas',
+        valor: 1100,
+        data_vencimento: dataMesAtual,
+        data_pagamento: dataMesAtual,
+        categoria_id: 20,
+        status: 'Realizado',
+        recorrente: false,
+      },
+      {
+        lancamento_id: 305,
+        tipo: 'e',
+        titulo: 'Honorários Pendentes',
+        descricao: 'A receber',
+        valor: 2400,
+        data_vencimento: dataMesAtual,
+        data_pagamento: null,
+        categoria_id: 10,
+        status: 'Pendente',
+        recorrente: false,
+      },
+      {
+        lancamento_id: 306,
+        tipo: 's',
+        titulo: 'Laudo Contábil Página 2',
+        descricao: 'Item na página 2 da tabela',
+        valor: 1200,
+        data_vencimento: dataMesAtual,
+        data_pagamento: dataMesAtual,
+        categoria_id: 40,
+        status: 'Realizado',
+        recorrente: false,
+      },
+      {
+        lancamento_id: 307,
+        tipo: 's',
+        titulo: 'Despesa Pendente Página 2',
+        descricao: 'Não paga ainda',
+        valor: 800,
+        data_vencimento: dataMesAtual,
+        data_pagamento: null,
+        categoria_id: 40,
+        status: 'Pendente',
+        recorrente: false,
+      },
+    ];
+
+    render(<FinancasClient initialData={[]} />);
+
+    // Cards mostram apenas realizados do mês atual e todas as entradas pendentes em A Receber
+    // Rosquinha exibe Perícia Técnica (item 306 da página 2!) mesmo estando na página 1 da tabela
+    await waitFor(() => {
+      expect(screen.getByTestId('kpi-receita-mes')).toHaveTextContent(
+        '5.000,00'
+      );
+      expect(screen.getByTestId('kpi-despesas-mes')).toHaveTextContent(
+        '5.500,00'
+      );
+      expect(screen.getByTestId('kpi-saldo-liquido')).toHaveTextContent(
+        '-500,00'
+      );
+      expect(screen.getByTestId('kpi-a-receber')).toHaveTextContent('2.400,00');
+      expect(
+        screen.getByTestId('donut-segment-Perícia Técnica')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId('donut-segment-Despesas Operacionais')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId('donut-segment-Custas Processuais')
+      ).toBeInTheDocument();
+    });
+
+    // Navegar para a página 2 da tabela NÃO reduz as categorias da rosquinha
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
+    await waitFor(() => {
+      expect(screen.getByText('Laudo Contábil Página 2')).toBeInTheDocument();
+    });
+    expect(
+      screen.getByTestId('donut-segment-Despesas Operacionais')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('donut-segment-Custas Processuais')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('donut-segment-Perícia Técnica')
+    ).toBeInTheDocument();
+
+    // Voltar para página 1 e marcar a despesa atrasada de Março (302) como realizada hoje -> atualiza Despesas do Mês na hora sem F5!
+    fireEvent.click(screen.getByRole('button', { name: 'Página anterior' }));
+    await waitFor(() => {
+      expect(screen.getByText('Despesa Atrasada de Março')).toBeInTheDocument();
+    });
+
+    const concluirBtns = screen.getAllByRole('button', {
+      name: 'Marcar como realizado',
+    });
+    fireEvent.click(concluirBtns[0]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('kpi-despesas-mes')).toHaveTextContent(
+        '7.000,00'
+      );
+      expect(screen.getByTestId('kpi-saldo-liquido')).toHaveTextContent(
+        '-2.000,00'
+      );
+    });
+
+    const graficoInitialCall = fetchMock.mock.calls.find(
+      ([url, init]) =>
+        String(url).includes(
+          '/lancamentos/grafico?dias=180&status=Realizado'
+        ) &&
+        (!init?.method || init.method === 'GET')
+    );
+    expect(graficoInitialCall).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: '3m' }));
+    await waitFor(() => {
+      const call3m = fetchMock.mock.calls.find(([url]) =>
+        String(url).includes('/lancamentos/grafico?dias=90&status=Realizado')
+      );
+      expect(call3m).toBeDefined();
+    });
+
+    fireEvent.change(screen.getByLabelText('Valor mínimo do gráfico'), {
+      target: { value: '1000' },
+    });
+    fireEvent.change(screen.getByLabelText('Valor máximo do gráfico'), {
+      target: { value: '6000' },
+    });
+
+    await waitFor(() => {
+      const callValores = fetchMock.mock.calls.find(([url]) =>
+        String(url).includes(
+          '/lancamentos/grafico?dias=90&valor_min=1000&valor_max=6000&status=Realizado'
+        )
+      );
+      expect(callValores).toBeDefined();
+    });
+
+    const faixaAnterior = screen.getByTestId(
+      `ponto-entrada-${labelMesAnterior}`
+    );
+    fireEvent.mouseEnter(faixaAnterior);
+    expect(screen.getByTestId('fluxo-crosshair')).toBeInTheDocument();
+    expect(screen.getByTestId('fluxo-tooltip')).toBeInTheDocument();
+
+    const faixaAtual = screen.getByTestId(`ponto-entrada-${labelMesAtual}`);
+    fireEvent.mouseMove(faixaAtual);
+    fireEvent.click(faixaAtual);
+    expect(screen.queryByTestId('fluxo-tooltip')).not.toBeInTheDocument();
+    fireEvent.click(faixaAtual);
+    expect(screen.getByTestId('fluxo-tooltip')).toBeInTheDocument();
+    fireEvent.mouseLeave(faixaAtual.closest('div'));
+    expect(screen.queryByTestId('fluxo-tooltip')).not.toBeInTheDocument();
+
+    const segDespesas = screen.getByTestId(
+      'donut-segment-Despesas Operacionais'
+    );
+    fireEvent.mouseEnter(segDespesas);
+    expect(screen.getByTestId('donut-center-tooltip')).toBeInTheDocument();
+    fireEvent.click(segDespesas);
+    expect(
+      screen.queryByTestId('donut-center-tooltip')
+    ).not.toBeInTheDocument();
+    fireEvent.click(segDespesas);
+    expect(screen.getByTestId('donut-center-tooltip')).toBeInTheDocument();
+    fireEvent.mouseLeave(segDespesas.closest('div'));
+
+    const legendaDespesas = screen.getAllByText('Despesas Operacionais')[0];
+    fireEvent.mouseEnter(legendaDespesas.parentElement);
+    expect(screen.getByTestId('donut-center-tooltip')).toBeInTheDocument();
+    fireEvent.mouseLeave(legendaDespesas.parentElement);
+
+    // Exercita helpers SVG, indicadores e utilitários/serviços de gráfico e calendário
+    expect(buildSmoothLinePath([])).toBe('');
+    expect(buildSmoothLinePath([{ x: 5, y: 10 }])).toBe('M 5.0 10.0');
+    expect(buildSmoothAreaPath([])).toBe('');
+    expect(buildSmoothAreaPath([{ x: 5, y: 10 }], 200)).toContain(
+      'L 5.0 200.0'
+    );
+
+    expect(formatCurrencyNumber(undefined)).toBe('0,00');
+    expect(formatCompactCurrency(undefined)).toBe('R$ 0k');
+    expect(formatCompactCurrency(0)).toBe('R$ 0k');
+    expect(formatCompactCurrency(450)).toBe('R$ 450');
+    expect(formatCompactCurrency(5500)).toBe('R$ 5.5k');
+    expect(formatCompactCurrency(11000)).toBe('R$ 11k');
+
+    expect(calcularIndicadoresFinanceiros(null)).toEqual({
+      receitaMes: 0,
+      despesasMes: 0,
+      saldoLiquido: 0,
+      aReceber: 0,
+    });
+    expect(
+      calcularIndicadoresFinanceiros([], {
+        realizado: { total_entradas: 2000, total_saidas: 500 },
+        pendente: { total_entradas: 300 },
+      })
+    ).toEqual({
+      receitaMes: 2000,
+      despesasMes: 500,
+      saldoLiquido: 1500,
+      aReceber: 300,
+    });
+    expect(
+      calcularIndicadoresFinanceiros([
+        { tipo: 'entrada', valor: 1000, status: 'realizado' },
+        { tipo: 'entrada', valor: 500, status: 'pendente' },
+        { tipo: 'saida', valor: 300, status: 'realizado' },
+      ])
+    ).toEqual({
+      receitaMes: 1000,
+      despesasMes: 300,
+      saldoLiquido: 700,
+      aReceber: 500,
+    });
+
+    expect(
+      agruparFluxoCaixaPorMes(
+        [{ data: '2026-08-10', total_entradas: 1000, total_saidas: 200 }],
+        [],
+        2,
+        new Date('2026-08-15T12:00:00Z')
+      )
+    ).toHaveLength(2);
+    expect(
+      agruparFluxoCaixaPorMes(
+        [],
+        [
+          {
+            dataPagamentoIso: '2026-08-10',
+            tipo: 'entrada',
+            valor: 500,
+            status: 'realizado',
+          },
+        ],
+        2,
+        '2026-08-31'
+      )
+    ).toHaveLength(2);
+    expect(agruparDespesasPorCategoria(null)).toEqual([]);
+
+    const graficoCompleto = await obterGraficoFinancas({
+      inicio: '2026-01-01',
+      fim: '2026-08-31',
+      dias: 180,
+      valor_min: 100,
+      valor_max: 9000,
+      status: 'Realizado',
+      tipo: 'e',
+      categoria_id: 10,
+      cliente_id: 1,
+    });
+    expect(graficoCompleto.itens).toBeDefined();
+
+    routeOverrides['GET /lancamentos/grafico'] = async () =>
+      createJsonResponse({ itens: null }, 200);
+    expect((await obterGraficoFinancas()).itens).toEqual([]);
+
+    routeOverrides['GET /lancamentos/grafico'] = async () =>
+      createJsonResponse([], 200);
+    expect(await obterGraficoFinancas()).toBeNull();
+
+    routeOverrides['GET /lancamentos/grafico'] = async () =>
+      createJsonResponse({}, 500);
+    expect(await obterGraficoFinancas()).toBeNull();
+
+    routeOverrides['GET /lancamentos/grafico'] = async () => {
+      throw new Error('Falha grafico');
+    };
+    expect(await obterGraficoFinancas()).toBeNull();
+
+    routeOverrides['GET /lancamentos/calendario'] = async () =>
+      createJsonResponse(dbLancamentos, 200);
+    const cal = await obterCalendario({
+      inicio: '2026-08-01',
+      fim: '2026-08-31',
+      status: 'Realizado',
+      tipo: 'e',
+      categoria_id: 10,
+      cliente_id: 1,
+    });
+    expect(cal.length).toBeGreaterThan(0);
+
+    routeOverrides['GET /lancamentos/calendario'] = async () =>
+      createJsonResponse({}, 500);
+    expect(await obterCalendario()).toEqual([]);
+
+    routeOverrides['GET /lancamentos/calendario'] = async () => {
+      throw new Error('Cal error');
+    };
+    expect(await obterCalendario()).toEqual([]);
+    delete routeOverrides['GET /lancamentos/calendario'];
+
+    routeOverrides['GET /lancamentos/calendario/exportar'] = async () => ({
+      ok: true,
+      status: 200,
+      blob: async () =>
+        new Blob(['BEGIN:VCALENDAR'], { type: 'text/calendar' }),
+    });
+    if (!window.URL.createObjectURL) {
+      window.URL.createObjectURL = vi.fn(() => 'blob:test');
+    } else {
+      vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('blob:test');
+    }
+    if (!window.URL.revokeObjectURL) {
+      window.URL.revokeObjectURL = vi.fn();
+    } else {
+      vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {});
+    }
+    const blob = await exportarCalendarioIcs({
+      inicio: '2026-08-01',
+      fim: '2026-08-31',
+      status: 'Realizado',
+      tipo: 'e',
+      categoria_id: 10,
+      cliente_id: 1,
+    });
+    expect(blob).toBeDefined();
+
+    render(
+      <FinancialDashboard
+        lancamentos={[]}
+        indicadores={{
+          receitaMes: 100,
+          despesasMes: 500,
+          saldoLiquido: -400,
+          aReceber: 0,
+        }}
+      />
+    );
+    expect(
+      screen.getAllByLabelText('Tendência negativa').length
+    ).toBeGreaterThan(0);
+    expect(screen.getByText('Nenhuma despesa registrada')).toBeInTheDocument();
+  });
+
+  it('integra obterCalendario com filtros, sem filtros, respostas sem array e falhas de rede', async () => {
+    // Com todos os filtros aplicados
+    const resComFiltros = await obterCalendario({
+      inicio: '2026-08-01',
+      fim: '2026-08-31',
+      status: 'Realizado',
+      tipo: 'entrada',
+      categoria_id: 10,
+      cliente_id: 5,
+    });
+    expect(Array.isArray(resComFiltros)).toBe(true);
+
+    // Sem filtros e sem token
+    sessionStorage.removeItem('access_token');
+    const resSemToken = await obterCalendario();
+    expect(Array.isArray(resSemToken)).toBe(true);
+    sessionStorage.setItem('access_token', FAKE_TOKEN);
+
+    // Resposta não-ok
+    routeOverrides['GET /lancamentos/calendario'] = async () =>
+      createJsonResponse({}, 500);
+    expect(await obterCalendario()).toEqual([]);
+
+    // Resposta ok mas não-array
+    routeOverrides['GET /lancamentos/calendario'] = async () =>
+      createJsonResponse({ resultado: 'invalido' }, 200);
+    expect(await obterCalendario()).toEqual([]);
+
+    // Falha de rede (exceção no fetch)
+    routeOverrides['GET /lancamentos/calendario'] = async () => {
+      throw new Error('Network down');
+    };
+    expect(await obterCalendario()).toEqual([]);
+  });
+
+  it('integra exportarCalendarioIcs com todos os filtros, geração de blob, download e tratamento de erros da API', async () => {
+    const createObjectUrlSpy = vi
+      .spyOn(window.URL, 'createObjectURL')
+      .mockReturnValue('blob:http://localhost:3000/mock-ics');
+    const revokeObjectUrlSpy = vi
+      .spyOn(window.URL, 'revokeObjectURL')
+      .mockImplementation(() => {});
+
+    // Exportação com sucesso com filtros
+    const blob = await exportarCalendarioIcs({
+      inicio: '2026-08-01',
+      fim: '2026-08-31',
+      status: 'Pendente',
+      tipo: 'saida',
+      categoria_id: 20,
+      cliente_id: 3,
+    });
+    expect(blob).toBeTruthy();
+    expect(createObjectUrlSpy).toHaveBeenCalled();
+    expect(revokeObjectUrlSpy).toHaveBeenCalledWith(
+      'blob:http://localhost:3000/mock-ics'
+    );
+
+    // Exportação sem filtros e sem token
+    sessionStorage.removeItem('access_token');
+    const blobSemFiltros = await exportarCalendarioIcs();
+    expect(blobSemFiltros).toBeTruthy();
+    sessionStorage.setItem('access_token', FAKE_TOKEN);
+
+    // Erro da API com mensagem de detalhe
+    routeOverrides['GET /lancamentos/calendario/exportar'] = async () =>
+      createJsonResponse(
+        { detail: 'Filtro de datas inválido para exportação' },
+        400
+      );
+    await expect(exportarCalendarioIcs()).rejects.toThrow(
+      'Filtro de datas inválido para exportação'
+    );
+
+    // Erro da API com JSON inválido (fallback)
+    routeOverrides['GET /lancamentos/calendario/exportar'] = async () =>
+      invalidJsonErrorResponse(500);
+    await expect(exportarCalendarioIcs()).rejects.toThrow(
+      'Não foi possível exportar o calendário.'
+    );
+
+    createObjectUrlSpy.mockRestore();
+    revokeObjectUrlSpy.mockRestore();
   });
 
   describe('exportação de relatórios', () => {

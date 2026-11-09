@@ -10,6 +10,7 @@ import {
   Trash2,
   User,
 } from 'lucide-react';
+import ActivityFilters from '@/components/features/atividades/ActivityFilters/ActivityFilters';
 import ActivityStageSummary from '@/components/features/atividades/ActivityStageSummary/ActivityStageSummary';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import { useKanbanAtividades } from '@/hooks/useKanbanAtividades';
@@ -51,6 +52,9 @@ export default function AtividadesClient() {
     stages: etapas,
     isLoading,
     error,
+    filters,
+    setFilter,
+    clearFilters,
     reload: recarregar,
   } = useKanbanAtividades();
 
@@ -203,6 +207,15 @@ export default function AtividadesClient() {
     }
   };
 
+  const responsaveisOptions = useMemo(
+    () =>
+      funcionarios.map((f) => ({
+        value: String(f.funcionario_id),
+        label: f.nome,
+      })),
+    [funcionarios]
+  );
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -229,6 +242,13 @@ export default function AtividadesClient() {
         isLoading={isLoading}
         error={error}
         onRetry={recarregar}
+      />
+
+      <ActivityFilters
+        filters={filters}
+        responsaveis={responsaveisOptions}
+        onFilterChange={setFilter}
+        onClear={clearFilters}
       />
 
       {feedback && (

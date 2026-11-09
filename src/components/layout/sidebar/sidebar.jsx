@@ -14,6 +14,8 @@ import {
   Palette,
   Settings,
 } from 'lucide-react';
+import { useInstitucionalContext } from '@/contexts/InstitucionalContext';
+import { getImageUrl } from '@/utils/institucional';
 import styles from './sidebar.module.css';
 
 const menuItems = [
@@ -30,14 +32,54 @@ const menuItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { institucional } = useInstitucionalContext();
+
+  const corPrimaria = institucional?.corPrimaria || '#172133';
+  const corSecundaria = institucional?.corSecundaria || '#B79A63';
+  const nomeEscritorio = institucional?.nomeEscritorio || 'Carreiro Advogados';
+  const logotipo = institucional?.logotipo;
 
   return (
-    <aside className={styles.sidebar}>
-      <div className={styles.logoArea}>
-        <div className={styles.logoIcon}>
-          <Scale size={20} />
-        </div>
-        <span className={styles.logoText}>Carreiro Advogados</span>
+    <aside
+      className={styles.sidebar}
+      suppressHydrationWarning
+      style={{
+        backgroundColor: corPrimaria,
+        '--cor-primaria': corPrimaria,
+        '--cor-secundaria': corSecundaria,
+      }}
+      data-testid="sidebar"
+    >
+      <div className={styles.logoArea} suppressHydrationWarning>
+        {logotipo ? (
+          <div className={styles.logoImgWrapper} data-testid="sidebar-logo-img">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={getImageUrl(logotipo)}
+              alt={`Logotipo ${nomeEscritorio}`}
+              className={styles.logoImg}
+            />
+          </div>
+        ) : (
+          <div
+            className={styles.logoIcon}
+            suppressHydrationWarning
+            style={{
+              backgroundColor: corSecundaria,
+              color: corPrimaria,
+            }}
+            data-testid="sidebar-logo-icon"
+          >
+            <Scale size={20} color={corPrimaria} />
+          </div>
+        )}
+        <span
+          className={styles.logoText}
+          style={{ color: corSecundaria }}
+          suppressHydrationWarning
+        >
+          {nomeEscritorio}
+        </span>
       </div>
 
       <nav className={styles.nav}>
@@ -50,8 +92,14 @@ export default function Sidebar() {
               key={item.path}
               href={item.path}
               className={`${styles.navItem} ${isActive ? styles.active : ''}`}
+              style={isActive ? { color: corSecundaria } : undefined}
             >
-              {isActive && <div className={styles.activeIndicator} />}
+              {isActive && (
+                <div
+                  className={styles.activeIndicator}
+                  style={{ backgroundColor: corSecundaria }}
+                />
+              )}
               <Icon size={20} className={styles.icon} />
               <span className={styles.navText}>{item.label}</span>
             </Link>

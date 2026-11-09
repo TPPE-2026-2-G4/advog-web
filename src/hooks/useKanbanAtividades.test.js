@@ -1,6 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { obterKanbanAtividades } from '@/services/atividades';
+import {
+  filtrarAtividades,
+  obterKanbanAtividades,
+} from '@/services/atividades';
 import { useKanbanAtividades } from './useKanbanAtividades';
 
 vi.mock('@/services/atividades', () => ({
@@ -127,5 +130,139 @@ describe('useKanbanAtividades', () => {
       rejectRequest(new Error('tarde demais'));
     });
     expect(second.result.current.error).toBe('');
+  });
+});
+
+vi.mock('@/services/atividades', () => ({
+  obterKanbanAtividades: vi.fn(),
+  filtrarAtividades: vi.fn(),
+}));
+
+describe('useKanbanAtividades - filtros', () => {
+  const kanbanOriginal = {
+    escopo: 'escritorio',
+    etapas: [
+      {
+        etapa_id: 1,
+        nome: 'Backlog',
+        ordem: 1,
+        atividades: [
+          { atividade_id: 1, titulo: 'Tarefa A', etapa_id: 1 },
+          { atividade_id: 2, titulo: 'Tarefa B', etapa_id: 1 },
+        ],
+      },
+      {
+        etapa_id: 2,
+        nome: 'Em Execução',
+        ordem: 2,
+        atividades: [{ atividade_id: 3, titulo: 'Tarefa C', etapa_id: 2 }],
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    obterKanbanAtividades.mockResolvedValue(kanbanOriginal);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('chama filtrarAtividades após debounce de 300ms quando a busca é preenchida', async () => {
+    const atividadesFiltradas = [
+      { atividade_id: 1, titulo: 'Tarefa A', etapa_id: 1 },
+    ];
+    filtrarAtividades.mockResolvedValue(atividadesFiltradas);
+
+    const { result } = renderHook(() => useKanbanAtividades());
+
+    // Aguarda carga inicial
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Dispara preenchimento do filtro
+    act(() => {
+      result.current.setFilter('busca', 'Tarefa A');
+    });
+
+    // Antes dos 300ms, filtrarAtividades não deve ter sido chamada
+    expect(filtrarAtividades).not.toHaveBeenCalled();
+
+    // Avança 300ms do debounce
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    expect(filtrarAtividades).toHaveBeenCalledWith({
+      busca_textual: 'Tarefa A',
+      funcionario_id: undefined,
+      prazo_fim: undefined,
+    });
+
+    expect(result.current.stages[0].atividades).toHaveLength(1);
+    expect(result.current.stages[0].atividades[0].titulo).toBe('Tarefa A');
+    expect(result.current.stages[1].atividades).toHaveLength(0);
+  });
+
+  it('limpa as atividades filtradas e restaura o quadro base ao chamar clearFilters()', async () => {
+    filtrarAtividades.mockResolvedValue([
+      { atividade_id: 1, titulo: 'Tarefa A', etapa_id: 1 },
+    ]);
+
+    const { result } = renderHook(() => useKanbanAtividades());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      result.current.setFilter('busca', 'Tarefa');
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    expect(result.current.stages[0].atividades).toHaveLength(1);
+
+    // Limpa os filtros
+    act(() => {
+      result.current.clearFilters();
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.filters.busca).toBe('');
+    expect(result.current.stages[0].atividades).toHaveLength(2);
+    expect(result.current.stages[1].atividades).toHaveLength(1);
+  });
+
+  it('propaga mensagem de erro caso o endpoint de filtros falhe', async () => {
+    filtrarAtividades.mockRejectedValue(new Error('Erro na filtragem'));
+
+    const { result } = renderHook(() => useKanbanAtividades());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      result.current.setFilter('funcionarioId', '5');
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    expect(result.current.error).toBe('Erro na filtragem');
+    expect(result.current.stages[0].atividades).toHaveLength(0);
   });
 });

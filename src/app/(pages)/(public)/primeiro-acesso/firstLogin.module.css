@@ -10,7 +10,7 @@
 .label {
   font-size: 13px;
   font-weight: 450;
-  color: #172133;
+  color: var(--cor-primaria, #172133);
   margin-top: 8px;
 }
 
@@ -23,6 +23,9 @@
   font-size: 15px;
   background-color: transparent;
   outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .input::placeholder {
@@ -31,16 +34,17 @@
 }
 
 .input:focus {
-  border-color: #c1a077;
+  border-color: var(--cor-secundaria, #c1a077);
+  box-shadow: 0 0 0 1px var(--cor-secundaria, #c1a077);
 }
 
 .select {
-  color: #172133;
+  color: var(--cor-primaria, #172133);
   cursor: pointer;
 }
 
 .select option {
-  color: #172133;
+  color: var(--cor-primaria, #172133);
 }
 
 .oabOption {
@@ -48,7 +52,7 @@
   align-items: center;
   gap: 8px;
   margin-top: 8px;
-  color: #172133;
+  color: var(--cor-primaria, #172133);
   font-size: 13px;
   cursor: pointer;
 }
@@ -57,7 +61,7 @@
   width: 16px;
   height: 16px;
   margin: 0;
-  accent-color: #172133;
+  accent-color: var(--cor-secundaria, #c1a077);
   cursor: pointer;
 }
 
@@ -89,21 +93,23 @@
   margin-top: 12px;
   border: none;
   border-radius: 8px;
-  background-color: #172133;
-  color: white;
+  background-color: var(--cor-secundaria, #c1a077);
+  color: var(--cor-secundaria-texto, #172133);
   font-family: var(--font-inter), sans-serif;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition:
+    filter 0.2s ease,
+    transform 0.2s ease;
 }
 
-.button:hover {
-  background-color: #24334d;
+.button:hover:not(:disabled) {
+  filter: brightness(0.88);
 }
 
 .button:disabled {
-  background-color: #4b5563;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 

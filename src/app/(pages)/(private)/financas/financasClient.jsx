@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
+import FinancialDashboard from '@/components/features/financas/FinancialDashboard/FinancialDashboard';
 import ExportMenu from '@/components/ui/ExportMenu/ExportMenu';
 import LancamentosTable from '@/components/features/financas/LancamentosTable/LancamentosTable';
 import LancamentoModal from '@/components/features/financas/LancamentoModal/LancamentoModal';
@@ -21,6 +22,8 @@ export default function FinancasClient({
     lancamentos,
     categorias,
     pagination,
+    resumoBackend,
+    versaoDados,
     isNewModalOpen,
     setIsNewModalOpen,
     selectedLancamento,
@@ -124,6 +127,12 @@ export default function FinancasClient({
           {deleteError || statusError || exportError}
         </div>
       )}
+
+      <FinancialDashboard
+        lancamentos={lancamentos}
+        resumoBackend={resumoBackend}
+        refreshTrigger={versaoDados}
+      />
 
       <LancamentosTable
         lancamentos={lancamentos}

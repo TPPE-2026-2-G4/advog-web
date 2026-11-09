@@ -11,6 +11,10 @@ import UserMenu from '@/components/layout/navbar/userMenu';
 import PrivateLayout from './layout';
 import DashboardPage from './dashboard/page';
 import { AuthProvider } from '@/contexts/AuthContext';
+import {
+  InstitucionalProvider,
+  useInstitucionalContext,
+} from '@/contexts/InstitucionalContext';
 import { useAuth } from '@/hooks/useAuth';
 import { proxy } from '@/proxy';
 import { getPermissionLabel } from '@/constants/permissions';
@@ -244,6 +248,116 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
       expect(screen.getByText(roleEsperado)).toBeInTheDocument();
     }
   );
+
+  it('integra InstitucionalProvider no RootLayout: inicializa com cache, atualiza dados, aplica CSS e sincroniza com eventos customizados e storage', async () => {
+    localStorage.setItem(
+      'institucional_data',
+      JSON.stringify({
+        corPrimaria: '#223344',
+        corSecundaria: '#889900',
+        nomeEscritorio: 'Cached Escritório',
+      })
+    );
+
+    function TestInstitucional() {
+      const { institucional, atualizarInstitucional } =
+        useInstitucionalContext();
+      return (
+        <div>
+          <span data-testid="nome-escritorio">
+            {institucional.nomeEscritorio}
+          </span>
+          <span data-testid="cor-primaria">{institucional.corPrimaria}</span>
+          <button
+            onClick={() =>
+              atualizarInstitucional({
+                nomeEscritorio: 'Escritório Atualizado Manualmente',
+                corPrimaria: '#112233',
+                corSecundaria: '#445566',
+              })
+            }
+          >
+            Atualizar Manual
+          </button>
+        </div>
+      );
+    }
+
+    render(
+      <RootLayout>
+        <TestInstitucional />
+      </RootLayout>
+    );
+
+    // Variável CSS aplicada pelo cache
+    expect(
+      document.documentElement.style.getPropertyValue('--cor-primaria')
+    ).toBe('#223344');
+
+    // Atualização manual via atualizarInstitucional
+    fireEvent.click(screen.getByRole('button', { name: 'Atualizar Manual' }));
+
+    expect(screen.getByTestId('nome-escritorio')).toHaveTextContent(
+      'Escritório Atualizado Manualmente'
+    );
+    expect(
+      document.documentElement.style.getPropertyValue('--cor-primaria')
+    ).toBe('#112233');
+
+    // Evento institucional-updated
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('institucional-updated', {
+          detail: {
+            nomeEscritorio: 'Escritório Via Evento Customizado',
+            corPrimaria: '#334455',
+          },
+        })
+      );
+    });
+
+    expect(screen.getByTestId('nome-escritorio')).toHaveTextContent(
+      'Escritório Via Evento Customizado'
+    );
+    expect(
+      document.documentElement.style.getPropertyValue('--cor-primaria')
+    ).toBe('#334455');
+
+    // Evento storage com JSON válido
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'institucional_data',
+          newValue: JSON.stringify({
+            nomeEscritorio: 'Escritório Via Storage',
+            corPrimaria: '#556677',
+            corSecundaria: '#778899',
+          }),
+        })
+      );
+    });
+
+    expect(screen.getByTestId('nome-escritorio')).toHaveTextContent(
+      'Escritório Via Storage'
+    );
+    expect(
+      document.documentElement.style.getPropertyValue('--cor-primaria')
+    ).toBe('#556677');
+
+    // Evento storage com JSON inválido (não quebra)
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'institucional_data',
+          newValue: 'invalid-json{{{',
+        })
+      );
+    });
+
+    expect(screen.getByTestId('nome-escritorio')).toHaveTextContent(
+      'Escritório Via Storage'
+    );
+  });
 
   describe('menu do usuário: variações de dados e de sessão', () => {
     const renderMenu = (user) => {

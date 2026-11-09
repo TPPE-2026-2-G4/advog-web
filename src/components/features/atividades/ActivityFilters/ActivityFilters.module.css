@@ -1,0 +1,149 @@
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  width: 100%;
+}
+
+.searchContainer {
+  position: relative;
+  flex: 1 1 320px;
+  max-width: 440px;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  color: #9ca3af;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  height: 38px;
+  padding: 8px 16px 8px 40px;
+  color: #172133;
+  font-family: inherit;
+  font-size: 14px;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  box-sizing: border-box;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.searchInput::placeholder {
+  color: #9ca3af;
+}
+
+.searchInput:focus-visible {
+  border-color: #c1a077;
+  box-shadow: 0 0 0 2px rgba(193, 160, 119, 0.15);
+}
+
+.filtersGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.pillSelect {
+  height: 38px;
+  padding: 8px 16px;
+  color: #172133;
+  font-family: inherit;
+  font-size: 14px;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  box-sizing: border-box;
+  outline: none;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.pillSelect:focus-visible {
+  border-color: #c1a077;
+  box-shadow: 0 0 0 2px rgba(193, 160, 119, 0.15);
+}
+
+.dateGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.dateLabel {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.pillDate {
+  height: 38px;
+  padding: 8px 14px;
+  color: #172133;
+  font-family: inherit;
+  font-size: 14px;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  box-sizing: border-box;
+  outline: none;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.pillDate:focus-visible {
+  border-color: #c1a077;
+  box-shadow: 0 0 0 2px rgba(193, 160, 119, 0.15);
+}
+
+.clearButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 8px 16px;
+  color: #4b5563;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  background-color: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.clearButton:hover {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+@media (max-width: 768px) {
+  .searchContainer {
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .filtersGroup {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

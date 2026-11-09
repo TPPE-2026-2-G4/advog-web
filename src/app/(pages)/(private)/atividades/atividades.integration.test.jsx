@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AtividadesClient from './atividadesClient';
 import AtividadesPage from './page';
 import {
+  filtrarAtividades,
   listarProdutividadeEquipe,
   obterKanbanAtividades,
 } from '@/services/atividades';
@@ -24,6 +25,7 @@ vi.mock('@/services/atividades', async (importOriginal) => {
     obterKanbanAtividades: vi.fn((...args) =>
       actual.obterKanbanAtividades(...args)
     ),
+    filtrarAtividades: vi.fn(),
   };
 });
 
@@ -68,6 +70,11 @@ describe('AtividadesClient integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     obterKanbanAtividades.mockResolvedValue(kanban);
+  });
+
+  it('renderiza AtividadesPage como wrapper de AtividadesClient', () => {
+    const page = AtividadesPage();
+    expect(page).toBeTruthy();
   });
 
   it('exibe o total e a contagem de cada etapa na ordem do quadro', async () => {
@@ -547,5 +554,101 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
         'Não foi possível excluir a atividade.'
       );
     });
+  });
+});
+
+describe('Integração de Filtros no Quadro de Atividades', () => {
+  const atividadeItem = (id, etapaId, titulo) => ({
+    atividade_id: id,
+    titulo,
+    etapa_id: etapaId,
+    data_prazo: '2026-12-31T23:59:59',
+    processo_id: null,
+    responsaveis: [{ funcionario_id: 1, nome: 'Ana Paula' }],
+  });
+  const kanbanSeteAtividades = {
+    escopo: 'escritorio',
+    etapas: [
+      {
+        etapa_id: 1,
+        nome: 'Backlog',
+        ordem: 1,
+        atividades: [
+          atividadeItem(1, 1, 'Petição Inicial Santos'),
+          atividadeItem(2, 1, 'Contrato Social Alpha'),
+          atividadeItem(3, 1, 'Defesa Trabalhista'),
+        ],
+      },
+      {
+        etapa_id: 2,
+        nome: 'Em Execução',
+        ordem: 2,
+        atividades: [atividadeItem(4, 2, 'Recurso Ordinário')],
+      },
+      {
+        etapa_id: 3,
+        nome: 'Revisão',
+        ordem: 3,
+        atividades: [
+          atividadeItem(5, 3, 'Parecer Tributário'),
+          atividadeItem(6, 3, 'Consultoria LGPD'),
+        ],
+      },
+      {
+        etapa_id: 4,
+        nome: 'Finalizado',
+        ordem: 4,
+        atividades: [atividadeItem(7, 4, 'Homologação Acordo')],
+      },
+    ],
+  };
+  beforeEach(() => {
+    vi.clearAllMocks();
+    obterKanbanAtividades.mockResolvedValue(kanbanSeteAtividades);
+  });
+  it('fluxo ponta a ponta: renderiza total inicial, aplica filtro textual e limpa para restaurar', async () => {
+    const atividadeFiltrada = [atividadeItem(1, 1, 'Petição Inicial Santos')];
+    filtrarAtividades.mockResolvedValue(atividadeFiltrada);
+    render(<AtividadesClient />);
+
+    await waitFor(() =>
+      expect(screen.getByText('Total').nextSibling).toHaveTextContent('7')
+    );
+    expect(screen.getByText('Backlog').nextSibling).toHaveTextContent('3');
+    expect(screen.getByText('Em Execução').nextSibling).toHaveTextContent('1');
+    expect(screen.getByText('Revisão').nextSibling).toHaveTextContent('2');
+    expect(screen.getByText('Finalizado').nextSibling).toHaveTextContent('1');
+
+    const inputBusca = screen.getByPlaceholderText(
+      'Buscar por título, descrição ou responsável...'
+    );
+    fireEvent.change(inputBusca, { target: { value: 'Petição' } });
+
+    await waitFor(() =>
+      expect(filtrarAtividades).toHaveBeenCalledWith(
+        expect.objectContaining({ busca_textual: 'Petição' })
+      )
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText('Total').nextSibling).toHaveTextContent('1')
+    );
+    expect(screen.getByText('Backlog').nextSibling).toHaveTextContent('1');
+    expect(screen.getByText('Em Execução').nextSibling).toHaveTextContent('0');
+    expect(screen.getByText('Revisão').nextSibling).toHaveTextContent('0');
+    expect(screen.getByText('Finalizado').nextSibling).toHaveTextContent('0');
+
+    const botaoLimpar = await screen.findByRole('button', {
+      name: 'Limpar filtros',
+    });
+    fireEvent.click(botaoLimpar);
+
+    await waitFor(() =>
+      expect(screen.getByText('Total').nextSibling).toHaveTextContent('7')
+    );
+    expect(screen.getByText('Backlog').nextSibling).toHaveTextContent('3');
+    expect(screen.getByText('Em Execução').nextSibling).toHaveTextContent('1');
+    expect(screen.getByText('Revisão').nextSibling).toHaveTextContent('2');
+    expect(screen.getByText('Finalizado').nextSibling).toHaveTextContent('1');
   });
 });
