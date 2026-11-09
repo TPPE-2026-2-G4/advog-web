@@ -6,7 +6,12 @@ import { obterKanbanAtividades } from '@/services/atividades';
 import { obterResumoAtividades } from '@/services/dashboard';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
-import { listarProcessosCriticos, obterProcesso } from '@/services/processos';
+import {
+  listarProcessos,
+  listarProcessosCriticos,
+  obterProcesso,
+  obterResumoProcessos,
+} from '@/services/processos';
 import { getCurrentUser } from '@/utils/authSession';
 
 vi.mock('@/services/atividades', () => ({
@@ -26,13 +31,18 @@ vi.mock('@/services/funcionarios', () => ({
 }));
 
 vi.mock('@/services/processos', () => ({
+  listarProcessos: vi.fn(),
   listarProcessosCriticos: vi.fn(),
   obterProcesso: vi.fn(),
+  obterResumoProcessos: vi.fn(),
 }));
 
 vi.mock('@/utils/authSession', () => ({
   getCurrentUser: vi.fn(),
 }));
+
+const daysFromNowIso = (days) =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 const mockProcesses = [
   {
@@ -49,6 +59,36 @@ const mockProcesses = [
     funcionario_id: 2,
   },
 ];
+
+const mockUpcomingPage = () => ({
+  itens: [
+    {
+      processo_id: 202,
+      cnj: '0099012-34.2026.8.26.0602',
+      titulo: 'Recurso de Apelação',
+      descricao: 'Recurso',
+      status: 'Ativo',
+      tribunal: 'TJSP',
+      area: 'Civil',
+      data_prazo: `${daysFromNowIso(2)}T18:00:00`,
+      cliente_id: 1,
+      funcionario_id: 2,
+    },
+  ],
+  total: 1,
+  page: 1,
+  page_size: 100,
+  total_pages: 1,
+});
+
+const mockProcessSummary = {
+  total: 9,
+  em_andamento: 4,
+  em_analise: 2,
+  finalizados: 1,
+  proximos_do_prazo: 2,
+  atrasados: 3,
+};
 
 const mockSummary = {
   escopo: 'escritorio',
@@ -88,6 +128,8 @@ describe('DashboardPage e DashboardClient', () => {
         },
       },
     });
+    obterResumoProcessos.mockResolvedValue(mockProcessSummary);
+    listarProcessos.mockResolvedValue(mockUpcomingPage());
     obterResumoAtividades.mockResolvedValue(mockSummary);
     obterKanbanAtividades.mockResolvedValue(mockKanban);
     listarClientes.mockResolvedValue([
@@ -107,6 +149,7 @@ describe('DashboardPage e DashboardClient', () => {
       expect(
         screen.getByText('Processos Críticos (Sem movimentação)')
       ).toBeInTheDocument();
+      expect(screen.getByText('Prazos Próximos')).toBeInTheDocument();
     });
   });
 
@@ -126,13 +169,30 @@ describe('DashboardPage e DashboardClient', () => {
       screen.getByText('Você não possui permissão para visualizar processos.')
     ).toBeInTheDocument();
     expect(listarProcessosCriticos).not.toHaveBeenCalled();
+    expect(listarProcessos).not.toHaveBeenCalled();
+    expect(obterResumoProcessos).not.toHaveBeenCalled();
+    expect(screen.queryByText('Resumo de Processos')).not.toBeInTheDocument();
+    expect(screen.queryByText('Prazos Próximos')).not.toBeInTheDocument();
   });
 
-  it('carrega processos críticos, enriquece com nomes de cliente e responsável e abre modal ao clicar em Analisar', async () => {
-    obterProcesso.mockResolvedValueOnce({
-      ...mockProcesses[0],
-      descricao: 'Descrição completa do caso crítico',
-    });
+  it('carrega processos críticos e prazos próximos, enriquece com nomes e abre modal ao clicar em Analisar ou Ver', async () => {
+    obterProcesso
+      .mockResolvedValueOnce({
+        ...mockProcesses[0],
+        descricao: 'Descrição completa do caso crítico',
+      })
+      .mockResolvedValueOnce({
+        processo_id: 202,
+        cnj: '0099012-34.2026.8.26.0602',
+        titulo: 'Recurso de Apelação',
+        descricao: 'Descrição detalhada do recurso',
+        status: 'Ativo',
+        tribunal: 'TJSP',
+        area: 'Civil',
+        data_prazo: `${daysFromNowIso(2)}T18:00:00`,
+        cliente_id: 1,
+        funcionario_id: 2,
+      });
 
     render(<DashboardClient />);
 
@@ -140,7 +200,9 @@ describe('DashboardPage e DashboardClient', () => {
       expect(
         screen.getAllByText('Ação de Cobrança Teste')[0]
       ).toBeInTheDocument();
-      expect(screen.getAllByText('Empresa Alpha Ltda')[0]).toBeInTheDocument();
+      expect(
+        screen.getByText('Recurso de Apelação - Empresa Alpha Ltda')
+      ).toBeInTheDocument();
     });
 
     const analyzeButtons = screen.getAllByRole('button', { name: 'Analisar' });
@@ -155,11 +217,18 @@ describe('DashboardPage e DashboardClient', () => {
     expect(
       screen.getByText('Descrição completa do caso crítico')
     ).toBeInTheDocument();
-    const closeButton = screen.getByRole('button', { name: 'Fechar' });
-    fireEvent.click(closeButton);
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toHaveTextContent(
+        'Descrição detalhada do recurso'
+      );
     });
   });
 
@@ -175,15 +244,36 @@ describe('DashboardPage e DashboardClient', () => {
     });
   });
 
-  it('exibe o card de atividades pendentes, o resumo e a atividade recente', async () => {
+  it('exibe os cards de resumo de processos (com Concluídos e Atrasados), prazos próximos, resumo de atividades e atividade recente', async () => {
     render(<DashboardClient />);
 
     await waitFor(() => {
+      expect(screen.getByText('Processos Ativos')).toBeInTheDocument();
       expect(screen.getByText('Atividades Pendentes')).toBeInTheDocument();
+      expect(screen.getByText('Prazos Urgentes')).toBeInTheDocument();
+      expect(screen.getByText('Resumo de Processos')).toBeInTheDocument();
+      expect(screen.getByText('Prazos Próximos')).toBeInTheDocument();
       expect(screen.getByText('Resumo de Atividades')).toBeInTheDocument();
       expect(screen.getByText('Redigir petição inicial')).toBeInTheDocument();
     });
 
+    expect(screen.getByText('Em andamento').previousSibling).toHaveTextContent(
+      '4'
+    );
+    expect(screen.getByText('Em análise').previousSibling).toHaveTextContent(
+      '2'
+    );
+    expect(screen.getByText('Concluídos').previousSibling).toHaveTextContent(
+      '1'
+    );
+    expect(
+      screen.getByText('Próximos do prazo').previousSibling
+    ).toHaveTextContent('2');
+    expect(screen.getByText('Atrasados').previousSibling).toHaveTextContent(
+      '3'
+    );
+
+    expect(screen.getByText('Vence em: 2 dia(s)')).toBeInTheDocument();
     expect(screen.getByText('Atividades do escritório')).toBeInTheDocument();
     expect(screen.getByText('Em execução').previousSibling).toHaveTextContent(
       '7'
@@ -208,7 +298,13 @@ describe('DashboardPage e DashboardClient', () => {
     expect(screen.getByText('Acesso negado')).toBeInTheDocument();
   });
 
-  it('permite recarregar o resumo e as atividades recentes após uma falha', async () => {
+  it('permite recarregar os resumos, prazos próximos e atividades recentes após uma falha', async () => {
+    obterResumoProcessos
+      .mockRejectedValueOnce(new Error('Falha no resumo de processos'))
+      .mockResolvedValueOnce(mockProcessSummary);
+    listarProcessos
+      .mockRejectedValueOnce(new Error('Falha nos prazos próximos'))
+      .mockResolvedValueOnce(mockUpcomingPage());
     obterResumoAtividades
       .mockRejectedValueOnce(new Error('Falha no resumo'))
       .mockResolvedValueOnce(mockSummary);
@@ -219,6 +315,10 @@ describe('DashboardPage e DashboardClient', () => {
     render(<DashboardClient />);
 
     await waitFor(() => {
+      expect(
+        screen.getByText('Falha no resumo de processos')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Falha nos prazos próximos')).toBeInTheDocument();
       expect(screen.getByText('Falha no resumo')).toBeInTheDocument();
       expect(screen.getByText('Falha no kanban')).toBeInTheDocument();
     });
@@ -229,6 +329,12 @@ describe('DashboardPage e DashboardClient', () => {
     retryButtons.forEach((button) => fireEvent.click(button));
 
     await waitFor(() => {
+      expect(
+        screen.queryByText('Falha no resumo de processos')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Falha nos prazos próximos')
+      ).not.toBeInTheDocument();
       expect(screen.queryByText('Falha no resumo')).not.toBeInTheDocument();
       expect(screen.queryByText('Falha no kanban')).not.toBeInTheDocument();
       expect(screen.getByText('Redigir petição inicial')).toBeInTheDocument();
