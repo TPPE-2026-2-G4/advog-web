@@ -1,15 +1,19 @@
 'use client';
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Clock } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Clock } from 'lucide-react';
 import ActivitySummary from '@/components/features/atividades/ActivitySummary/ActivitySummary';
 import RecentActivities from '@/components/features/atividades/RecentActivities/RecentActivities';
 import StatCard from '@/components/ui/StatCard/StatCard';
 import CriticalProcessesCard from '@/components/features/processos/CriticalProcessesCard/CriticalProcessesCard';
 import ProcessDetailsModal from '@/components/features/processos/ProcessDetailsModal/ProcessDetailsModal';
+import ProcessSummary from '@/components/features/processos/ProcessSummary/ProcessSummary';
+import UpcomingDeadlines from '@/components/features/processos/UpcomingDeadlines/UpcomingDeadlines';
 import { useKanbanAtividades } from '@/hooks/useKanbanAtividades';
+import { usePrazosProximos } from '@/hooks/usePrazosProximos';
 import { useProcessosCriticos } from '@/hooks/useProcessosCriticos';
 import { useResumoAtividades } from '@/hooks/useResumoAtividades';
+import { useResumoProcessos } from '@/hooks/useResumoProcessos';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { getRecentActivities } from '@/utils/atividade';
@@ -28,6 +32,20 @@ export default function DashboardClient() {
   const permissions = JSON.parse(permissionsJson);
   const canView = permissions.visualizar_processos === true;
   const canEdit = permissions.editar_processos === true;
+
+  const {
+    summary: processSummary,
+    isLoading: isProcessSummaryLoading,
+    error: processSummaryError,
+    reload: reloadProcessSummary,
+  } = useResumoProcessos({ enabled: canView });
+
+  const {
+    processos: upcomingProcesses,
+    isLoading: isUpcomingLoading,
+    error: upcomingError,
+    reload: reloadUpcoming,
+  } = usePrazosProximos({ enabled: canView });
 
   const {
     summary: activitySummary,
@@ -106,10 +124,21 @@ export default function DashboardClient() {
     [processos, clientNames, employeeNames]
   );
 
+  const enrichedUpcomingProcesses = useMemo(
+    () =>
+      upcomingProcesses.map((proc) =>
+        enrichProcess(proc, clientNames, employeeNames)
+      ),
+    [upcomingProcesses, clientNames, employeeNames]
+  );
+
   const enrichedDetail = useMemo(
     () => enrichProcess(detailProcess, clientNames, employeeNames),
     [detailProcess, clientNames, employeeNames]
   );
+
+  const canShowProcessStats =
+    canView && !isProcessSummaryLoading && !processSummaryError;
 
   return (
     <div className={styles.container}>
@@ -131,6 +160,12 @@ export default function DashboardClient() {
       <main className={styles.main}>
         <div className={styles.statsGrid}>
           <StatCard
+            title="Processos Ativos"
+            value={canShowProcessStats ? processSummary.em_andamento : '—'}
+            icon={ArrowUpRight}
+            iconColor="#34785f"
+          />
+          <StatCard
             title="Atividades Pendentes"
             value={
               isSummaryLoading || summaryError ? '—' : activitySummary.pendentes
@@ -138,40 +173,81 @@ export default function DashboardClient() {
             icon={Clock}
             iconColor="#C1A077"
           />
-        </div>
-
-        <div className={styles.activitiesGrid}>
-          <ActivitySummary
-            summary={activitySummary}
-            isLoading={isSummaryLoading}
-            error={summaryError}
-            onRetry={reloadSummary}
-          />
-          <RecentActivities
-            activities={recentActivities}
-            isLoading={isActivitiesLoading}
-            error={activitiesError}
-            onRetry={reloadActivities}
+          <StatCard
+            title="Prazos Urgentes"
+            value={canShowProcessStats ? processSummary.proximos_do_prazo : '—'}
+            icon={ArrowDownRight}
+            iconColor="#A8283A"
           />
         </div>
 
         {canView ? (
-          <CriticalProcessesCard
-            processes={enrichedProcesses}
-            isLoading={isLoading}
-            isReloading={isReloading}
-            error={error}
-            onRetry={reload}
-            onAnalyze={openDetail}
-            thresholdDays={15}
-          />
-        ) : (
-          <div className={styles.errorState} role="alert">
-            <div>
-              <h2>Acesso negado</h2>
-              <p>Você não possui permissão para visualizar processos.</p>
+          <>
+            <div className={styles.summariesGrid}>
+              <ProcessSummary
+                summary={processSummary}
+                isLoading={isProcessSummaryLoading}
+                error={processSummaryError}
+                onRetry={reloadProcessSummary}
+              />
+              <ActivitySummary
+                summary={activitySummary}
+                isLoading={isSummaryLoading}
+                error={summaryError}
+                onRetry={reloadSummary}
+              />
             </div>
-          </div>
+
+            <div className={styles.activitiesGrid}>
+              <UpcomingDeadlines
+                processes={enrichedUpcomingProcesses}
+                isLoading={isUpcomingLoading}
+                error={upcomingError}
+                onRetry={reloadUpcoming}
+                onView={openDetail}
+              />
+              <RecentActivities
+                activities={recentActivities}
+                isLoading={isActivitiesLoading}
+                error={activitiesError}
+                onRetry={reloadActivities}
+              />
+            </div>
+
+            <CriticalProcessesCard
+              processes={enrichedProcesses}
+              isLoading={isLoading}
+              isReloading={isReloading}
+              error={error}
+              onRetry={reload}
+              onAnalyze={openDetail}
+              thresholdDays={15}
+            />
+          </>
+        ) : (
+          <>
+            <div className={styles.activitiesGrid}>
+              <ActivitySummary
+                summary={activitySummary}
+                isLoading={isSummaryLoading}
+                error={summaryError}
+                onRetry={reloadSummary}
+              />
+              <RecentActivities
+                activities={recentActivities}
+                isLoading={isActivitiesLoading}
+                error={activitiesError}
+                onRetry={reloadActivities}
+              />
+            </div>
+
+            <div className={styles.errorState} role="alert">
+              <div>
+                <h2>Acesso negado</h2>
+                <p>Você não possui permissão para visualizar processos.</p>
+              </div>
+            </div>
+          </>
         )}
       </main>
 
