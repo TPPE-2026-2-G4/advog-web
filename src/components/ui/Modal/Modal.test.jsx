@@ -78,6 +78,20 @@ describe('Modal', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('não fecha quando a seleção de texto começa no modal e termina no overlay', () => {
+    const onClose = vi.fn();
+    const { container } = render(
+      <Modal isOpen onClose={onClose}>
+        <div data-testid="inner">Conteúdo do Modal</div>
+      </Modal>
+    );
+
+    fireEvent.pointerDown(screen.getByTestId('inner'));
+    fireEvent.click(container.firstChild);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('fecha ao pressionar a tecla Escape', () => {
     const onClose = vi.fn();
     render(
