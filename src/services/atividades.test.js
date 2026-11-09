@@ -6,6 +6,7 @@ import {
   buscarAtividade,
   criarAtividade,
   excluirAtividade,
+  filtrarAtividades,
   listarProdutividadeEquipe,
   obterKanbanAtividades,
 } from './atividades';
@@ -186,6 +187,96 @@ describe('obterKanbanAtividades', () => {
 
     await expect(obterKanbanAtividades()).rejects.toThrow(
       'Não foi possível carregar as atividades.'
+    );
+  });
+});
+
+describe('filtrarAtividades', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.stubGlobal('fetch', vi.fn());
+    getAccessToken.mockReturnValue('token-admin');
+  });
+
+  it('monta a URL com todos os parâmetros presentes', async () => {
+    const lista = [{ atividade_id: 1, titulo: 'Elaborar Petição' }];
+    fetch.mockResolvedValue(respostaJson(lista));
+
+    const filtros = {
+      busca_textual: 'Petição Santos',
+      funcionario_id: 3,
+      prazo_fim: '2026-12-31',
+      prazo_inicio: '2026-01-01',
+      etapa_id: 2,
+    };
+
+    const resultado = await filtrarAtividades(filtros);
+
+    expect(resultado).toEqual(lista);
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/atividades/?busca_textual=Peti%C3%A7%C3%A3o+Santos&funcionario_id=3&prazo_fim=2026-12-31&prazo_inicio=2026-01-01&etapa_id=2`,
+      expect.objectContaining({
+        method: 'GET',
+        headers: {
+          Authorization: 'Bearer token-admin',
+        },
+        cache: 'no-store',
+      })
+    );
+  });
+
+  it('omite parâmetros vazios, nulos ou indefinidos na query string', async () => {
+    fetch.mockResolvedValue(respostaJson([]));
+
+    await filtrarAtividades({
+      busca_textual: '   ',
+      funcionario_id: '',
+      prazo_fim: undefined,
+      etapa_id: null,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/atividades/`,
+      expect.objectContaining({
+        method: 'GET',
+      })
+    );
+  });
+
+  it('lança erro se o usuário não tiver token de autenticação', async () => {
+    getAccessToken.mockReturnValue(null);
+
+    await expect(filtrarAtividades()).rejects.toThrow(
+      'Sessão expirada. Faça login novamente.'
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [401, 'Sessão expirada. Faça login novamente.'],
+    [403, 'Você não possui permissão para visualizar estas atividades.'],
+    [500, 'Erro interno no servidor'],
+  ])('propaga mensagem adequada para status %i', async (status, detail) => {
+    fetch.mockResolvedValue(respostaJson({ detail }, { ok: false, status }));
+
+    await expect(filtrarAtividades({ busca_textual: 'teste' })).rejects.toThrow(
+      detail
+    );
+  });
+
+  it('usa mensagem de fallback quando a resposta de erro não contém detail', async () => {
+    fetch.mockResolvedValue(respostaJson({}, { ok: false, status: 500 }));
+
+    await expect(filtrarAtividades()).rejects.toThrow(
+      'Não foi possível filtrar as atividades.'
+    );
+  });
+
+  it('converte falha de rede em erro amigável', async () => {
+    fetch.mockRejectedValue(new Error('Network error'));
+
+    await expect(filtrarAtividades()).rejects.toThrow(
+      'Não foi possível filtrar as atividades.'
     );
   });
 });

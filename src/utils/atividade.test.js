@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   countActivitiesByStage,
+  distributeActivitiesIntoStages,
   EMPTY_ACTIVITY_SUMMARY,
   formatActivityResponsibles,
   formatarResumoAtividades,
@@ -150,5 +151,62 @@ describe('utils de atividade', () => {
     ).toBe('Ana, Pedro');
     expect(formatActivityResponsibles([])).toBe('Sem responsável');
     expect(formatActivityResponsibles()).toBe('Sem responsável');
+  });
+});
+
+describe('distributeActivitiesIntoStages', () => {
+  const etapasModelo = [
+    { etapa_id: 1, nome: 'Backlog', ordem: 1, atividades: [] },
+    { etapa_id: 2, nome: 'Em Execução', ordem: 2, atividades: [] },
+    { etapa_id: 3, nome: 'Finalizado', ordem: 3, atividades: [] },
+  ];
+
+  it('distribui corretamente as atividades conforme suas etapas', () => {
+    const atividades = [
+      { atividade_id: 10, titulo: 'Atividade 1', etapa_id: 1 },
+      { atividade_id: 20, titulo: 'Atividade 2', etapa_id: 2 },
+      { atividade_id: 30, titulo: 'Atividade 3', etapa_id: 1 },
+    ];
+
+    const resultado = distributeActivitiesIntoStages(etapasModelo, atividades);
+
+    expect(resultado[0].atividades).toHaveLength(2);
+    expect(resultado[0].atividades.map((a) => a.atividade_id)).toEqual([
+      10, 30,
+    ]);
+
+    expect(resultado[1].atividades).toHaveLength(1);
+    expect(resultado[1].atividades[0].atividade_id).toBe(20);
+
+    expect(resultado[2].atividades).toEqual([]);
+  });
+
+  it('preserva colunas vazias mantendo array vazio em atividades', () => {
+    const resultado = distributeActivitiesIntoStages(etapasModelo, []);
+
+    expect(resultado).toHaveLength(3);
+    expect(resultado[0].atividades).toEqual([]);
+    expect(resultado[1].atividades).toEqual([]);
+    expect(resultado[2].atividades).toEqual([]);
+  });
+
+  it('descarta com segurança atividades associadas a etapa_id inexistente', () => {
+    const atividadesComIdInvalido = [
+      { atividade_id: 99, titulo: 'Sem etapa válida', etapa_id: 999 },
+    ];
+
+    const resultado = distributeActivitiesIntoStages(
+      etapasModelo,
+      atividadesComIdInvalido
+    );
+
+    expect(resultado[0].atividades).toEqual([]);
+    expect(resultado[1].atividades).toEqual([]);
+    expect(resultado[2].atividades).toEqual([]);
+  });
+
+  it('trata parâmetros ausentes ou nulos sem lançar exceção', () => {
+    expect(distributeActivitiesIntoStages()).toEqual([]);
+    expect(distributeActivitiesIntoStages(null, null)).toEqual([]);
   });
 });
