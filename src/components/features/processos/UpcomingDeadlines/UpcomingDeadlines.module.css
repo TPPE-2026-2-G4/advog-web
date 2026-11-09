@@ -1,0 +1,206 @@
+.card {
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #f3f4f6;
+  border-left: 3px solid #a8283a;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #a8283a;
+  font-family:
+    var(--font-cormorant),
+    Cormorant Garamond,
+    serif;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.title svg {
+  color: #a8283a;
+  flex-shrink: 0;
+}
+
+.muted {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: #f9f8f5;
+  border: 1px solid #e9e5de;
+  border-radius: 12px;
+  transition: border-color 0.15s ease;
+}
+
+.item:hover {
+  border-color: #dcd5ca;
+}
+
+.itemInfo {
+  min-width: 0;
+  flex: 1;
+}
+
+.cnj {
+  margin: 0 0 4px 0;
+  color: #8a8a86;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+.processTitle {
+  margin: 0 0 4px 0;
+  color: #172133;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtitle {
+  margin: 0;
+  color: #8a8a86;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.danger {
+  background: #fdf0f1;
+  border: 1px solid #f0cfd2;
+  color: #a8283a;
+}
+
+.warning {
+  background: #fef9ec;
+  border: 1px solid #f5e0a3;
+  color: #b47814;
+}
+
+.success {
+  background: #eef6f2;
+  border: 1px solid #cce3d8;
+  color: #34785f;
+}
+
+.viewButton {
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #b08d57;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.viewButton:hover {
+  background: #f2ece1;
+  color: #8f6f3e;
+}
+
+.viewButton:focus-visible {
+  outline: 2px solid #b08d57;
+  outline-offset: 2px;
+}
+
+.errorState {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fdf0f1;
+  border: 1px solid #f0cfd2;
+  border-radius: 8px;
+}
+
+.errorState p {
+  margin: 0;
+  color: #991b1b;
+  font-size: 14px;
+}
+
+.retry {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #c1a077;
+  border-radius: 6px;
+  color: #172133;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.retry:hover {
+  background: #f9f5ee;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 18px 16px;
+  }
+
+  .item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .itemActions {
+    justify-content: space-between;
+  }
+}

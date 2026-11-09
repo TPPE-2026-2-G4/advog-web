@@ -44,6 +44,7 @@ export default function Sidebar() {
   return (
     <aside
       className={styles.sidebar}
+      suppressHydrationWarning
       style={{
         backgroundColor: corPrimaria,
         '--cor-primaria': corPrimaria,
@@ -51,7 +52,7 @@ export default function Sidebar() {
       }}
       data-testid="sidebar"
     >
-      <div className={styles.logoArea}>
+      <div className={styles.logoArea} suppressHydrationWarning>
         {logotipo ? (
           <div className={styles.logoImgWrapper} data-testid="sidebar-logo-img">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -64,6 +65,7 @@ export default function Sidebar() {
         ) : (
           <div
             className={styles.logoIcon}
+            suppressHydrationWarning
             style={{
               backgroundColor: corSecundaria,
               color: corPrimaria,
@@ -73,7 +75,11 @@ export default function Sidebar() {
             <Scale size={20} color={corPrimaria} />
           </div>
         )}
-        <span className={styles.logoText} style={{ color: corSecundaria }}>
+        <span
+          className={styles.logoText}
+          style={{ color: corSecundaria }}
+          suppressHydrationWarning
+        >
           {nomeEscritorio}
         </span>
       </div>
