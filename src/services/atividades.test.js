@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAccessToken } from '@/utils/authSession';
 import { API_URL } from './api';
-import { listarProdutividadeEquipe, obterKanbanAtividades } from './atividades';
+import {
+  atualizarAtividade,
+  buscarAtividade,
+  criarAtividade,
+  excluirAtividade,
+  listarProdutividadeEquipe,
+  obterKanbanAtividades,
+} from './atividades';
 
 vi.mock('@/utils/authSession', () => ({
   getAccessToken: vi.fn(),
@@ -90,6 +97,32 @@ describe('serviço de atividades', () => {
 
     await expect(listarProdutividadeEquipe()).rejects.toThrow(
       'Não foi possível carregar a produtividade da equipe.'
+    );
+  });
+
+  it('executa operações de kanban e gerenciamento de atividades', async () => {
+    const atividade = { atividade_id: 1, titulo: 'Petição' };
+    fetch.mockResolvedValueOnce(respostaJson(atividade));
+    await expect(buscarAtividade(1)).resolves.toEqual(atividade);
+
+    fetch.mockResolvedValueOnce(respostaJson(atividade, { status: 201 }));
+    await expect(criarAtividade({ titulo: 'Petição' })).resolves.toEqual(
+      atividade
+    );
+
+    fetch.mockResolvedValueOnce(
+      respostaJson({ ...atividade, titulo: 'Revisada' })
+    );
+    await expect(
+      atualizarAtividade(1, { titulo: 'Revisada' })
+    ).resolves.toEqual({ ...atividade, titulo: 'Revisada' });
+
+    fetch.mockResolvedValueOnce(respostaJson(null, { status: 204 }));
+    await expect(excluirAtividade(1)).resolves.toBeUndefined();
+
+    fetch.mockResolvedValueOnce(respostaJson({}, { ok: false, status: 403 }));
+    await expect(excluirAtividade(1)).rejects.toThrow(
+      'Você não possui permissão para realizar esta ação.'
     );
   });
 });
