@@ -4,11 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Clock,
   FileText,
+  GripVertical,
   Layers,
   Pencil,
   Plus,
+  PlusCircle,
   Trash2,
   User,
+  X,
 } from 'lucide-react';
 import ActivityFilters from '@/components/features/atividades/ActivityFilters/ActivityFilters';
 import ActivityStageSummary from '@/components/features/atividades/ActivityStageSummary/ActivityStageSummary';
@@ -18,7 +21,11 @@ import {
   atualizarAtividade,
   buscarAtividade,
   criarAtividade,
+  criarEtapaKanban,
   excluirAtividade,
+  excluirEtapaKanban,
+  renomearEtapaKanban,
+  reordenarEtapasKanban,
 } from '@/services/atividades';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { listarProcessos } from '@/services/processos';
@@ -41,6 +48,8 @@ const formatDate = (iso) => toDateInput(iso).split('-').reverse().join('/');
 const isOverdue = (prazo, etapaNome) =>
   etapaNome !== 'Finalizado' &&
   toDateInput(prazo) < new Date().toISOString().slice(0, 10);
+const isProtectedStage = (nome) =>
+  ['backlog', 'finalizado'].includes(String(nome).trim().toLowerCase());
 
 export default function AtividadesClient() {
   const perms = getCurrentUser()?.cargo?.permissao ?? {};
@@ -73,6 +82,13 @@ export default function AtividadesClient() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [draggedId, setDraggedId] = useState(null);
+  const [draggedStageId, setDraggedStageId] = useState(null);
+  const [stageModalOpen, setStageModalOpen] = useState(false);
+  const [editingStageId, setEditingStageId] = useState(null);
+  const [stageName, setStageName] = useState('');
+  const [stageFormError, setStageFormError] = useState('');
+  const [novaEtapaOpen, setNovaEtapaOpen] = useState(false);
+  const [novaEtapaNome, setNovaEtapaNome] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -207,6 +223,92 @@ export default function AtividadesClient() {
     }
   };
 
+  const openCreateStage = () => {
+    setEditingStageId(null);
+    setStageName('');
+    setStageFormError('');
+    setStageModalOpen(true);
+  };
+
+  const openRenameStage = (col) => {
+    setEditingStageId(col.etapa_id);
+    setStageName(col.nome);
+    setStageFormError('');
+    setStageModalOpen(true);
+  };
+
+  const handleSaveStage = async (e) => {
+    e.preventDefault();
+    const trimmed = stageName.trim();
+    if (!trimmed) {
+      setStageFormError('Informe o nome da etapa.');
+      return;
+    }
+
+    try {
+      if (editingStageId !== null) {
+        await renomearEtapaKanban(editingStageId, { nome: trimmed });
+        setFeedback('Etapa renomeada com sucesso.');
+      } else {
+        await criarEtapaKanban({ nome: trimmed });
+        setFeedback('Etapa criada com sucesso.');
+      }
+      setStageModalOpen(false);
+      recarregar();
+    } catch (err) {
+      setStageFormError(err.message);
+    }
+  };
+
+  const handleDeleteStage = async (col) => {
+    setActionError('');
+    try {
+      await excluirEtapaKanban(col.etapa_id);
+      setFeedback('Etapa excluída.');
+      recarregar();
+    } catch (err) {
+      setActionError(err.message);
+    }
+  };
+
+  const handleAddColuna = async () => {
+    const trimmed = novaEtapaNome.trim();
+    if (!trimmed) {
+      setActionError('Informe o nome da etapa.');
+      return;
+    }
+
+    setActionError('');
+    try {
+      await criarEtapaKanban({ nome: trimmed });
+      setFeedback('Etapa criada com sucesso.');
+      setNovaEtapaNome('');
+      setNovaEtapaOpen(false);
+      recarregar();
+    } catch (err) {
+      setActionError(err.message);
+    }
+  };
+
+  const handleReorderStages = async (sourceStageId, targetStageId) => {
+    const currentIds = etapas.map((et) => et.etapa_id);
+    const fromIndex = currentIds.indexOf(sourceStageId);
+    const toIndex = currentIds.indexOf(targetStageId);
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+
+    const nextIds = [...currentIds];
+    const [moved] = nextIds.splice(fromIndex, 1);
+    nextIds.splice(toIndex, 0, moved);
+
+    setActionError('');
+    try {
+      await reordenarEtapasKanban(nextIds);
+      recarregar();
+    } catch (err) {
+      setActionError(err.message);
+    }
+  };
+
   const responsaveisOptions = useMemo(
     () =>
       funcionarios.map((f) => ({
@@ -226,13 +328,22 @@ export default function AtividadesClient() {
           </p>
         </div>
         {canCreate && (
-          <button
-            type="button"
-            className={styles.addButton}
-            onClick={openCreate}
-          >
-            <Plus size={18} /> Nova Atividade
-          </button>
+          <div className={styles.headerActions}>
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              onClick={openCreateStage}
+            >
+              <Plus size={18} /> Nova Etapa
+            </button>
+            <button
+              type="button"
+              className={styles.addButton}
+              onClick={openCreate}
+            >
+              <Plus size={18} /> Nova Atividade
+            </button>
+          </div>
         )}
       </header>
 
@@ -263,110 +374,263 @@ export default function AtividadesClient() {
       )}
 
       <div className={styles.board}>
-        {etapas.map((col) => (
-          <div
-            key={col.etapa_id}
-            data-testid={`coluna-${col.etapa_id}`}
-            className={styles.column}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => {
-              if (draggedId && draggedId.etapaId !== col.etapa_id) {
-                handleMove(draggedId.id, col.etapa_id);
-              }
-              setDraggedId(null);
-            }}
-          >
-            <div className={styles.columnHeader}>
-              <span className={styles.columnTitle}>
-                <span>{col.nome.slice(0, 1)}</span>
-                {col.nome.slice(1)}
-              </span>
-              <span className={styles.badge}>{col.atividades.length}</span>
-            </div>
+        {etapas.map((col) => {
+          const protectedStage = isProtectedStage(col.nome);
+          return (
+            <div
+              key={col.etapa_id}
+              data-testid={`coluna-${col.etapa_id}`}
+              className={`${styles.column} ${draggedStageId === col.etapa_id ? styles.columnDragging : ''}`}
+              draggable={canEdit}
+              onDragStart={() => {
+                setDraggedStageId(col.etapa_id);
+                setDraggedId(null);
+              }}
+              onDragEnd={() => setDraggedStageId(null)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => {
+                if (draggedStageId !== null) {
+                  if (draggedStageId !== col.etapa_id) {
+                    handleReorderStages(draggedStageId, col.etapa_id);
+                  }
+                  setDraggedStageId(null);
+                  return;
+                }
+                if (draggedId && draggedId.etapaId !== col.etapa_id) {
+                  handleMove(draggedId.id, col.etapa_id);
+                }
+                setDraggedId(null);
+              }}
+            >
+              <div className={styles.columnHeader}>
+                <div className={styles.columnTitleGroup}>
+                  {canEdit && (
+                    <GripVertical
+                      size={14}
+                      className={styles.dragHandle}
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className={styles.columnTitle}>
+                    <span>{col.nome.slice(0, 1)}</span>
+                    {col.nome.slice(1)}
+                  </span>
+                </div>
+                <div className={styles.columnHeaderActions}>
+                  <span className={styles.badge}>{col.atividades.length}</span>
+                  {!protectedStage && canEdit && (
+                    <button
+                      type="button"
+                      aria-label={`Renomear etapa ${col.nome}`}
+                      className={styles.iconBtn}
+                      onClick={() => openRenameStage(col)}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                  {!protectedStage && canDelete && (
+                    <button
+                      type="button"
+                      aria-label={`Excluir etapa ${col.nome}`}
+                      className={styles.iconBtn}
+                      onClick={() => handleDeleteStage(col)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
 
-            <div className={styles.cardList}>
-              {col.atividades.map((a) => {
-                const vencida = isOverdue(a.data_prazo, col.nome);
-                const respNomes = a.responsaveis.length
-                  ? a.responsaveis.map((r) => r.nome).join(', ')
-                  : 'Não atribuído';
+              <div className={styles.cardList}>
+                {col.atividades.map((a) => {
+                  const vencida = isOverdue(a.data_prazo, col.nome);
+                  const respNomes = a.responsaveis.length
+                    ? a.responsaveis.map((r) => r.nome).join(', ')
+                    : 'Não atribuído';
 
-                return (
-                  <div
-                    key={a.atividade_id}
-                    draggable={canEdit}
-                    onDragStart={() =>
-                      setDraggedId({
-                        id: a.atividade_id,
-                        etapaId: col.etapa_id,
-                      })
-                    }
-                    className={styles.card}
-                    onClick={() => openDetails(a)}
-                  >
-                    <div className={styles.cardTop}>
-                      <span className={styles.cardTitle}>{a.titulo}</span>
-                      <div className={styles.cardActions}>
-                        {canEdit && (
-                          <button
-                            type="button"
-                            aria-label={`Editar ${a.titulo}`}
-                            className={styles.iconBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEdit(a);
-                            }}
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            type="button"
-                            aria-label={`Excluir ${a.titulo}`}
-                            className={styles.iconBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(a.atividade_id);
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className={styles.cardMeta}>
-                      <div className={styles.metaRow}>
-                        <User size={13} />
-                        <span>{respNomes}</span>
-                      </div>
-                      <div
-                        className={`${styles.metaRow} ${vencida ? styles.overdue : ''}`}
-                      >
-                        <Clock size={13} />
-                        <span>
-                          {formatDate(a.data_prazo)}
-                          {vencida && ' · Vencida'}
-                        </span>
-                      </div>
-                      {a.processo_id && (
-                        <div className={styles.processTag}>
-                          {processosMap.get(a.processo_id) ||
-                            `Processo #${a.processo_id}`}
+                  return (
+                    <div
+                      key={a.atividade_id}
+                      draggable={canEdit}
+                      onDragStart={(e) => {
+                        e.stopPropagation();
+                        setDraggedStageId(null);
+                        setDraggedId({
+                          id: a.atividade_id,
+                          etapaId: col.etapa_id,
+                        });
+                      }}
+                      className={styles.card}
+                      onClick={() => openDetails(a)}
+                    >
+                      <div className={styles.cardTop}>
+                        <span className={styles.cardTitle}>{a.titulo}</span>
+                        <div className={styles.cardActions}>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              aria-label={`Editar ${a.titulo}`}
+                              className={styles.iconBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEdit(a);
+                              }}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              aria-label={`Excluir ${a.titulo}`}
+                              className={styles.iconBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(a.atividade_id);
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
-                      )}
+                      </div>
+
+                      <div className={styles.cardMeta}>
+                        <div className={styles.metaRow}>
+                          <User size={13} />
+                          <span>{respNomes}</span>
+                        </div>
+                        <div
+                          className={`${styles.metaRow} ${vencida ? styles.overdue : ''}`}
+                        >
+                          <Clock size={13} />
+                          <span>
+                            {formatDate(a.data_prazo)}
+                            {vencida && ' · Vencida'}
+                          </span>
+                        </div>
+                        {a.processo_id && (
+                          <div className={styles.processTag}>
+                            {processosMap.get(a.processo_id) ||
+                              `Processo #${a.processo_id}`}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-              {col.atividades.length === 0 && (
-                <div className={styles.emptyCol}>Nenhuma atividade</div>
-              )}
+                  );
+                })}
+                {col.atividades.length === 0 && (
+                  <div className={styles.emptyCol}>Nenhuma atividade</div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
+
+        {canCreate &&
+          (novaEtapaOpen ? (
+            <div className={styles.newStageBox}>
+              <input
+                autoFocus
+                type="text"
+                aria-label="Nome da nova etapa"
+                value={novaEtapaNome}
+                onChange={(e) => setNovaEtapaNome(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddColuna();
+                  if (e.key === 'Escape') {
+                    setNovaEtapaOpen(false);
+                    setNovaEtapaNome('');
+                  }
+                }}
+                placeholder="Nome da etapa..."
+                className={styles.newStageInput}
+              />
+              <div className={styles.newStageActions}>
+                <button
+                  type="button"
+                  className={styles.newStageSubmitBtn}
+                  onClick={handleAddColuna}
+                >
+                  Adicionar
+                </button>
+                <button
+                  type="button"
+                  aria-label="Cancelar nova etapa"
+                  onClick={() => {
+                    setNovaEtapaOpen(false);
+                    setNovaEtapaNome('');
+                  }}
+                  className={styles.newStageCancelBtn}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              aria-label="Adicionar nova etapa ao final"
+              onClick={() => setNovaEtapaOpen(true)}
+              className={styles.newStageDashedBtn}
+            >
+              <PlusCircle size={24} />
+              <span>Nova Etapa</span>
+            </button>
+          ))}
       </div>
+
+      <Modal
+        isOpen={stageModalOpen}
+        onClose={() => setStageModalOpen(false)}
+        ariaLabel={editingStageId !== null ? 'Renomear Etapa' : 'Nova Etapa'}
+      >
+        <form
+          onSubmit={handleSaveStage}
+          className={styles.modalContent}
+          noValidate
+        >
+          <div className={styles.modalHeader}>
+            <div>
+              <h2 className={styles.modalTitle}>
+                {editingStageId !== null ? 'Renomear Etapa' : 'Nova Etapa'}
+              </h2>
+              <p className={styles.requiredHint}>
+                <span aria-hidden="true">*</span> Campos obrigatórios
+              </p>
+            </div>
+            <ModalCloseButton onClose={() => setStageModalOpen(false)} />
+          </div>
+          <div className={styles.modalBody}>
+            {stageFormError && (
+              <div role="alert" className={styles.alertError}>
+                {stageFormError}
+              </div>
+            )}
+            <label className={styles.field}>
+              <span className={styles.requiredLabel}>Nome da etapa</span>
+              <input
+                aria-label="Nome da etapa"
+                value={stageName}
+                onChange={(e) => setStageName(e.target.value)}
+                required
+              />
+            </label>
+          </div>
+          <div className={styles.modalFooter}>
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              onClick={() => setStageModalOpen(false)}
+            >
+              Cancelar
+            </button>
+            <button type="submit" className={styles.addButton}>
+              {editingStageId !== null ? 'Salvar Etapa' : 'Criar Etapa'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal
         isOpen={Boolean(viewing)}
