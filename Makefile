@@ -21,10 +21,20 @@ down:
 
 local:
 	@echo "\n\n⚙️ Rodando aplicação localmente... \n"
-	docker compose down advog-web
+	docker compose down
 	npm run dev
 
 test:
 	@echo "\n\n⚙️ Rodando testes... \n"
 	npm run test --coverage
 	@echo "\n✅ Testes executados com sucesso! \n"
+
+local-prod:
+	@[ -f .env.producao ] || cp .env.example.production .env.producao
+	@if grep -q "<servico>" .env.producao; then \
+		echo "\n❌ Edite o .env.producao e informe a URL da API de produção em NEXT_PUBLIC_API_URL.\n"; \
+		exit 1; \
+	fi
+	@echo "\n\n⚙️ Rodando aplicação localmente com a API de produção... \n"
+	docker compose stop web
+	npm run dev:prod
