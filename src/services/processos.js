@@ -166,6 +166,22 @@ export function sincronizarProcessos() {
   );
 }
 
+export function obterStatusDatajud() {
+  return request(
+    '/processos/datajud/status',
+    { cache: 'no-store' },
+    'Não foi possível verificar o status da integração DataJud.'
+  );
+}
+
+export function obterStatusInfraestrutura() {
+  return request(
+    '/health/ready',
+    { cache: 'no-store' },
+    'Não foi possível verificar o status do armazenamento e banco de dados.'
+  );
+}
+
 export function criarProcesso(dados) {
   return request(
     '/processos/',

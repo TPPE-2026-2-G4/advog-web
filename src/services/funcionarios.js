@@ -159,3 +159,31 @@ export async function mudarExibicaoInstitucional(
 
   return response.json();
 }
+
+export async function mudarReceberEmails(funcionarioId, receberEmails) {
+  const token = getAccessToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+
+  const response = await fetch(
+    `${API_URL}/funcionarios/${funcionarioId}/receber-emails`,
+    {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ receber_emails: Boolean(receberEmails) }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        'Não foi possível atualizar a preferência de notificações por e-mail.'
+      )
+    );
+  }
+
+  return response.json();
+}

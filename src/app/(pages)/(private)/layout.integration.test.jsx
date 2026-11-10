@@ -179,6 +179,11 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
       screen.queryByText('camila@carreiro.adv.br')
     ).not.toBeInTheDocument();
 
+    // Reabre dropdown, navega para /ajustes ao clicar em Configurações
+    fireEvent.click(screen.getByText('Dra. C.'));
+    fireEvent.click(screen.getByRole('button', { name: /configurações/i }));
+    expect(mockPush).toHaveBeenCalledWith('/ajustes');
+
     // Reabre dropdown, abre modal de logout, cancela e depois confirma saída
     fireEvent.click(screen.getByText('Dra. C.'));
     fireEvent.click(screen.getByRole('button', { name: /sair/i }));

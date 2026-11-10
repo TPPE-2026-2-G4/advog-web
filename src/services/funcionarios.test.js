@@ -6,6 +6,7 @@ import {
   mudarAcessoFuncionario,
   mudarCargoFuncionario,
   mudarExibicaoInstitucional,
+  mudarReceberEmails,
 } from './funcionarios';
 
 const respostaJson = (dados, configuracao = {}) => ({
@@ -341,5 +342,57 @@ describe('serviço de funcionários', () => {
         'Não autorizado a alterar visibilidade'
       );
     });
+  });
+
+  describe('mudarReceberEmails', () => {
+    it.each([true, false])(
+      'envia a preferência de recebimento (%s) e o token por PATCH',
+      async (receberEmails) => {
+        const funcionario = {
+          funcionario_id: 8,
+          receber_emails: receberEmails,
+        };
+        sessionStorage.setItem('access_token', 'token-jwt');
+        fetch.mockResolvedValue(respostaJson(funcionario));
+
+        await expect(mudarReceberEmails(8, receberEmails)).resolves.toEqual(
+          funcionario
+        );
+
+        expect(fetch).toHaveBeenCalledWith(
+          'http://localhost:8000/funcionarios/8/receber-emails',
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer token-jwt',
+            },
+            body: JSON.stringify({ receber_emails: receberEmails }),
+          }
+        );
+      }
+    );
+
+    it.each([
+      [
+        'mensagem da API',
+        respostaComErro('Funcionário não encontrado'),
+        'Funcionário não encontrado',
+      ],
+      [
+        'mensagem padrão',
+        respostaComErroSemJson(),
+        'Não foi possível atualizar a preferência de notificações por e-mail.',
+      ],
+    ])(
+      'lança erro com %s quando a atualização de e-mails falha',
+      async (_descricao, resposta, mensagemEsperada) => {
+        fetch.mockResolvedValue(resposta);
+
+        await expect(mudarReceberEmails(8, false)).rejects.toThrow(
+          mensagemEsperada
+        );
+      }
+    );
   });
 });

@@ -25,6 +25,7 @@ export const config = {
     '/financas/:path*',
     '/processos/:path*',
     '/site/:path*',
+    '/ajustes/:path*',
     '/login',
   ],
 };
