@@ -24,11 +24,14 @@ import {
   getCurrentUser,
 } from '@/utils/authSession';
 
-const { mockPush, mockRedirect, mockPathname } = vi.hoisted(() => ({
-  mockPush: vi.fn(),
-  mockRedirect: vi.fn(),
-  mockPathname: vi.fn(() => '/equipe'),
-}));
+const { mockPush, mockReplace, mockRedirect, mockPathname } = vi.hoisted(
+  () => ({
+    mockPush: vi.fn(),
+    mockReplace: vi.fn(),
+    mockRedirect: vi.fn(),
+    mockPathname: vi.fn(() => '/equipe'),
+  })
+);
 
 vi.mock('next/font/google', () => ({
   Inter: () => ({ variable: 'inter-font' }),
@@ -38,10 +41,19 @@ vi.mock('next/font/google', () => ({
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+    replace: mockReplace,
   }),
   usePathname: () => mockPathname(),
   redirect: (...args) => mockRedirect(...args),
 }));
+
+const createJwt = (payload) => {
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  return `header.${btoa(String.fromCharCode(...bytes))}.signature`;
+};
+const nowInSeconds = () => Math.floor(Date.now() / 1000);
+const validToken = () => createJwt({ exp: nowInSeconds() + 3600 });
+const expiredToken = () => createJwt({ exp: nowInSeconds() - 60 });
 
 function ProtectedConsumer() {
   const { user } = useAuth();
@@ -77,13 +89,33 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
     {
       cenario: 'usuário autenticado acessando /login',
       pathname: '/login',
-      cookieToken: { value: 'jwt-valido' },
+      cookieToken: { value: validToken() },
       esperadoLocation: 'http://localhost:3000/equipe',
+    },
+    {
+      cenario:
+        'usuário com credencial expirada acessando rota privada /financas',
+      pathname: '/financas',
+      cookieToken: { value: expiredToken() },
+      esperadoLocation: 'http://localhost:3000/login?sessao=expirada',
+    },
+    {
+      cenario: 'usuário sem credencial acessando rota privada /calendario',
+      pathname: '/calendario',
+      cookieToken: undefined,
+      esperadoLocation: 'http://localhost:3000/login',
+    },
+    {
+      cenario:
+        'usuário com credencial expirada acessando rota privada /clientes',
+      pathname: '/clientes',
+      cookieToken: { value: expiredToken() },
+      esperadoLocation: 'http://localhost:3000/login?sessao=expirada',
     },
     {
       cenario: 'usuário autenticado acessando rota privada /financas',
       pathname: '/financas',
-      cookieToken: { value: 'jwt-valido' },
+      cookieToken: { value: validToken() },
       esperadoLocation: null,
     },
   ])(
@@ -107,22 +139,71 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
     }
   );
 
+  it('redireciona ao login com aviso e limpa a sessão quando a credencial expira com a página privada aberta', async () => {
+    sessionStorage.setItem('access_token', expiredToken());
+    localStorage.setItem('access_token', expiredToken());
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({ nome: 'Ana Beatriz', email: 'ana@adv.br' })
+    );
+    document.cookie = `access_token=${expiredToken()}; path=/`;
+
+    render(
+      <AuthProvider>
+        <PrivateLayout>
+          <div>Conteúdo protegido</div>
+        </PrivateLayout>
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/login?sessao=expirada');
+    });
+    expect(getAccessToken()).toBeNull();
+    expect(sessionStorage.getItem('current_user')).toBeNull();
+    expect(document.cookie).not.toContain('access_token=');
+  });
+
+  it('redireciona ao login com aviso quando a API responde 401 durante o uso da página privada', async () => {
+    sessionStorage.setItem('access_token', validToken());
+    const originalFetch = window.fetch;
+    window.fetch = vi.fn().mockResolvedValue({ status: 401 });
+
+    try {
+      render(
+        <AuthProvider>
+          <PrivateLayout>
+            <div>Conteúdo protegido</div>
+          </PrivateLayout>
+        </AuthProvider>
+      );
+      expect(mockReplace).not.toHaveBeenCalled();
+
+      await window.fetch('http://localhost:8000/processos/');
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith('/login?sessao=expirada');
+      });
+      expect(getAccessToken()).toBeNull();
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
   it('renderiza DashboardPage (/dashboard) com sucesso', () => {
     const element = DashboardPage();
     expect(element).toBeTruthy();
   });
 
   it('renderiza RootLayout + AuthProvider + PrivateLayout com Sidebar ativa, UserMenu, abre modal de confirmação e executa logout completo', async () => {
-    const payloadJwt = btoa(
-      JSON.stringify({
-        sub: '10',
-        nome: 'Dra. Camila Nogueira',
-        email: 'camila@carreiro.adv.br',
-        cargo: { nome_cargo: 'Sócia Diretora' },
-        permissoes: ['gerenciar_equipe', 'permissao_customizada'],
-      })
-    );
-    const fakeJwt = `header.${payloadJwt}.signature`;
+    const fakeJwt = createJwt({
+      sub: '10',
+      nome: 'Dra. Camila Nogueira',
+      email: 'camila@carreiro.adv.br',
+      cargo: { nome_cargo: 'Sócia Diretora' },
+      permissoes: ['gerenciar_equipe', 'permissao_customizada'],
+      exp: nowInSeconds() + 3600,
+    });
     sessionStorage.setItem('access_token', fakeJwt);
     sessionStorage.setItem(
       'current_user',
@@ -230,6 +311,7 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
   ])(
     'resolve dados do usuário no UserMenu para $cenario',
     ({ userStorage, shortEsperado, roleEsperado }) => {
+      sessionStorage.setItem('access_token', validToken());
       sessionStorage.setItem('current_user', JSON.stringify(userStorage));
 
       render(

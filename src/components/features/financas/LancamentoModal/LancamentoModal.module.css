@@ -34,6 +34,22 @@
   font-family: var(--font-cormorant), Georgia, serif;
 }
 
+.requiredHint {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.requiredHint span,
+.requiredLabel::after {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.requiredLabel::after {
+  content: ' *';
+}
+
 .body {
   padding: 24px;
   display: flex;
@@ -198,6 +214,36 @@
   margin: 0;
   color: #b91c1c;
   font-size: 13px;
+}
+
+.recurrenceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.weekdays {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.weekday {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  background: white;
+  color: #172133;
+  cursor: pointer;
+}
+
+.weekday[aria-pressed='true'] {
+  background: #c1a077;
+  border-color: #8a6b46;
 }
 
 @media (max-width: 480px) {

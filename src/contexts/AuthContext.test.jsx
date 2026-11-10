@@ -139,4 +139,47 @@ describe('AuthProvider', () => {
     expect(localStorage.getItem('token')).toBeNull();
     expect(sessionStorage.getItem('access_token')).toBeNull();
   });
+
+  it.each([
+    {
+      cenario: 'JWT com expiração em 30 minutos',
+      token: () => {
+        const exp = Math.floor(Date.now() / 1000) + 1800;
+        return `h.${btoa(JSON.stringify({ exp }))}.s`;
+      },
+      maxAgeEsperado: (valor) => valor > 1790 && valor <= 1800,
+    },
+    {
+      cenario: 'token sem expiração identificável',
+      token: () => 'token-opaco',
+      maxAgeEsperado: (valor) => valor === 3600,
+    },
+  ])(
+    'grava o cookie de acesso com a mesma validade do token para $cenario',
+    async ({ token, maxAgeEsperado }) => {
+      loginServiceMock.mockResolvedValue({
+        funcionario: { email: 'ana@exemplo.com' },
+        access_token: token(),
+      });
+      const cookieSetter = vi.spyOn(document, 'cookie', 'set');
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+      await waitFor(() => {
+        expect(screen.getByTestId('user')).toHaveTextContent('ana@exemplo.com');
+      });
+
+      const cookie = cookieSetter.mock.calls.at(-1)[0];
+      const maxAge = Number(cookie.match(/max-age=(\d+)/)[1]);
+      expect(cookie).toContain('access_token=');
+      expect(maxAgeEsperado(maxAge)).toBe(true);
+
+      cookieSetter.mockRestore();
+    }
+  );
 });

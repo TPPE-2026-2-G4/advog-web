@@ -7,6 +7,7 @@ export default function CategoriaAutocomplete({
   value,
   onChange,
   disabled,
+  required = false,
 }) {
   const [query, setQuery] = useState(value || '');
   const [categorias, setCategorias] = useState([]);
@@ -67,6 +68,7 @@ export default function CategoriaAutocomplete({
         className={styles.input}
         value={query}
         disabled={disabled || isLoading}
+        required={required}
         onChange={(e) => {
           setQuery(e.target.value);
           onChange(e.target.value);

@@ -313,15 +313,20 @@ export async function criarFinancas(dados) {
 
 export async function atualizarFinancas(lancamentoId, dados) {
   const payload = toApiLancamento(dados);
+  delete payload.rrule;
   const token = getAccessToken();
-  const response = await fetch(`${API_URL}/lancamentos/${lancamentoId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-    },
-    body: JSON.stringify(payload),
-  });
+  const alcance = dados.alcance === 'serie' ? '?alcance=serie' : '';
+  const response = await fetch(
+    `${API_URL}/lancamentos/${lancamentoId}${alcance}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify(payload),
+    }
+  );
 
   if (!response.ok) {
     const error = await response.json().catch(() => null);
@@ -334,12 +339,16 @@ export async function atualizarFinancas(lancamentoId, dados) {
   return toLancamento(updated);
 }
 
-export async function excluirFinancas(lancamentoId) {
+export async function excluirFinancas(lancamentoId, alcance = 'individual') {
   const token = getAccessToken();
-  const response = await fetch(`${API_URL}/lancamentos/${lancamentoId}`, {
-    method: 'DELETE',
-    ...(token && { headers: { Authorization: `Bearer ${token}` } }),
-  });
+  const query = alcance === 'serie' ? '?alcance=serie' : '';
+  const response = await fetch(
+    `${API_URL}/lancamentos/${lancamentoId}${query}`,
+    {
+      method: 'DELETE',
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    }
+  );
 
   if (!response.ok) {
     const error = await response.json().catch(() => null);

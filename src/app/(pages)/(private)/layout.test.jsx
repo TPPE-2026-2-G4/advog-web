@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import PrivateLayout from './layout';
+import { useSessionGuard } from '@/hooks/useSessionGuard';
+
+vi.mock('@/hooks/useSessionGuard', () => ({
+  useSessionGuard: vi.fn(),
+}));
 
 vi.mock('@/components/layout/sidebar/sidebar', () => ({
   default: () => <aside data-testid="sidebar-mock">Sidebar</aside>,
@@ -11,6 +16,15 @@ vi.mock('@/components/layout/navbar/navbar', () => ({
 }));
 
 describe('PrivateLayout', () => {
+  it('ativa o guard de sessão para redirecionar ao login quando a credencial expirar', () => {
+    render(
+      <PrivateLayout>
+        <div>Conteúdo protegido</div>
+      </PrivateLayout>
+    );
+
+    expect(useSessionGuard).toHaveBeenCalled();
+  });
   it.each([
     ['conteúdo do dashboard', 'Dashboard'],
     ['conteúdo da equipe', 'Equipe'],

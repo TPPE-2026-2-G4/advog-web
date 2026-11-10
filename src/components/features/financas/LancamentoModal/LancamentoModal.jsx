@@ -14,6 +14,9 @@ import { listarCategorias, criarCategoria } from '@/services/financas';
 import styles from './LancamentoModal.module.css';
 
 import CategoriaAutocomplete from './CategoriaAutocomplete';
+import RecorrenciaSelector from './RecorrenciaSelector';
+import SerieScope from './SerieScope';
+import { opcoesRecorrencia } from '@/utils/recorrencia';
 
 const INITIAL_FORM = {
   tipo: 'entrada',
@@ -24,6 +27,9 @@ const INITIAL_FORM = {
   dataVencimento: '',
   categoria: '',
   recorrente: false,
+  repeticao: 'daily',
+  regraPersonalizada: '',
+  alcance: 'individual',
 };
 
 function getInitialFormData(initialItem) {
@@ -49,7 +55,8 @@ function getInitialFormData(initialItem) {
         formatDateToIso(initialItem.data_vencimento) ||
         '',
       categoria: initialItem.categoria || '',
-      recorrente: Boolean(initialItem.recorrente),
+      recorrente: Boolean(initialItem.serie_id || initialItem.recorrente),
+      alcance: 'individual',
     };
   }
   const todayIso = new Date().toISOString().split('T')[0];
@@ -72,6 +79,7 @@ export default function LancamentoModal({
   );
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
 
   const isEditing = Boolean(initialItem);
 
@@ -80,6 +88,7 @@ export default function LancamentoModal({
     setPrevIsOpen(isOpen);
     setFormData(getInitialFormData(initialItem));
     setError('');
+    setCustomOpen(false);
   }
 
   const handleChange = (e) => {
@@ -113,6 +122,16 @@ export default function LancamentoModal({
 
     if (isNaN(valorNumerico) || valorNumerico <= 0) {
       setError('Por favor, informe um valor válido maior que zero.');
+      return;
+    }
+
+    if (!formData.descricao.trim()) {
+      setError('Por favor, informe a descrição do lançamento.');
+      return;
+    }
+
+    if (!formData.categoria.trim() && !initialItem?.categoria_id) {
+      setError('Por favor, selecione ou informe uma categoria.');
       return;
     }
 
@@ -181,6 +200,18 @@ export default function LancamentoModal({
         categoria: categoriaNomeFinal || 'Outros',
         categoria_id: categoriaIdFinal,
         recorrente: formData.recorrente,
+        ...(isEditing
+          ? { alcance: formData.alcance }
+          : formData.recorrente
+            ? {
+                rrule:
+                  formData.repeticao === 'custom'
+                    ? formData.regraPersonalizada
+                    : opcoesRecorrencia(dataVencimentoIso || dataIso).find(
+                        (o) => o.value === formData.repeticao
+                      ).rule,
+              }
+            : {}),
       };
 
       // Se for novo lançamento e não tiver status definido:
@@ -203,8 +234,9 @@ export default function LancamentoModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      preventClose={isSubmitting}
+      preventClose={isSubmitting || customOpen}
       as="form"
+      noValidate
       onSubmit={handleSubmit}
       className={styles.modal}
       ariaLabel={
@@ -214,11 +246,16 @@ export default function LancamentoModal({
       }
     >
       <div className={styles.header}>
-        <h2 className={styles.title}>
-          {isEditing
-            ? 'Editar Lançamento Financeiro'
-            : 'Novo Lançamento Financeiro'}
-        </h2>
+        <div>
+          <h2 className={styles.title}>
+            {isEditing
+              ? 'Editar Lançamento Financeiro'
+              : 'Novo Lançamento Financeiro'}
+          </h2>
+          <p className={styles.requiredHint}>
+            <span aria-hidden="true">*</span> Campos obrigatórios
+          </p>
+        </div>
         <ModalCloseButton
           onClose={onClose}
           disabled={isSubmitting}
@@ -255,7 +292,10 @@ export default function LancamentoModal({
         </div>
 
         <div className={styles.inputGroup}>
-          <label className={styles.label} htmlFor="lancamento-titulo">
+          <label
+            className={`${styles.label} ${styles.requiredLabel}`}
+            htmlFor="lancamento-titulo"
+          >
             Título
           </label>
           <input
@@ -271,7 +311,10 @@ export default function LancamentoModal({
         </div>
 
         <div className={styles.inputGroup}>
-          <label className={styles.label} htmlFor="lancamento-descricao">
+          <label
+            className={`${styles.label} ${styles.requiredLabel}`}
+            htmlFor="lancamento-descricao"
+          >
             Descrição
           </label>
           <input
@@ -282,12 +325,16 @@ export default function LancamentoModal({
             placeholder="Detalhes adicionais..."
             value={formData.descricao}
             onChange={handleChange}
+            required
           />
         </div>
 
         <div className={styles.row}>
           <div className={styles.inputGroup}>
-            <label className={styles.label} htmlFor="lancamento-valor">
+            <label
+              className={`${styles.label} ${styles.requiredLabel}`}
+              htmlFor="lancamento-valor"
+            >
               Valor
             </label>
             <input
@@ -304,7 +351,10 @@ export default function LancamentoModal({
           </div>
 
           <div className={styles.inputGroup}>
-            <label className={styles.label} htmlFor="lancamento-data">
+            <label
+              className={`${styles.label} ${styles.requiredLabel}`}
+              htmlFor="lancamento-data"
+            >
               Data de Criação
             </label>
             <input
@@ -335,7 +385,10 @@ export default function LancamentoModal({
           </div>
 
           <div className={styles.inputGroup}>
-            <label className={styles.label} htmlFor="lancamento-categoria">
+            <label
+              className={`${styles.label} ${styles.requiredLabel}`}
+              htmlFor="lancamento-categoria"
+            >
               Categoria
             </label>
             <CategoriaAutocomplete
@@ -345,22 +398,49 @@ export default function LancamentoModal({
                 setFormData((current) => ({ ...current, categoria: newVal }))
               }
               disabled={isSubmitting}
+              required
             />
           </div>
         </div>
 
-        <label className={styles.checkboxContainer}>
-          <input
-            type="checkbox"
-            name="recorrente"
-            className={styles.checkbox}
-            checked={formData.recorrente}
-            onChange={handleChange}
+        {!isEditing && (
+          <label className={styles.checkboxContainer}>
+            <input
+              type="checkbox"
+              name="recorrente"
+              className={styles.checkbox}
+              checked={formData.recorrente}
+              onChange={handleChange}
+            />
+            <span className={styles.checkboxText}>
+              Este lançamento é recorrente
+            </span>
+          </label>
+        )}
+
+        {!isEditing && formData.recorrente && (
+          <RecorrenciaSelector
+            data={formData.dataVencimento || formData.data}
+            value={formData.repeticao}
+            onDialogChange={setCustomOpen}
+            onChange={(repeticao, regraPersonalizada) =>
+              setFormData((atual) => ({
+                ...atual,
+                repeticao,
+                regraPersonalizada,
+              }))
+            }
           />
-          <span className={styles.checkboxText}>
-            Este lançamento é recorrente
-          </span>
-        </label>
+        )}
+        {isEditing && initialItem.serie_id && (
+          <SerieScope
+            value={formData.alcance}
+            onChange={(alcance) =>
+              setFormData((atual) => ({ ...atual, alcance }))
+            }
+            disabled={isSubmitting}
+          />
+        )}
 
         {error && (
           <p className={styles.error} role="alert">

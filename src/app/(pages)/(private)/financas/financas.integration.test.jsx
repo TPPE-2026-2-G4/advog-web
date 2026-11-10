@@ -464,6 +464,7 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       cliente_id: null,
       status: 'Pendente',
       recorrente: true,
+      rrule: 'FREQ=DAILY',
     });
   });
 
@@ -626,8 +627,7 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
             422
           ),
       }),
-      mensagemEsperada:
-        'data_vencimento: Data de vencimento inválida para o período fiscal',
+      mensagemEsperada: 'Por favor, informe uma data de vencimento válida.',
     },
     {
       cenario: 'Erro 500 interno no servidor ao cadastrar (POST /lancamentos/)',
@@ -688,8 +688,14 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
         fireEvent.change(within(dialog).getByLabelText('Título'), {
           target: { value: 'Lançamento com Erro' },
         });
+        fireEvent.change(within(dialog).getByLabelText('Descrição'), {
+          target: { value: 'Descrição do lançamento' },
+        });
         fireEvent.change(within(dialog).getByLabelText('Valor'), {
           target: { value: '500' },
+        });
+        fireEvent.change(within(dialog).getByLabelText('Categoria'), {
+          target: { value: 'Honorários' },
         });
         fireEvent.click(
           within(dialog).getByRole('button', { name: 'Salvar Lançamento' })
@@ -1027,6 +1033,24 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       'Por favor, informe um valor válido maior que zero.'
     );
 
+    // Validação de descrição vazia
+    fireEvent.change(within(dialog).getByLabelText('Valor'), {
+      target: { value: '2500' },
+    });
+    fireEvent.submit(dialog);
+    expect(within(dialog).getByRole('alert')).toHaveTextContent(
+      'Por favor, informe a descrição do lançamento.'
+    );
+
+    // Validação de categoria vazia
+    fireEvent.change(within(dialog).getByLabelText('Descrição'), {
+      target: { value: 'Assessoria tributária completa' },
+    });
+    fireEvent.submit(dialog);
+    expect(within(dialog).getByRole('alert')).toHaveTextContent(
+      'Por favor, selecione ou informe uma categoria.'
+    );
+
     // Alternar tipo Saída -> Entrada
     fireEvent.click(within(dialog).getByRole('button', { name: 'Saída' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Entrada' }));
@@ -1226,6 +1250,9 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     fireEvent.change(within(modalDialog).getByLabelText('Título'), {
       target: { value: 'Lançamento Sem Datas' },
     });
+    fireEvent.change(within(modalDialog).getByLabelText('Descrição'), {
+      target: { value: 'Descrição Sem Datas' },
+    });
     fireEvent.change(within(modalDialog).getByLabelText('Valor'), {
       target: { value: '100' },
     });
@@ -1323,6 +1350,9 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     fireEvent.change(within(newDlg1).getByLabelText('Título'), {
       target: { value: 'Lançamento Com Categoria Legada No Estado' },
     });
+    fireEvent.change(within(newDlg1).getByLabelText('Descrição'), {
+      target: { value: 'Descrição Legada' },
+    });
     fireEvent.change(within(newDlg1).getByLabelText('Valor'), {
       target: { value: '450' },
     });
@@ -1389,11 +1419,18 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     const newDialog = screen.getByRole('dialog', {
       name: 'Novo Lançamento Financeiro',
     });
+    delete routeOverrides['GET /categorias-lancamento'];
     fireEvent.change(within(newDialog).getByLabelText('Título'), {
       target: { value: 'Lançamento Resposta Mínima' },
     });
+    fireEvent.change(within(newDialog).getByLabelText('Descrição'), {
+      target: { value: 'Descrição Resposta Mínima' },
+    });
     fireEvent.change(within(newDialog).getByLabelText('Valor'), {
       target: { value: '300' },
+    });
+    fireEvent.change(within(newDialog).getByLabelText('Categoria'), {
+      target: { value: 'Honorários' },
     });
     fireEvent.change(within(newDialog).getByLabelText('Data de Criação'), {
       target: { value: '' },
