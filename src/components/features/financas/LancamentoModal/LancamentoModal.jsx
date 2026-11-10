@@ -15,7 +15,7 @@ import styles from './LancamentoModal.module.css';
 
 import CategoriaAutocomplete from './CategoriaAutocomplete';
 import RecorrenciaSelector from './RecorrenciaSelector';
-import SerieScope from '../SerieScope';
+import SerieScope from './SerieScope';
 import { opcoesRecorrencia } from '@/utils/recorrencia';
 
 const INITIAL_FORM = {

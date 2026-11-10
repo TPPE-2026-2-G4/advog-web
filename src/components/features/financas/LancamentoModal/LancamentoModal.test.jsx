@@ -62,7 +62,15 @@ describe('LancamentoModal', () => {
         dataVencimentoIso: '2027-01-04',
       },
     });
-    fireEvent.click(screen.getByLabelText('Este e os próximos da série'));
+    const serieCheckbox = screen.getByLabelText(
+      'Aplicar a este e aos próximos da mesma série'
+    );
+    expect(serieCheckbox).not.toBeChecked();
+    fireEvent.click(serieCheckbox);
+    expect(serieCheckbox).toBeChecked();
+    fireEvent.click(serieCheckbox);
+    expect(serieCheckbox).not.toBeChecked();
+    fireEvent.click(serieCheckbox);
     fireEvent.submit(screen.getByRole('button', { name: 'Salvar Alterações' }));
     await waitFor(() =>
       expect(onSave).toHaveBeenCalledWith(
@@ -140,10 +148,9 @@ describe('LancamentoModal', () => {
     expect(
       screen.queryByLabelText('Este lançamento é recorrente')
     ).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Somente este lançamento')).toBeChecked();
     expect(
-      screen.getByLabelText('Este e os próximos da série')
-    ).toBeInTheDocument();
+      screen.getByLabelText('Aplicar a este e aos próximos da mesma série')
+    ).not.toBeChecked();
     expect(
       screen.getByRole('button', { name: 'Salvar Alterações' })
     ).toBeInTheDocument();

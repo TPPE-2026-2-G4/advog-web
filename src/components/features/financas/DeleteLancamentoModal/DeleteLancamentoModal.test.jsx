@@ -27,8 +27,11 @@ describe('DeleteLancamentoModal', () => {
     const props = renderModal({
       lancamento: { ...lancamentoMock, serie_id: 'serie-1' },
     });
-    expect(screen.getByLabelText('Somente este lançamento')).toBeChecked();
-    fireEvent.click(screen.getByLabelText('Este e os próximos da série'));
+    const serieCheckbox = screen.getByLabelText(
+      'Aplicar a este e aos próximos da mesma série'
+    );
+    expect(serieCheckbox).not.toBeChecked();
+    fireEvent.click(serieCheckbox);
     fireEvent.click(screen.getByRole('button', { name: 'Excluir lançamento' }));
     expect(props.onConfirm).toHaveBeenCalledWith('serie');
   });

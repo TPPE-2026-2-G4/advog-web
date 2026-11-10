@@ -5,7 +5,7 @@ import { AlertTriangle } from 'lucide-react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import styles from './DeleteLancamentoModal.module.css';
-import SerieScope from '../SerieScope';
+import SerieScope from '../LancamentoModal/SerieScope';
 
 export default function DeleteLancamentoModal({
   lancamento,
