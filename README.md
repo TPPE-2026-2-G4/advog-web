@@ -63,6 +63,30 @@ A aplicação publicada (versão mais recente da branch `main`) está disponíve
     ```
     _O site estará disponível em `http://localhost:3000/`. Qualquer alteração nos arquivos de `src/` será refletida no navegador instantaneamente (Hot Reload)._
 
+### Execução local com a API de produção
+
+Por padrão, `npm run dev` usa a API local (`http://localhost:8000`, definida no `.env`). Para rodar o front local usando a API de produção (e, portanto, o banco do Supabase), use:
+
+1.  Crie o arquivo `.env.producao` a partir do modelo e informe a URL da API no Render em `NEXT_PUBLIC_API_URL`:
+
+    ```bash
+    cp .env.example.production .env.producao
+    ```
+
+2.  Inicie o servidor:
+
+    ```bash
+    npm run dev:prod
+    ```
+
+    _Ou `make local-prod`, que também para o container do front. Para voltar à API local, use `npm run dev`._
+
+> ⚠️ Você estará operando com **dados reais**. Além disso, a API de produção precisa aceitar a origem `http://localhost:3000` em `CORS_ORIGINS`, senão o navegador bloqueia as requisições.
+
+### Deploy no Vercel
+
+O front publicado no Vercel lê as variáveis em **Settings → Environment Variables**. Defina `NEXT_PUBLIC_API_URL` com a URL da API no Render (ver `.env.example.production`). As variáveis `NEXT_PUBLIC_MINIO_*` **não** devem ser criadas: elas só servem ao MinIO local, e em produção as URLs das imagens já vêm prontas da API. Como as variáveis `NEXT_PUBLIC_*` são embutidas no build, é preciso **fazer um novo deploy** depois de alterá-las.
+
 ### Execução com Docker
 
 Para executar a aplicação em um container com a configuração de produção, é necessário ter [Docker](https://www.docker.com/) e Docker Compose instalados.
