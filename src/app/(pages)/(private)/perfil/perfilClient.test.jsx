@@ -295,7 +295,7 @@ describe('PerfilClient', () => {
     );
   });
 
-  it('desabilita Salvar durante o envio sem mostrar spinner', async () => {
+  it('desabilita Salvar e mostra o indicador de carregamento durante o envio', async () => {
     let finishRequest;
     atualizarPerfilFuncionario.mockReturnValueOnce(
       new Promise((resolve) => {
@@ -306,12 +306,12 @@ describe('PerfilClient', () => {
 
     submitForm();
 
-    const saveButton = screen.getByRole('button', {
-      name: 'Salvar alterações',
-    });
+    const saveButton = await screen.findByRole('button', { name: /Salvando/ });
     await waitFor(() => expect(saveButton).toBeDisabled());
-    expect(screen.queryByRole('status', { name: 'Carregando' })).toBeNull();
-    expect(saveButton).toHaveTextContent('Salvar alterações');
+    expect(
+      screen.getByRole('status', { name: 'Carregando' })
+    ).toBeInTheDocument();
+    expect(saveButton).toHaveTextContent('Salvando');
 
     finishRequest({ ...user });
     await screen.findByText('Suas informações foram atualizadas com sucesso!');
