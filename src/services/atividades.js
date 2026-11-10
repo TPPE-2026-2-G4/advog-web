@@ -105,3 +105,33 @@ export function excluirAtividade(atividadeId) {
     'Não foi possível excluir a atividade.'
   );
 }
+
+export function filtrarAtividades(filtros = {}) {
+  const params = new URLSearchParams();
+
+  if (filtros.busca_textual?.trim()) {
+    params.set('busca_textual', filtros.busca_textual.trim());
+  }
+  if (filtros.funcionario_id) {
+    params.set('funcionario_id', filtros.funcionario_id);
+  }
+  if (filtros.prazo_fim) {
+    params.set('prazo_fim', filtros.prazo_fim);
+  }
+  if (filtros.prazo_inicio) {
+    params.set('prazo_inicio', filtros.prazo_inicio);
+  }
+  if (filtros.etapa_id) {
+    params.set('etapa_id', filtros.etapa_id);
+  }
+
+  const query = params.toString();
+  const path = `/atividades/${query ? `?${query}` : ''}`;
+
+  return request(
+    path,
+    { method: 'GET', cache: 'no-store' },
+    'Não foi possível filtrar as atividades.',
+    'Você não possui permissão para visualizar estas atividades.'
+  );
+}

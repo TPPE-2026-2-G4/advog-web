@@ -16,7 +16,6 @@ const menuItems = [
   ['/financas', 'Finanças'],
   ['/calendario', 'Calendário'],
   ['/clientes', 'Clientes/CRM'],
-  ['/pesquisa', 'Pesquisa'],
   ['/equipe', 'Equipe'],
   ['/site', 'Site'],
   ['/ajustes', 'Ajustes'],

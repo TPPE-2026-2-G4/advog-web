@@ -137,11 +137,18 @@ export function useFinancas(initialData, options = {}) {
     return resumoLocal;
   }, [resumoBackend, resumoLocal]);
 
-  const handleDeleteLancamento = async (item) => {
+  const handleDeleteLancamento = async (item, alcance = 'individual') => {
     setIsDeleting(true);
     setDeleteError('');
     try {
-      await excluirFinancas(item.id);
+      if (alcance === 'serie') await excluirFinancas(item.id, alcance);
+      else await excluirFinancas(item.id);
+
+      if (item.serie_id) {
+        await handleFilterLancamentos({ ...activeFilters.current, page: 1 });
+        options.onDelete?.(item);
+        return;
+      }
 
       const otherLancamentos = lancamentos.filter(
         (entry) => entry.id !== item.id
@@ -215,7 +222,7 @@ export function useFinancas(initialData, options = {}) {
           response && response.categoria !== 'Outros' && response.categoria
             ? response.categoria
             : item.categoria || 'Outros',
-        id: response?.id || item.id || Date.now(),
+        id: response?.id || item.id,
       };
       setLancamentos((current = []) => [newItem, ...current]);
       setPagination((prev) => ({ ...prev, total: prev.total + 1 }));
@@ -238,6 +245,8 @@ export function useFinancas(initialData, options = {}) {
         });
       }
       options.onCreate?.(newItem);
+      if (response?.serie_id)
+        await handleFilterLancamentos({ ...activeFilters.current, page: 1 });
       setIsNewModalOpen(false);
       return newItem;
     } catch (err) {
@@ -253,6 +262,12 @@ export function useFinancas(initialData, options = {}) {
     setSaveError('');
     try {
       const response = await atualizarFinancas(item.id, item);
+      if (item.serie_id) {
+        await handleFilterLancamentos({ ...activeFilters.current, page: 1 });
+        options.onUpdate?.(response);
+        setSelectedLancamento(null);
+        return response;
+      }
       const resolvedData =
         response?.data_pagamento || response?.dataPagamento
           ? response.data

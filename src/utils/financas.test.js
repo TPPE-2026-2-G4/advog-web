@@ -518,15 +518,19 @@ describe('financas utils', () => {
       expect(parseApiError('Erro em texto')).toBe('Erro em texto');
     });
 
-    it('formata array de validação do FastAPI 422 legivelmente', () => {
+    it('formata array de validação do FastAPI 422 com mensagens amigáveis e fallback para outros campos', () => {
       const pydanticError = {
         detail: [
-          { loc: ['body', 'data_vencimento'], msg: 'field required' },
+          {
+            loc: ['body', 'categoria_id'],
+            msg: 'Input should be a valid integer',
+          },
           { loc: ['body', 'valor'], msg: 'value is not a valid float' },
+          { loc: ['body', 'campo_extra'], msg: 'invalid field' },
         ],
       };
       expect(parseApiError(pydanticError)).toBe(
-        'data_vencimento: field required; valor: value is not a valid float'
+        'Por favor, selecione ou informe uma categoria.; Por favor, informe um valor válido maior que zero.; campo_extra: invalid field'
       );
     });
 

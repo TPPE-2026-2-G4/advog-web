@@ -170,6 +170,40 @@ describe('LoginPage', () => {
     }
   });
 
+  it('avisa que a sessão expirou ao chegar redirecionado e remove o aviso da URL e da tela', () => {
+    vi.useFakeTimers();
+    useSearchParams.mockReturnValue({
+      get: vi.fn((key) => (key === 'sessao' ? 'expirada' : null)),
+    });
+
+    try {
+      render(<LoginPage />);
+
+      expect(
+        screen.getByRole('status', { name: 'Sua sessão expirou' })
+      ).toHaveTextContent('Sua sessão expirou. Faça login novamente');
+      expect(mockReplace).toHaveBeenCalledWith('/login');
+
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+
+      expect(
+        screen.queryByRole('status', { name: 'Sua sessão expirou' })
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('não exibe o aviso de sessão expirada em um acesso comum ao login', () => {
+    render(<LoginPage />);
+
+    expect(
+      screen.queryByRole('status', { name: 'Sua sessão expirou' })
+    ).not.toBeInTheDocument();
+  });
+
   it('renderiza o nome do escritório customizado e mantém o subtítulo fixo', () => {
     render(
       <InstitucionalProvider
