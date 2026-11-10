@@ -509,4 +509,23 @@ describe('EquipeClient', () => {
       'produtividade oculta'
     );
   });
+
+  it('nega o acesso quando o usuário não possui permissão de visualizar a equipe', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        cargo: {
+          nome_cargo: 'Estagiário',
+          permissao: { visualizar_equipe: false, gerenciar_equipe: false },
+        },
+      })
+    );
+
+    render(<EquipeClient initialData={[]} initialRoles={[]} />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Acesso negado');
+    expect(
+      screen.getByText('Você não possui permissão para visualizar a equipe.')
+    ).toBeInTheDocument();
+  });
 });

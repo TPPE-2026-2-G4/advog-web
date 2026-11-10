@@ -41,7 +41,7 @@ describe('TeamTable', () => {
     expect(screen.getByText('Analista')).toBeInTheDocument();
     expect(screen.getByText('Ativo')).toBeInTheDocument();
     expect(screen.getByText('Permissões')).toBeInTheDocument();
-    expect(screen.getByText('0/9')).toBeInTheDocument();
+    expect(screen.getByText('0/10')).toBeInTheDocument();
   });
 
   it('renderiza a foto do membro quando disponível e mantém as iniciais como fallback', () => {
@@ -78,7 +78,7 @@ describe('TeamTable', () => {
         nome_cargo: 'Analista',
         permissao: withAllowedPermissions(
           'visualizar_processos',
-          'criar_processos',
+          'gerenciar_processos',
           'visualizar_equipe'
         ),
       },
@@ -86,8 +86,8 @@ describe('TeamTable', () => {
 
     render(<TeamTable members={[member]} roles={roles} />);
 
-    expect(screen.getByText('3/9')).toBeInTheDocument();
-    expect(screen.getByLabelText('3 de 9 permissões')).toBeInTheDocument();
+    expect(screen.getByText('3/10')).toBeInTheDocument();
+    expect(screen.getByLabelText('3 de 10 permissões')).toBeInTheDocument();
   });
 
   it('usa as permissões aninhadas do funcionário se o cargo não foi listado', () => {
@@ -101,7 +101,7 @@ describe('TeamTable', () => {
 
     render(<TeamTable members={[member]} roles={[]} />);
 
-    expect(screen.getByText('2/9')).toBeInTheDocument();
+    expect(screen.getByText('2/10')).toBeInTheDocument();
   });
 
   it('renderiza cada membro fornecido em uma linha separada', () => {
@@ -257,7 +257,18 @@ describe('TeamTable', () => {
     expect(roleBadge.className).toMatch(/badge/);
   });
 
-  it.each(['Admin', 'Advogado', 'Estagiário', 'Consultor', 'Não informado'])(
+  it('não renderiza membros que sejam contas administradoras', () => {
+    const admin = createMember({
+      funcionario_id: 10,
+      nome_func: 'Administrador',
+      cargo: 'Administrador',
+    });
+    render(<TeamTable members={[admin]} />);
+
+    expect(screen.queryByText('Administrador')).not.toBeInTheDocument();
+  });
+
+  it.each(['Analista', 'Advogado', 'Estagiário', 'Consultor', 'Não informado'])(
     'atribui uma classe de badge ao cargo %s',
     (cargo) => {
       render(<TeamTable members={[createMember({ cargo })]} />);
@@ -287,5 +298,17 @@ describe('TeamTable', () => {
 
     const roleBadges = screen.getAllByText('Analista');
     expect(roleBadges[0].className).toBe(roleBadges[1].className);
+  });
+
+  it('oculta botões de edição, revogação e exclusão quando canManage é falso', () => {
+    const member = createMember({ status: 'Ativo' });
+    render(
+      <TeamTable members={[member]} canManage={false} canEditUsers={true} />
+    );
+
+    expect(screen.queryByTitle('Editar usuário')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Revogar acesso')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Excluir usuário')).not.toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 });

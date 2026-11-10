@@ -1,4 +1,5 @@
 import { getAccessToken } from '@/utils/authSession';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import { API_URL } from './api';
 
 const validationFieldLabels = {
@@ -33,15 +34,23 @@ const getErrorMessage = async (response, fallbackMessage) => {
   return fallbackMessage;
 };
 
-export async function listarFuncionarios() {
+export async function listarFuncionarios(options) {
   try {
+    const token =
+      typeof options === 'string'
+        ? options
+        : options?.token || getAccessToken();
     const response = await fetch(`${API_URL}/funcionarios`, {
       cache: 'no-store',
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
 
     if (!response.ok) return [];
 
-    return await response.json();
+    const data = await response.json();
+    return Array.isArray(data)
+      ? data.filter((f) => !isAdministratorAccount(f))
+      : [];
   } catch {
     return [];
   }
@@ -220,6 +229,29 @@ export async function uploadFotoPerfilFuncionario(arquivo) {
   if (!response.ok) {
     throw new Error(
       await getErrorMessage(response, 'Não foi possível atualizar sua foto.')
+
+export async function mudarReceberEmails(funcionarioId, receberEmails) {
+  const token = getAccessToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+
+  const response = await fetch(
+    `${API_URL}/funcionarios/${funcionarioId}/receber-emails`,
+    {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ receber_emails: Boolean(receberEmails) }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        'Não foi possível atualizar a preferência de notificações por e-mail.'
+      )
     );
   }
 

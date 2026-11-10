@@ -188,6 +188,17 @@ describe('UserMenu', () => {
     removeEventListener.mockRestore();
   });
 
+  it('fecha o menu e navega para /ajustes ao clicar em Configurações', async () => {
+    render(<UserMenu />);
+    const triggerText = await screen.findByText('Alexandre C.');
+    fireEvent.click(triggerText.closest('button'));
+
+    fireEvent.click(screen.getByRole('button', { name: /Configurações/i }));
+
+    expect(pushMock).toHaveBeenCalledWith('/ajustes');
+    expect(screen.queryByText('Alexandre Carreiro')).not.toBeInTheDocument();
+  });
+
   it('abre o modal de confirmação ao clicar em Sair e fecha ao cancelar sem deslogar', async () => {
     render(<UserMenu />);
     const triggerText = await screen.findByText('Alexandre C.');

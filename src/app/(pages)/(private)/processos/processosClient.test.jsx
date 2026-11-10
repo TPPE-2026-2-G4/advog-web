@@ -41,6 +41,7 @@ const currentUser = {
   cargo: {
     permissao: {
       visualizar_processos: true,
+      gerenciar_processos: true,
       criar_processos: true,
       editar_processos: true,
       excluir_processos: true,

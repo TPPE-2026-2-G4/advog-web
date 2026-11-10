@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import PermissionChecklist from '@/components/features/equipe/PermissionChecklist/PermissionChecklist';
-import { createEmptyPermission } from '@/constants/permissions';
+import {
+  createEmptyPermission,
+  togglePermission,
+} from '@/constants/permissions';
+import { isAdministratorRole } from '@/utils/funcionario';
 import styles from './NewRoleModal.module.css';
 
 const normalizeRoleName = (roleName) =>
@@ -55,10 +59,7 @@ export default function NewRoleModal({
   };
 
   const handleToggle = (permissionName) => {
-    setPermission((current) => ({
-      ...current,
-      [permissionName]: !current[permissionName],
-    }));
+    setPermission((current) => togglePermission(current, permissionName));
   };
 
   const handleSubmit = async (event) => {
@@ -75,7 +76,7 @@ export default function NewRoleModal({
       (role) => normalizeRoleName(role.nome_cargo ?? '') === normalizedRoleName
     );
 
-    if (roleAlreadyExists) {
+    if (roleAlreadyExists || isAdministratorRole(trimmedRoleName)) {
       setError('Já existe um cargo com esse nome.');
       return;
     }

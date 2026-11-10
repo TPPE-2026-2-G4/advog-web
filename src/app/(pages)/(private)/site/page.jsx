@@ -2,6 +2,7 @@ import SiteClient from './siteClient';
 import { buscarDadosInstitucionais } from '@/services/institucional';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { listarAtuacoes } from '@/services/atuacoes';
+import { isAdministratorAccount } from '@/utils/funcionario';
 
 export default async function SitePage() {
   const [dadosInstitucionais, funcionarios, atuacoes] = await Promise.all([
@@ -13,7 +14,9 @@ export default async function SitePage() {
   return (
     <SiteClient
       initialData={dadosInstitucionais}
-      initialTeam={funcionarios}
+      initialTeam={(funcionarios || []).filter(
+        (f) => !isAdministratorAccount(f)
+      )}
       initialAreas={atuacoes}
     />
   );

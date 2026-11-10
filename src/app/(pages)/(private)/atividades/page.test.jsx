@@ -339,4 +339,30 @@ describe('AtividadesPage e AtividadesClient', () => {
       expect(screen.getAllByRole('alert')[0]).toBeInTheDocument();
     });
   });
+
+  it('não exibe conta administradora na lista de responsáveis nem nos filtros', async () => {
+    listarFuncionarios.mockResolvedValueOnce([
+      {
+        funcionario_id: 1,
+        nome: 'Administrador',
+        cargo: 'Administrador',
+        email: 'advog@advog.com',
+      },
+      { funcionario_id: 2, nome: 'Dra. Ana Paula', cargo: 'Advogada' },
+    ]);
+    render(<AtividadesPage />);
+
+    const filtroSelect = screen.getByLabelText('Filtrar por responsável');
+    await waitFor(() => {
+      const options = Array.from(filtroSelect.querySelectorAll('option')).map(
+        (o) => o.textContent
+      );
+      expect(options).toContain('Dra. Ana Paula');
+      expect(options).not.toContain('Administrador');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Nova Atividade/i }));
+    expect(screen.getAllByText('Dra. Ana Paula')).toHaveLength(2);
+    expect(screen.queryByText('Administrador')).not.toBeInTheDocument();
+  });
 });

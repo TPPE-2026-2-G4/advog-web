@@ -15,16 +15,29 @@ import NewRoleModal from '@/components/features/equipe/NewRoleModal/NewRoleModal
 import DeleteRoleModal from '@/components/features/equipe/DeleteRoleModal/DeleteRoleModal';
 import { useEquipe } from '@/hooks/useEquipe';
 import { getCurrentUser } from '@/utils/authSession';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import styles from './equipe.module.css';
 
 const emptySubscribe = () => () => {};
 
 export default function EquipeClient({ initialData, initialRoles = [] }) {
-  const canEditUsers = useSyncExternalStore(
+  const userJson = useSyncExternalStore(
     emptySubscribe,
-    () => getCurrentUser()?.cargo?.permissao?.gerenciar_equipe === true,
-    () => false
+    () => JSON.stringify(getCurrentUser() ?? null),
+    () => 'null'
   );
+  const currentUser = JSON.parse(userJson);
+  const isUserAdmin = isAdministratorAccount(currentUser);
+  const perms = currentUser?.cargo?.permissao ?? {};
+  const canView =
+    !currentUser ||
+    isUserAdmin ||
+    perms.visualizar_equipe === true ||
+    perms.gerenciar_equipe === true ||
+    (perms.gerenciar_equipe === false && perms.visualizar_equipe !== false);
+  const canManage =
+    !currentUser || isUserAdmin || perms.gerenciar_equipe === true;
+  const canEditUsers = canManage;
 
   const {
     members,
@@ -67,6 +80,21 @@ export default function EquipeClient({ initialData, initialRoles = [] }) {
     handleDeleteRole,
   } = useEquipe(initialData, initialRoles);
 
+  if (!canView) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.headerRow}>
+          <div className={styles.titleArea} role="alert">
+            <h1 className={styles.title}>Acesso negado</h1>
+            <p className={styles.subtitle}>
+              Você não possui permissão para visualizar a equipe.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.headerRow}>
@@ -77,13 +105,15 @@ export default function EquipeClient({ initialData, initialRoles = [] }) {
           </p>
         </div>
 
-        <button
-          className={styles.addButton}
-          onClick={() => setIsModalOpen(true)}
-        >
-          <Plus size={18} />
-          Adicionar Usuário
-        </button>
+        {canManage && (
+          <button
+            className={styles.addButton}
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus size={18} />
+            Adicionar Usuário
+          </button>
+        )}
       </div>
 
       <div className={styles.statsGrid}>
@@ -115,13 +145,15 @@ export default function EquipeClient({ initialData, initialRoles = [] }) {
         onDelete={handleOpenDeleteModal}
         onChangeAccess={handleOpenAccessModal}
         onEdit={handleOpenEditModal}
-        canEditUsers={canEditUsers}
+        canEditUsers={canManage}
+        canManage={canManage}
       />
 
-      <TeamProductivity canView={canEditUsers} />
+      <TeamProductivity canView={canManage} />
 
       <RoleTables
         roles={roles}
+        canManage={canManage}
         onCreateRole={() => setIsNewRoleModalOpen(true)}
         onEditPermissions={handleOpenPermissionsModal}
         onDeleteRole={handleOpenDeleteRoleModal}
@@ -164,6 +196,7 @@ export default function EquipeClient({ initialData, initialRoles = [] }) {
       <RolePermissionsModal
         role={permissionsRole}
         isOpen={Boolean(permissionsRole)}
+        readOnly={!canManage}
         onClose={handleClosePermissionsModal}
         onSave={handleUpdateRolePermissions}
       />

@@ -8,6 +8,19 @@ import { getTokenMaxAgeSeconds } from '@/utils/jwt';
 
 const DEFAULT_COOKIE_MAX_AGE_SECONDS = 3600;
 
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  const originalError = console.error;
+  console.error = (...args) => {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('Encountered a script tag')
+    ) {
+      return;
+    }
+    originalError.apply(console, args);
+  };
+}
+
 export const AuthContext = createContext(undefined);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getCurrentUser());

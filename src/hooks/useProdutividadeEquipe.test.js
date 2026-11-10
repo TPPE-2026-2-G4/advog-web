@@ -56,6 +56,29 @@ describe('useProdutividadeEquipe', () => {
     expect(result.current.error).toBe('');
   });
 
+  it('filtra contas administradoras retornadas pela API', async () => {
+    listarProdutividadeEquipe.mockResolvedValue([
+      { funcionario_id: 1, nome: 'Administrador', finalizadas: 0 },
+      { funcionario_id: 2, nome: 'Ana', finalizadas: 3 },
+    ]);
+
+    const { result } = renderHook(() => useProdutividadeEquipe(true));
+
+    await waitFor(() =>
+      expect(result.current.productivity).toEqual([
+        {
+          funcionario_id: 2,
+          nome: 'Ana',
+          finalizadas: 3,
+          em_andamento: 0,
+          a_fazer: 0,
+          atrasadas: 0,
+          progresso: 0,
+        },
+      ])
+    );
+  });
+
   it('limpa a produtividade e informa a mensagem de um erro recebido', async () => {
     listarProdutividadeEquipe.mockRejectedValue(new Error('Falha na API'));
 

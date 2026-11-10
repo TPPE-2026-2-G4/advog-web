@@ -25,6 +25,7 @@ export default function LancamentosTable({
   lancamentos = [],
   categorias = [],
   pagination,
+  canManage = true,
   onEdit,
   onDelete,
   onToggleStatus,
@@ -385,47 +386,51 @@ export default function LancamentosTable({
                     </td>
 
                     <td className={styles.td} data-label="Ações">
-                      <div className={styles.actionsCell}>
-                        <button
-                          type="button"
-                          className={`${styles.actionBtn} ${
-                            isPago
-                              ? styles.statusBtnPago
-                              : styles.statusBtnPendente
-                          }`}
-                          title={
-                            isPago
-                              ? 'Marcar como pendente/atrasado'
-                              : 'Marcar como realizado'
-                          }
-                          aria-label={
-                            isPago
-                              ? 'Marcar como pendente'
-                              : 'Marcar como realizado'
-                          }
-                          onClick={() => onToggleStatus?.(item)}
-                        >
-                          {isPago ? <X size={18} /> : <Check size={18} />}
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.actionBtn}
-                          title="Editar lançamento"
-                          aria-label="Editar lançamento"
-                          onClick={() => onEdit?.(item)}
-                        >
-                          <Pencil size={18} />
-                        </button>
-                        <button
-                          type="button"
-                          className={`${styles.actionBtn} ${styles.deleteBtn}`}
-                          title="Excluir lançamento"
-                          aria-label="Excluir lançamento"
-                          onClick={() => onDelete?.(item)}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
+                      {canManage ? (
+                        <div className={styles.actionsCell}>
+                          <button
+                            type="button"
+                            className={`${styles.actionBtn} ${
+                              isPago
+                                ? styles.statusBtnPago
+                                : styles.statusBtnPendente
+                            }`}
+                            title={
+                              isPago
+                                ? 'Marcar como pendente/atrasado'
+                                : 'Marcar como realizado'
+                            }
+                            aria-label={
+                              isPago
+                                ? 'Marcar como pendente'
+                                : 'Marcar como realizado'
+                            }
+                            onClick={() => onToggleStatus?.(item)}
+                          >
+                            {isPago ? <X size={18} /> : <Check size={18} />}
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.actionBtn}
+                            title="Editar lançamento"
+                            aria-label="Editar lançamento"
+                            onClick={() => onEdit?.(item)}
+                          >
+                            <Pencil size={18} />
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                            title="Excluir lançamento"
+                            aria-label="Excluir lançamento"
+                            onClick={() => onDelete?.(item)}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className={styles.noActions}>—</span>
+                      )}
                     </td>
                   </tr>
                 );

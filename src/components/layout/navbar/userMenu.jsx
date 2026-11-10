@@ -49,6 +49,11 @@ export default function UserMenu() {
     setIsLogoutModalOpen(true);
   };
 
+  const handleGoToSettings = () => {
+    setIsOpen(false);
+    router.push('/ajustes');
+  };
+
   const handleCloseLogoutModal = () => {
     setIsLogoutModalOpen(false);
   };
@@ -130,7 +135,11 @@ export default function UserMenu() {
                 <User size={16} className={styles.icon} />
                 Meu perfil
               </button>
-              <button className={styles.menuItem}>
+              <button
+                type="button"
+                onClick={handleGoToSettings}
+                className={styles.menuItem}
+              >
                 <Settings size={16} className={styles.icon} />
                 Configurações
               </button>

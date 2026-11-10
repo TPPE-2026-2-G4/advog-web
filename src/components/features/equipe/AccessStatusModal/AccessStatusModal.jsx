@@ -3,6 +3,7 @@
 import { Lock, Unlock } from 'lucide-react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import styles from './AccessStatusModal.module.css';
 
 export default function AccessStatusModal({
@@ -13,7 +14,7 @@ export default function AccessStatusModal({
   onClose,
   onConfirm,
 }) {
-  if (!isOpen || !member) return null;
+  if (!isOpen || !member || isAdministratorAccount(member)) return null;
 
   const isRevoking = member.status === 'Ativo';
   const actionLabel = isRevoking ? 'Revogar acesso' : 'Permitir acesso';

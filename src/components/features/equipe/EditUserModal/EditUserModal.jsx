@@ -3,6 +3,10 @@
 import { X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
+import {
+  isAdministratorAccount,
+  isAdministratorRole,
+} from '@/utils/funcionario';
 import styles from './EditUserModal.module.css';
 
 const findMemberRoleId = (member, roles) => {
@@ -40,7 +44,7 @@ export default function EditUserModal({
   onClose,
   onSave,
 }) {
-  if (!isOpen || !member) return null;
+  if (!isOpen || !member || isAdministratorAccount(member, roles)) return null;
 
   const memberKey =
     member.funcionario_id ??
@@ -62,6 +66,7 @@ export default function EditUserModal({
 }
 
 function EditUserDialog({ member, roles, isRoleLocked, onClose, onSave }) {
+  const availableRoles = roles.filter((role) => !isAdministratorRole(role));
   const [formData, setFormData] = useState(() => toFormData(member, roles));
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -171,7 +176,7 @@ function EditUserDialog({ member, roles, isRoleLocked, onClose, onSave }) {
               <option value="" disabled>
                 Selecione o perfil
               </option>
-              {roles.map((role) => (
+              {availableRoles.map((role) => (
                 <option key={role.cargo_id} value={role.cargo_id}>
                   {role.nome_cargo}
                 </option>

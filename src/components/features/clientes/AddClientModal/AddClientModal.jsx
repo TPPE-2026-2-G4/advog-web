@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import AutocompleteResponsible from '../AutocompleteResponsible/AutocompleteResponsible';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import {
   ETAPAS,
   formatarCpfCnpj,
@@ -18,6 +19,11 @@ export default function AddClientModal({
   funcionarios = [],
   isSaving = false,
 }) {
+  const availableFuncionarios = useMemo(
+    () => (funcionarios || []).filter((f) => !isAdministratorAccount(f)),
+    [funcionarios]
+  );
+
   const [nome, setNome] = useState('');
   const [cpfCnpj, setCpfCnpj] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -62,13 +68,23 @@ export default function AddClientModal({
     }
 
     try {
+      const selectedFunc = funcionarios.find(
+        (f) => Number(f.funcionario_id || f.id) === Number(responsavelId)
+      );
+      const cleanResponsavelId =
+        selectedFunc && isAdministratorAccount(selectedFunc)
+          ? null
+          : responsavelId
+            ? Number(responsavelId)
+            : null;
+
       await onSubmit?.({
         nome: nome.trim(),
         cpf: cpfCnpj.replace(/\D/g, '') || null,
         documento: cpfCnpj || null,
         telefone: telefone.trim() || null,
         email: email.trim(),
-        responsavel_id: responsavelId ? Number(responsavelId) : null,
+        responsavel_id: cleanResponsavelId,
         etapa_id: Number(etapaId) || 1,
         area_interesse: areaInteresse.trim() || null,
         descricao: descricao.trim() || null,
@@ -182,7 +198,7 @@ export default function AddClientModal({
               id="add-client-responsavel"
               responsavelId={responsavelId}
               onChange={(id) => setResponsavelId(id)}
-              funcionarios={funcionarios}
+              funcionarios={availableFuncionarios}
               disabled={isSaving}
             />
           </div>

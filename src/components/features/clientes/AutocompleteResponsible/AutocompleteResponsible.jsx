@@ -3,15 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import { obterIniciais } from '@/utils/cliente';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import styles from './AutocompleteResponsible.module.css';
 
 const encontrarFuncionario = (id, list = []) => {
   if (!id) return null;
-  return (
-    list.find(
-      (f) => Number(f.funcionario_id || f.id) === Number(id) || f.nome === id
-    ) || null
+  const found = list.find(
+    (f) => Number(f.funcionario_id || f.id) === Number(id) || f.nome === id
   );
+  if (!found || isAdministratorAccount(found)) return null;
+  return found;
 };
 
 export default function AutocompleteResponsible({
@@ -61,12 +62,14 @@ export default function AutocompleteResponsible({
   }, [selecionado]);
 
   const filtrados = useMemo(() => {
-    if (!searchTerm.trim()) return funcionarios;
+    const validos = funcionarios.filter((f) => !isAdministratorAccount(f));
+    if (!searchTerm.trim()) return validos;
     const termo = searchTerm.toLowerCase();
-    return funcionarios.filter((f) => f.nome?.toLowerCase().includes(termo));
+    return validos.filter((f) => f.nome?.toLowerCase().includes(termo));
   }, [funcionarios, searchTerm]);
 
   const handleSelect = (func) => {
+    if (isAdministratorAccount(func)) return;
     setIsOpen(false);
     setSearchTerm(func.nome);
     onChange?.(func.funcionario_id || func.id, func);

@@ -65,15 +65,17 @@ describe('AddUserModal', () => {
     }
   );
 
-  it.each(roles)(
-    'renderiza a opção de cargo "$nome_cargo" com valor $cargo_id',
-    ({ cargo_id, nome_cargo }) => {
-      renderModal();
-      expect(screen.getByRole('option', { name: nome_cargo })).toHaveValue(
-        String(cargo_id)
-      );
-    }
-  );
+  it('não renderiza o cargo de Administrador como opção de cargo', () => {
+    renderModal();
+    expect(
+      screen.queryByRole('option', { name: 'Administrador' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('renderiza as opções de cargos não administradores', () => {
+    renderModal();
+    expect(screen.getByRole('option', { name: 'Advogado' })).toHaveValue('2');
+  });
 
   it('atualiza os campos e envia os dados ao submeter o formulário', async () => {
     const onCreated = vi.fn().mockResolvedValue({ funcionario_id: 1 });

@@ -677,6 +677,25 @@ describe('Componentes UI do Módulo Site', () => {
         screen.getByText('0 de 0 advogados visíveis no site institucional')
       ).toBeInTheDocument();
     });
+
+    it('ignora e não exibe a conta de administrador na lista de advogados exibidos no site', () => {
+      const teamWithAdmin = [
+        {
+          funcionario_id: 99,
+          nome: 'Administrador',
+          cargo: 'Administrador',
+          email: 'advog@advog.com',
+          exibicaoInstitucional: true,
+        },
+        ...mockTeam,
+      ];
+      render(<TeamTab team={teamWithAdmin} onToggleLawyer={vi.fn()} />);
+
+      expect(screen.queryByText('Administrador')).not.toBeInTheDocument();
+      expect(
+        screen.getByText('3 de 5 advogados visíveis no site institucional')
+      ).toBeInTheDocument();
+    });
   });
 
   describe('ColorsTab', () => {

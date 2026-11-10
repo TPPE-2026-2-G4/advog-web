@@ -1,3 +1,5 @@
+import { isAdministratorAccount } from './funcionario';
+
 export const EMPTY_TEAM_SUMMARY = Object.freeze({
   finalizadas: 0,
   em_andamento: 0,
@@ -19,3 +21,8 @@ export const formatarSumarioEquipe = (summary) => ({
 export const obterProgressoEquipe = (summary) => {
   return Math.max(0, Math.min(100, Number(summary?.progresso || 0)));
 };
+
+export function filtrarProdutividadeSemAdmin(list = []) {
+  if (!Array.isArray(list)) return [];
+  return list.filter((item) => !isAdministratorAccount(item));
+}

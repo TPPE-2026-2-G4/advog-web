@@ -4,6 +4,7 @@ import { Plus, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import { getCurrentUser } from '@/utils/authSession';
 const emptySubscribe = () => () => {};
 const EMPTY_RESPONSAVEIS = [];
@@ -28,10 +29,19 @@ export default function ProcessosClient({
     () => '{}'
   );
   const permissions = JSON.parse(permissionsJson);
-  const canView = permissions.visualizar_processos === true;
-  const canCreate = permissions.criar_processos === true;
-  const canEdit = permissions.editar_processos === true;
-  const canDelete = permissions.excluir_processos === true;
+  const currentUser = getCurrentUser();
+  const isUserAdmin = isAdministratorAccount(currentUser);
+  const canView =
+    isUserAdmin ||
+    permissions.visualizar_processos === true ||
+    permissions.gerenciar_processos === true;
+  const canManage =
+    isUserAdmin ||
+    permissions.gerenciar_processos === true ||
+    permissions.editar_processos === true;
+  const canCreate = canManage;
+  const canEdit = canManage;
+  const canDelete = canManage;
 
   const [clientes, setClientes] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
@@ -87,7 +97,9 @@ export default function ProcessosClient({
     Promise.all([listarClientes(), listarFuncionarios()])
       .then(([receivedClients, receivedEmployees]) => {
         setClientes(receivedClients);
-        setFuncionarios(receivedEmployees);
+        setFuncionarios(
+          (receivedEmployees || []).filter((f) => !isAdministratorAccount(f))
+        );
         setReferenceError('');
       })
       .catch((error) => {
@@ -107,13 +119,18 @@ export default function ProcessosClient({
   const employeeNames = useMemo(
     () =>
       new Map(
-        funcionarios.map((item) => [item.funcionario_id || item.id, item.nome])
+        funcionarios
+          .filter((f) => !isAdministratorAccount(f))
+          .map((item) => [item.funcionario_id || item.id, item.nome])
       ),
     [funcionarios]
   );
 
   const responsaveisOptions = useMemo(
-    () => toResponsavelOptions(funcionarios),
+    () =>
+      toResponsavelOptions(
+        funcionarios.filter((f) => !isAdministratorAccount(f))
+      ),
     [funcionarios]
   );
 

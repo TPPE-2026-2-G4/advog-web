@@ -1,4 +1,5 @@
 import { getAccessToken } from '@/utils/authSession';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import { API_URL } from './api';
 
 const getErrorMessage = async (
@@ -48,13 +49,17 @@ const request = async (path, options, fallbackMessage, forbiddenMessage) => {
   return response.json();
 };
 
-export function listarProdutividadeEquipe() {
-  return request(
+export async function listarProdutividadeEquipe() {
+  const data = await request(
     '/atividades/produtividade',
     { method: 'GET', cache: 'no-store' },
     'Não foi possível carregar a produtividade da equipe.',
     'Você não possui permissão para visualizar a produtividade da equipe.'
   );
+
+  return Array.isArray(data)
+    ? data.filter((item) => !isAdministratorAccount(item))
+    : data;
 }
 
 export function obterKanbanAtividades() {
@@ -103,6 +108,50 @@ export function excluirAtividade(atividadeId) {
     `/atividades/${encodeURIComponent(atividadeId)}`,
     { method: 'DELETE' },
     'Não foi possível excluir a atividade.'
+  );
+}
+
+export function criarEtapaKanban(dados) {
+  return request(
+    '/atividades/etapas',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    },
+    'Não foi possível criar a etapa.'
+  );
+}
+
+export function renomearEtapaKanban(etapaId, dados) {
+  return request(
+    `/atividades/etapas/${encodeURIComponent(etapaId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    },
+    'Não foi possível renomear a etapa.'
+  );
+}
+
+export function excluirEtapaKanban(etapaId) {
+  return request(
+    `/atividades/etapas/${encodeURIComponent(etapaId)}`,
+    { method: 'DELETE' },
+    'Não foi possível excluir a etapa.'
+  );
+}
+
+export function reordenarEtapasKanban(etapaIds) {
+  return request(
+    '/atividades/etapas/reordenar',
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ etapa_ids: etapaIds }),
+    },
+    'Não foi possível reordenar as etapas.'
   );
 }
 

@@ -160,7 +160,7 @@ describe('integração da página de equipe', () => {
       target: { value: 'maria@teste.local' },
     });
     fireEvent.change(screen.getByLabelText('Cargo'), {
-      target: { value: '1' },
+      target: { value: '2' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
@@ -318,20 +318,33 @@ describe('integração da página de equipe', () => {
     );
   });
 
-  it('impede alterar o cargo do único administrador', () => {
+  it('não exibe a conta administradora na equipe e não permite editar, revogar ou excluir', () => {
     const admin = createMember({
       cargo_id: 1,
       cargo: 'Administrador',
+      nome_func: 'Administrador',
     });
     renderEquipe([admin]);
 
-    fireEvent.click(screen.getByTitle('Editar usuário'));
+    expect(screen.queryByText('Administrador')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Editar usuário')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Revogar acesso')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Excluir usuário')).not.toBeInTheDocument();
+  });
 
-    expect(screen.getByLabelText('Nível de Acesso')).toBeDisabled();
+  it('não exibe o cargo de administrador na referência de cargos nem nos formulários', () => {
+    renderEquipe();
+
+    // Na referência de cargos (RBAC)
+    expect(screen.queryByText('Administrador')).not.toBeInTheDocument();
+
+    // No modal de adicionar usuário
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar Usuário/i }));
     expect(
-      screen.getByText(
-        'Único administrador do sistema — cargo não pode ser alterado.'
-      )
+      screen.queryByRole('option', { name: 'Administrador' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'Advogado' })
     ).toBeInTheDocument();
   });
 
@@ -347,7 +360,7 @@ describe('integração da página de equipe', () => {
     renderEquipe();
 
     fireEvent.click(
-      screen.getAllByRole('button', { name: 'Editar permissões →' })[1]
+      screen.getAllByRole('button', { name: 'Editar permissões →' })[0]
     );
     fireEvent.click(
       screen.getByRole('checkbox', { name: 'Configurações do sistema' })
@@ -359,7 +372,10 @@ describe('integração da página de equipe', () => {
     });
     expect(fetch).toHaveBeenCalledWith('http://localhost:8000/cargos/2', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token-jwt',
+      },
       body: JSON.stringify({ permissao: updatedPermission }),
     });
   });
@@ -425,7 +441,10 @@ describe('integração da página de equipe', () => {
     });
     expect(fetch).toHaveBeenCalledWith('http://localhost:8000/cargos', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token-jwt',
+      },
       body: JSON.stringify({
         nome_cargo: 'Paralegal',
         descricao: 'Cargo personalizado.',
@@ -463,6 +482,9 @@ describe('integração da página de equipe', () => {
     });
     expect(fetch).toHaveBeenCalledWith('http://localhost:8000/cargos/3', {
       method: 'DELETE',
+      headers: {
+        Authorization: 'Bearer token-jwt',
+      },
     });
   });
 
@@ -862,6 +884,57 @@ describe('integração da página de equipe', () => {
         cache: 'no-store',
       })
     );
+  });
+
+  it('omite a conta administradora da tabela de produtividade da equipe', async () => {
+    const member = createMember();
+
+    fetch.mockImplementation((url) => {
+      const endpoint = String(url);
+
+      if (endpoint.endsWith('/atividades/produtividade')) {
+        return Promise.resolve(
+          createApiResponse([
+            {
+              funcionario_id: 1,
+              nome: 'Administrador',
+              finalizadas: 0,
+              em_andamento: 0,
+              a_fazer: 0,
+              atrasadas: 0,
+              progresso: 0,
+            },
+            {
+              funcionario_id: 2,
+              nome: 'Maria Silva',
+              finalizadas: 4,
+              em_andamento: 2,
+              a_fazer: 1,
+              atrasadas: 0,
+              progresso: 80,
+            },
+          ])
+        );
+      }
+
+      return Promise.resolve(createApiResponse([]));
+    });
+
+    renderEquipe([member]);
+
+    const productivitySection = screen.getByRole('region', {
+      name: 'Produtividade da Equipe',
+    });
+
+    await waitFor(() => {
+      expect(
+        within(productivitySection).getByText('Maria Silva')
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      within(productivitySection).queryByText('Administrador')
+    ).not.toBeInTheDocument();
   });
 
   it('exibe erro quando a produtividade da equipe não pode ser carregada', async () => {

@@ -247,4 +247,25 @@ describe('ProcessFormModal', () => {
     resolveSave(processData);
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
   });
+
+  it('não exibe conta administradora nas opções de responsável e bloqueia atribuição ao administrador', async () => {
+    const mixedFuncionarios = [
+      {
+        funcionario_id: 1,
+        nome: 'Administrador',
+        cargo: 'Administrador',
+        email: 'advog@advog.com',
+      },
+      { funcionario_id: 5, nome: 'Ana Paula', cargo: 'Advogada' },
+    ];
+    renderForm({ funcionarios: mixedFuncionarios });
+
+    const select = screen.getByLabelText('Responsável');
+    const options = Array.from(select.querySelectorAll('option')).map(
+      (o) => o.textContent
+    );
+
+    expect(options).toContain('Ana Paula');
+    expect(options).not.toContain('Administrador');
+  });
 });

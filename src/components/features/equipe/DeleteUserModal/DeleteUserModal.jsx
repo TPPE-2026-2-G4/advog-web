@@ -3,6 +3,7 @@
 import { AlertTriangle } from 'lucide-react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import styles from './DeleteUserModal.module.css';
 
 export default function DeleteUserModal({
@@ -13,7 +14,7 @@ export default function DeleteUserModal({
   onClose,
   onConfirm,
 }) {
-  if (!isOpen || !member) return null;
+  if (!isOpen || !member || isAdministratorAccount(member)) return null;
 
   return (
     <Modal

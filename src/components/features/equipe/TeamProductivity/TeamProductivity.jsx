@@ -2,6 +2,7 @@
 
 import { TrendingUp } from 'lucide-react';
 import { useProdutividadeEquipe } from '@/hooks/useProdutividadeEquipe';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import {
   EMPTY_TEAM_SUMMARY,
   obterProgressoEquipe,
@@ -12,6 +13,10 @@ export default function ProdutividadeEquipe({ canView = false }) {
   const { productivity, isLoading, error } = useProdutividadeEquipe(canView);
 
   if (!canView) return null;
+
+  const visibleProductivity = (productivity || []).filter(
+    (summary) => !isAdministratorAccount(summary)
+  );
 
   return (
     <section
@@ -39,7 +44,7 @@ export default function ProdutividadeEquipe({ canView = false }) {
             </tr>
           </thead>
           <tbody>
-            {productivity.map((summary) => {
+            {visibleProductivity.map((summary) => {
               const currentSummary = summary || EMPTY_TEAM_SUMMARY;
               const progress = obterProgressoEquipe(currentSummary);
 

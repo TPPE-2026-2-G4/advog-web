@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import AutocompleteResponsible from '../AutocompleteResponsible/AutocompleteResponsible';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import {
   ETAPAS,
   formatarCpfCnpj,
@@ -19,6 +20,11 @@ function EditClientDialog({
   funcionarios = [],
   isSaving = false,
 }) {
+  const availableFuncionarios = useMemo(
+    () => (funcionarios || []).filter((f) => !isAdministratorAccount(f)),
+    [funcionarios]
+  );
+
   const [nome, setNome] = useState(cliente?.nome || '');
   const [cpfCnpj, setCpfCnpj] = useState(() =>
     formatarCpfCnpj(cliente?.cpf || cliente?.cnpj || cliente?.documento || '')
@@ -62,13 +68,23 @@ function EditClientDialog({
 
     try {
       const clienteId = cliente.cliente_id || cliente.id;
+      const selectedFunc = funcionarios.find(
+        (f) => Number(f.funcionario_id || f.id) === Number(responsavelId)
+      );
+      const cleanResponsavelId =
+        selectedFunc && isAdministratorAccount(selectedFunc)
+          ? null
+          : responsavelId
+            ? Number(responsavelId)
+            : null;
+
       await onSubmit?.(clienteId, {
         nome: nome.trim(),
         cpf: cpfCnpj ? formatarCpfCnpj(cpfCnpj) : null,
         documento: cpfCnpj ? formatarCpfCnpj(cpfCnpj) : null,
         telefone: telefone ? formatarTelefone(telefone) : null,
         email: email.trim(),
-        responsavel_id: responsavelId ? Number(responsavelId) : null,
+        responsavel_id: cleanResponsavelId,
         etapa_id: etapaId,
         area_interesse: areaInteresse.trim() || null,
         descricao: descricao.trim() || null,
@@ -181,7 +197,7 @@ function EditClientDialog({
               id="edit-client-responsavel"
               responsavelId={responsavelId}
               onChange={(id) => setResponsavelId(id)}
-              funcionarios={funcionarios}
+              funcionarios={availableFuncionarios}
               disabled={isSaving}
             />
           </div>
