@@ -338,7 +338,14 @@ export default function PreviewModal({
                           className={styles.previewTeamAvatar}
                           style={{ color: corPrimaria }}
                         >
-                          {initials}
+                          {member.foto_perfil_url ? (
+                            <img
+                              src={getImageUrl(member.foto_perfil_url)}
+                              alt={`Foto de ${member.nome}`}
+                            />
+                          ) : (
+                            initials
+                          )}
                         </div>
                         <span className={styles.previewTeamName}>
                           {member.nome}

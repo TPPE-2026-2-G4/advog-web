@@ -44,6 +44,29 @@ describe('TeamTable', () => {
     expect(screen.getByText('0/9')).toBeInTheDocument();
   });
 
+  it('renderiza a foto do membro quando disponível e mantém as iniciais como fallback', () => {
+    render(
+      <TeamTable
+        members={[
+          createMember({
+            foto_perfil_url: 'https://storage.example.com/maria.png',
+          }),
+          createMember({
+            funcionario_id: 2,
+            nome_func: 'João Santos',
+            initials: 'JS',
+          }),
+        ]}
+      />
+    );
+
+    expect(screen.getByAltText('Foto de Maria Silva')).toHaveAttribute(
+      'src',
+      'https://storage.example.com/maria.png'
+    );
+    expect(screen.getByText('JS')).toBeInTheDocument();
+  });
+
   it('exibe a contagem do cargo atual recebido pela API', () => {
     const member = createMember({
       cargo_id: 2,

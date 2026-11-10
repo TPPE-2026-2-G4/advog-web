@@ -244,7 +244,14 @@ export default async function Home() {
                         className={styles.teamAvatar}
                         style={{ color: corPrimaria }}
                       >
-                        {initials}
+                        {member.foto_perfil_url ? (
+                          <img
+                            src={getImageUrl(member.foto_perfil_url)}
+                            alt={`Foto de ${member.nome}`}
+                          />
+                        ) : (
+                          initials
+                        )}
                       </div>
                       <h3 className={styles.teamName}>{member.nome}</h3>
 

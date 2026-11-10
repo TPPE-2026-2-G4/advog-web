@@ -38,6 +38,7 @@ describe('toTeamMember', () => {
         initials: 'UD',
         nome_func: 'Usuário de Demonstração',
         email_func: 'usuario.demonstracao@teste.local',
+        foto_perfil_url: null,
         cargo: 'Não informado',
         status,
       });
@@ -65,6 +66,20 @@ describe('toTeamMember', () => {
     expect(teamMember.email_func).toBe(funcionario.email);
     expect(teamMember.status).toBe(funcionario.status);
     expect(teamMember.cargo).toBe('Não informado');
+  });
+
+  it('preserva a URL da foto de perfil fornecida pela API', () => {
+    const teamMember = toTeamMember({
+      funcionario_id: 1,
+      nome: 'Maria Silva',
+      email: 'maria@teste.local',
+      foto_perfil_url: 'https://storage.example.com/maria.png',
+      status: 'Ativo',
+    });
+
+    expect(teamMember.foto_perfil_url).toBe(
+      'https://storage.example.com/maria.png'
+    );
   });
 
   it.each([

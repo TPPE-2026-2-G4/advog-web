@@ -631,6 +631,32 @@ describe('Componentes UI do Módulo Site', () => {
       ).toBeInTheDocument();
     });
 
+    it('renderiza a foto do advogado e mantém as iniciais como fallback', () => {
+      render(
+        <TeamTab
+          team={[
+            {
+              funcionario_id: 1,
+              nome: 'Dr. Alexandre Carreiro',
+              foto_perfil_url: 'https://storage.example.com/alexandre.png',
+              exibicaoInstitucional: true,
+            },
+            {
+              funcionario_id: 2,
+              nome: 'Dra. Ana Paula Ribeiro',
+              exibicaoInstitucional: false,
+            },
+          ]}
+          onToggleLawyer={vi.fn()}
+        />
+      );
+
+      expect(
+        screen.getByAltText('Foto de Dr. Alexandre Carreiro')
+      ).toHaveAttribute('src', 'https://storage.example.com/alexandre.png');
+      expect(screen.getByText('AP')).toBeInTheDocument();
+    });
+
     it('dispara onToggleLawyer ao clicar no switch', () => {
       const handleToggle = vi.fn();
       render(<TeamTab team={mockTeam} onToggleLawyer={handleToggle} />);
@@ -971,6 +997,35 @@ describe('Componentes UI do Módulo Site', () => {
       expect(screen.getByText('Advogada Sênior')).toBeInTheDocument();
 
       expect(screen.queryByText('Advogado Oculto')).not.toBeInTheDocument();
+    });
+
+    it('renderiza a foto do advogado no preview e mantém as iniciais para os demais', () => {
+      render(
+        <PreviewModal
+          isOpen={true}
+          onClose={vi.fn()}
+          formData={{}}
+          team={[
+            {
+              funcionario_id: 1,
+              nome: 'Dr. Alexandre Carreiro',
+              foto_perfil_url: 'https://storage.example.com/alexandre.png',
+              exibicaoInstitucional: true,
+            },
+            {
+              funcionario_id: 2,
+              nome: 'Dra. Ana Paula Ribeiro',
+              exibicaoInstitucional: true,
+            },
+          ]}
+          areas={[]}
+        />
+      );
+
+      expect(
+        screen.getByAltText('Foto de Dr. Alexandre Carreiro')
+      ).toHaveAttribute('src', 'https://storage.example.com/alexandre.png');
+      expect(screen.getByText('AP')).toBeInTheDocument();
     });
 
     it('não renderiza a seção Nossa Equipe se nenhum advogado estiver visível', () => {

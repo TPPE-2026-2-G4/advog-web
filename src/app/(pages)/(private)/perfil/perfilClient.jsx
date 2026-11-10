@@ -280,8 +280,15 @@ export default function PerfilClient({ atuacoes = [] }) {
             aria-label="Alterar foto de perfil"
             disabled={isSubmitting}
           >
-            <span className={styles.avatar} aria-label={`Iniciais ${initials}`}>
-              {profileImage ? <img src={profileImage} /> : initials}
+            <span className={styles.avatar}>
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  alt={`Foto de ${getName(currentUser)}`}
+                />
+              ) : (
+                initials
+              )}
             </span>
           </button>
           <input
