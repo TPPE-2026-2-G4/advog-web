@@ -111,6 +111,50 @@ export function excluirAtividade(atividadeId) {
   );
 }
 
+export function criarEtapaKanban(dados) {
+  return request(
+    '/atividades/etapas',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    },
+    'Não foi possível criar a etapa.'
+  );
+}
+
+export function renomearEtapaKanban(etapaId, dados) {
+  return request(
+    `/atividades/etapas/${encodeURIComponent(etapaId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    },
+    'Não foi possível renomear a etapa.'
+  );
+}
+
+export function excluirEtapaKanban(etapaId) {
+  return request(
+    `/atividades/etapas/${encodeURIComponent(etapaId)}`,
+    { method: 'DELETE' },
+    'Não foi possível excluir a etapa.'
+  );
+}
+
+export function reordenarEtapasKanban(etapaIds) {
+  return request(
+    '/atividades/etapas/reordenar',
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ etapa_ids: etapaIds }),
+    },
+    'Não foi possível reordenar as etapas.'
+  );
+}
+
 export function filtrarAtividades(filtros = {}) {
   const params = new URLSearchParams();
 

@@ -32,6 +32,13 @@
   font-size: 14px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .addButton {
   display: inline-flex;
   align-items: center;
@@ -47,6 +54,9 @@
 }
 
 .secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 18px;
   font-size: 14px;
   font-weight: 500;
@@ -96,10 +106,36 @@
   gap: 12px;
 }
 
+.columnDragging {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
 .columnHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+}
+
+.columnTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dragHandle {
+  color: #94a3b8;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.columnHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .columnTitle {
@@ -193,6 +229,94 @@
   padding: 24px 0;
   font-size: 12px;
   color: #9ca3af;
+}
+
+.newStageDashedBtn {
+  min-width: 280px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 16px;
+  background: transparent;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.newStageDashedBtn:hover {
+  border-color: #c1a077;
+  background: rgba(193, 160, 119, 0.06);
+  color: #c1a077;
+}
+
+.newStageBox {
+  min-width: 280px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.newStageInput {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  font-size: 14px;
+  color: #172133;
+  box-sizing: border-box;
+}
+
+.newStageInput:focus {
+  outline: none;
+  border-color: #c1a077;
+}
+
+.newStageActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.newStageSubmitBtn {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  background: #c1a077;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.newStageCancelBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.newStageCancelBtn:hover {
+  color: #172133;
 }
 
 .modalContent {
