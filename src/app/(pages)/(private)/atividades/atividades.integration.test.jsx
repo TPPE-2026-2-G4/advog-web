@@ -358,6 +358,57 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
         dbAtividades = dbAtividades.filter((a) => a.atividade_id !== id);
         return createJsonResponse(null, 204);
       }
+      if (method === 'POST' && url.endsWith('/atividades/etapas')) {
+        const body = JSON.parse(init.body);
+        if (
+          dbEtapas.some(
+            (e) => e.nome.toLowerCase() === body.nome.trim().toLowerCase()
+          )
+        ) {
+          return createJsonResponse(
+            { detail: 'Já existe uma etapa com este nome' },
+            422
+          );
+        }
+        const maxOrdem = Math.max(0, ...dbEtapas.map((e) => e.ordem));
+        const nova = {
+          etapa_id: 50,
+          nome: body.nome.trim(),
+          ordem: maxOrdem + 1,
+        };
+        dbEtapas.push(nova);
+        return createJsonResponse(nova, 201);
+      }
+      if (method === 'PATCH' && url.endsWith('/atividades/etapas/reordenar')) {
+        const body = JSON.parse(init.body);
+        dbEtapas = body.etapa_ids.map((id, idx) => {
+          const et = dbEtapas.find((e) => e.etapa_id === id);
+          return { ...et, ordem: idx + 1 };
+        });
+        return createJsonResponse(dbEtapas);
+      }
+      if (method === 'PATCH' && /\/atividades\/etapas\/\d+$/.test(url)) {
+        const id = Number(url.split('/atividades/etapas/')[1]);
+        const body = JSON.parse(init.body);
+        dbEtapas = dbEtapas.map((e) =>
+          e.etapa_id === id ? { ...e, nome: body.nome.trim() } : e
+        );
+        return createJsonResponse(dbEtapas.find((e) => e.etapa_id === id));
+      }
+      if (method === 'DELETE' && /\/atividades\/etapas\/\d+$/.test(url)) {
+        const id = Number(url.split('/atividades/etapas/')[1]);
+        if (dbAtividades.some((a) => a.etapa_id === id)) {
+          return createJsonResponse(
+            {
+              detail:
+                'Não é possível excluir uma etapa que possui atividades vinculadas. Mova ou exclua as atividades antes.',
+            },
+            422
+          );
+        }
+        dbEtapas = dbEtapas.filter((e) => e.etapa_id !== id);
+        return createJsonResponse(null, 204);
+      }
       if (method === 'GET' && url.includes('/funcionarios')) {
         return createJsonResponse([
           { funcionario_id: 1, nome: 'Dr. Alexandre' },
@@ -553,6 +604,132 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
       expect(screen.getByRole('alert')).toHaveTextContent(
         'Não foi possível excluir a atividade.'
       );
+    });
+  });
+
+  it('permite criar, renomear, reordenar e excluir etapas, protegendo Backlog e Finalizado', async () => {
+    render(<AtividadesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Elaborar contestação')).toBeInTheDocument();
+    });
+
+    // Backlog e Finalizado não possuem botões de renomear ou excluir
+    expect(
+      screen.queryByRole('button', { name: 'Renomear etapa Backlog' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Excluir etapa Backlog' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Renomear etapa Finalizado' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Excluir etapa Finalizado' })
+    ).not.toBeInTheDocument();
+
+    // Em Execução possui botões de renomear e excluir
+    expect(
+      screen.getByRole('button', { name: 'Renomear etapa Em Execução' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Excluir etapa Em Execução' })
+    ).toBeInTheDocument();
+
+    // Criar nova etapa pelo botão do cabeçalho
+    fireEvent.click(screen.getAllByRole('button', { name: /Nova Etapa/i })[0]);
+    fireEvent.submit(screen.getByRole('button', { name: 'Criar Etapa' }));
+    expect(screen.getByText('Informe o nome da etapa.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Nome da etapa'), {
+      target: { value: 'Aguardando Cliente' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: 'Criar Etapa' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Etapa criada com sucesso.')).toBeInTheDocument();
+      expect(screen.getByTestId('coluna-50')).toBeInTheDocument();
+    });
+
+    // Testar o botão de nova etapa inline ao final das colunas (abrir, Escape, abrir e criar com Enter)
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Adicionar nova etapa ao final' })
+    );
+    const inlineInput = screen.getByPlaceholderText('Nome da etapa...');
+    fireEvent.keyDown(inlineInput, { key: 'Escape' });
+    expect(
+      screen.queryByPlaceholderText('Nome da etapa...')
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Adicionar nova etapa ao final' })
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Cancelar nova etapa' })
+    );
+    expect(
+      screen.queryByPlaceholderText('Nome da etapa...')
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Adicionar nova etapa ao final' })
+    );
+    const inlineInputEnter = screen.getByPlaceholderText('Nome da etapa...');
+    fireEvent.change(inlineInputEnter, {
+      target: { value: 'Aguardando Cliente' },
+    });
+    fireEvent.keyDown(inlineInputEnter, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Já existe uma etapa com este nome'
+      );
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Cancelar nova etapa' })
+    );
+
+    // Renomear a etapa criada
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Renomear etapa Aguardando Cliente' })
+    );
+    fireEvent.change(screen.getByLabelText('Nome da etapa'), {
+      target: { value: 'Validação Cliente' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar Etapa' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Etapa renomeada com sucesso.')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Renomear etapa Validação Cliente' })
+      ).toBeInTheDocument();
+    });
+
+    // Reordenar colunas arrastando Finalizado (coluna-3) sobre Backlog (coluna-1)
+    const colFinalizado = screen.getByTestId('coluna-3');
+    const colBacklog = screen.getByTestId('coluna-1');
+    fireEvent.dragStart(colFinalizado);
+    fireEvent.dragOver(colBacklog);
+    fireEvent.drop(colBacklog);
+    fireEvent.dragEnd(colFinalizado);
+
+    await waitFor(() => {
+      const labels = screen
+        .getAllByRole('listitem')
+        .map((item) => item.firstChild.textContent);
+      expect(labels[1]).toBe('Finalizado');
+    });
+
+    // Excluir etapa vazia (Validação Cliente)
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Excluir etapa Validação Cliente' })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Etapa excluída.')).toBeInTheDocument();
+      expect(screen.queryByTestId('coluna-50')).not.toBeInTheDocument();
     });
   });
 });
