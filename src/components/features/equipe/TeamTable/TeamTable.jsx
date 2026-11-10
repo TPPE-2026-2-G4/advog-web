@@ -1,5 +1,6 @@
 import { CircleCheck, CircleSlash, Pencil, Trash2 } from 'lucide-react';
 import { createEmptyPermission } from '@/constants/permissions';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import styles from './TeamTable.module.css';
 
 const roleBadgePalette = [
@@ -45,7 +46,14 @@ export default function TeamTable({
   onChangeAccess,
   onEdit,
   canEditUsers = false,
+  canManage = true,
 }) {
+  const allowManage = canManage;
+  const allowEdit = canManage && canEditUsers;
+  const visibleMembers = members.filter(
+    (member) => !isAdministratorAccount(member, roles)
+  );
+
   return (
     <div className={styles.tableContainer}>
       <h2 className={styles.headerTitle}>Membros da Equipe</h2>
@@ -62,7 +70,8 @@ export default function TeamTable({
             </tr>
           </thead>
           <tbody>
-            {members.map((member) => {
+            {visibleMembers.map((member) => {
+              const isMemberAdmin = isAdministratorAccount(member, roles);
               const permission = getMemberPermission(member, roles);
               const permissionCount =
                 Object.values(permission).filter(Boolean).length;
@@ -127,48 +136,54 @@ export default function TeamTable({
                   </td>
 
                   <td className={styles.td} data-label="Ações">
-                    <div className={styles.actionsCell}>
-                      {canEditUsers && (
-                        <button
-                          className={styles.actionBtn}
-                          title="Editar usuário"
-                          onClick={() => onEdit?.(member)}
-                          type="button"
-                        >
-                          <Pencil size={18} />
-                        </button>
-                      )}
-                      {member.status !== 'Pendente' && (
-                        <button
-                          className={`${styles.actionBtn} ${
-                            member.status === 'Ativo'
-                              ? styles.revokeAccessBtn
-                              : styles.allowAccessBtn
-                          }`}
-                          title={
-                            member.status === 'Ativo'
-                              ? 'Revogar acesso'
-                              : 'Permitir acesso'
-                          }
-                          onClick={() => onChangeAccess(member)}
-                          type="button"
-                        >
-                          {member.status === 'Ativo' ? (
-                            <CircleSlash size={17} aria-hidden="true" />
-                          ) : (
-                            <CircleCheck size={17} aria-hidden="true" />
-                          )}
-                        </button>
-                      )}
-                      <button
-                        className={`${styles.actionBtn} ${styles.deleteBtn}`}
-                        title="Excluir usuário"
-                        onClick={() => onDelete(member)}
-                        type="button"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                    {allowManage ? (
+                      <div className={styles.actionsCell}>
+                        {allowEdit && !isMemberAdmin && (
+                          <button
+                            className={styles.actionBtn}
+                            title="Editar usuário"
+                            onClick={() => onEdit?.(member)}
+                            type="button"
+                          >
+                            <Pencil size={18} />
+                          </button>
+                        )}
+                        {member.status !== 'Pendente' && !isMemberAdmin && (
+                          <button
+                            className={`${styles.actionBtn} ${
+                              member.status === 'Ativo'
+                                ? styles.revokeAccessBtn
+                                : styles.allowAccessBtn
+                            }`}
+                            title={
+                              member.status === 'Ativo'
+                                ? 'Revogar acesso'
+                                : 'Permitir acesso'
+                            }
+                            onClick={() => onChangeAccess(member)}
+                            type="button"
+                          >
+                            {member.status === 'Ativo' ? (
+                              <CircleSlash size={17} aria-hidden="true" />
+                            ) : (
+                              <CircleCheck size={17} aria-hidden="true" />
+                            )}
+                          </button>
+                        )}
+                        {!isMemberAdmin && (
+                          <button
+                            className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                            title="Excluir usuário"
+                            onClick={() => onDelete(member)}
+                            type="button"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <span className={styles.noActions}>—</span>
+                    )}
                   </td>
                 </tr>
               );

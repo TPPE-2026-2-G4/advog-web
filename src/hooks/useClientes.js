@@ -8,13 +8,16 @@ import {
   listarClientes,
 } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
+import { isAdministratorAccount } from '@/utils/funcionario';
 
 export function useClientes({
   initialClientes = [],
   initialFuncionarios = [],
 } = {}) {
   const [clientes, setClientes] = useState(initialClientes);
-  const [funcionarios, setFuncionarios] = useState(initialFuncionarios);
+  const [funcionarios, setFuncionarios] = useState(() =>
+    (initialFuncionarios || []).filter((f) => !isAdministratorAccount(f))
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [responsavelFilter, setResponsavelFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -40,7 +43,7 @@ export function useClientes({
       listarFuncionarios()
         .then((dados) => {
           if (isMounted && Array.isArray(dados)) {
-            setFuncionarios(dados);
+            setFuncionarios(dados.filter((f) => !isAdministratorAccount(f)));
           }
         })
         .catch(() => {});
@@ -130,12 +133,20 @@ export function useClientes({
     setIsSaving(true);
     setErrorMessage('');
     try {
-      const criado = await criarCliente(dados);
+      const respFunc = funcionarios.find(
+        (f) => Number(f.funcionario_id || f.id) === Number(dados.responsavel_id)
+      );
+      const cleanDados =
+        respFunc && isAdministratorAccount(respFunc)
+          ? { ...dados, responsavel_id: null }
+          : dados;
+      const criado = await criarCliente(cleanDados);
       const clienteComDados = {
-        ...dados,
+        ...cleanDados,
         ...criado,
-        cpf: criado?.cpf || dados.cpf || null,
-        documento: criado?.documento || dados.documento || dados.cpf || null,
+        cpf: criado?.cpf || cleanDados.cpf || null,
+        documento:
+          criado?.documento || cleanDados.documento || cleanDados.cpf || null,
       };
       setClientes((prev) => [clienteComDados, ...prev]);
       setIsAddOpen(false);
@@ -158,19 +169,26 @@ export function useClientes({
     setIsSaving(true);
     setErrorMessage('');
     try {
-      const atualizado = await atualizarCliente(id, dados);
+      const respFunc = funcionarios.find(
+        (f) => Number(f.funcionario_id || f.id) === Number(dados.responsavel_id)
+      );
+      const cleanDados =
+        respFunc && isAdministratorAccount(respFunc)
+          ? { ...dados, responsavel_id: null }
+          : dados;
+      const atualizado = await atualizarCliente(id, cleanDados);
       setClientes((prev) =>
         prev.map((c) =>
           (c.cliente_id || c.id) === id
             ? {
                 ...c,
-                ...dados,
+                ...cleanDados,
                 ...atualizado,
-                cpf: atualizado?.cpf || dados.cpf || c.cpf || null,
+                cpf: atualizado?.cpf || cleanDados.cpf || c.cpf || null,
                 documento:
                   atualizado?.documento ||
-                  dados.documento ||
-                  dados.cpf ||
+                  cleanDados.documento ||
+                  cleanDados.cpf ||
                   c.documento ||
                   null,
               }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   Clock,
   FileText,
@@ -30,6 +30,7 @@ import {
 import { listarFuncionarios } from '@/services/funcionarios';
 import { listarProcessos } from '@/services/processos';
 import { countActivitiesByStage } from '@/utils/atividade';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import { getCurrentUser } from '@/utils/authSession';
 import styles from './atividades.module.css';
 
@@ -51,11 +52,32 @@ const isOverdue = (prazo, etapaNome) =>
 const isProtectedStage = (nome) =>
   ['backlog', 'finalizado'].includes(String(nome).trim().toLowerCase());
 
+const emptySubscribe = () => () => {};
+
 export default function AtividadesClient() {
-  const perms = getCurrentUser()?.cargo?.permissao ?? {};
-  const canCreate = perms.criar_atividades !== false;
-  const canEdit = perms.editar_atividades !== false;
-  const canDelete = perms.excluir_atividades !== false;
+  const userJson = useSyncExternalStore(
+    emptySubscribe,
+    () => JSON.stringify(getCurrentUser() ?? null),
+    () => 'null'
+  );
+  const currentUser = JSON.parse(userJson);
+  const isUserAdmin = isAdministratorAccount(currentUser);
+  const perms = currentUser?.cargo?.permissao ?? {};
+  const canView =
+    !currentUser ||
+    isUserAdmin ||
+    perms.visualizar_atividades === true ||
+    perms.gerenciar_atividades === true ||
+    perms.criar_atividades === true ||
+    perms.editar_atividades === true;
+  const canManage =
+    !currentUser ||
+    isUserAdmin ||
+    perms.gerenciar_atividades === true ||
+    (perms.criar_atividades === true && perms.editar_atividades === true);
+  const canCreate = canManage;
+  const canEdit = canManage;
+  const canDelete = canManage;
 
   const {
     stages: etapas,
@@ -95,7 +117,11 @@ export default function AtividadesClient() {
       Promise.resolve(listarFuncionarios?.()).catch(() => []),
       Promise.resolve(listarProcessos?.()).catch(() => ({ itens: [] })),
     ]).then(([funcs, procs]) => {
-      setFuncionarios(Array.isArray(funcs) ? funcs : []);
+      setFuncionarios(
+        Array.isArray(funcs)
+          ? funcs.filter((f) => !isAdministratorAccount(f))
+          : []
+      );
       setProcessos(Array.isArray(procs?.itens) ? procs.itens : []);
     });
   }, []);
@@ -144,7 +170,9 @@ export default function AtividadesClient() {
         data_prazo: toDateInput(detail.data_prazo),
         etapa_id: detail.etapa_id,
         processo_id: detail.processo_id ?? '',
-        responsaveis_ids: detail.responsaveis.map((r) => r.funcionario_id),
+        responsaveis_ids: (detail.responsaveis || [])
+          .filter((r) => !isAdministratorAccount(r))
+          .map((r) => r.funcionario_id),
       });
       setFormError('');
       setModalOpen(true);
@@ -154,6 +182,11 @@ export default function AtividadesClient() {
   };
 
   const toggleResponsavel = (id) => {
+    const target = funcionarios.find(
+      (f) => Number(f.funcionario_id || f.id) === Number(id)
+    );
+    if (target && isAdministratorAccount(target)) return;
+
     setForm((prev) => ({
       ...prev,
       responsaveis_ids: prev.responsaveis_ids.includes(id)
@@ -179,6 +212,15 @@ export default function AtividadesClient() {
       return;
     }
 
+    const adminIds = new Set(
+      funcionarios
+        .filter((f) => isAdministratorAccount(f))
+        .map((f) => Number(f.funcionario_id || f.id))
+    );
+    const cleanResponsaveisIds = form.responsaveis_ids.filter(
+      (id) => !adminIds.has(Number(id))
+    );
+
     const payload = {
       titulo: form.titulo.trim(),
       descricao: form.descricao.trim(),
@@ -186,7 +228,7 @@ export default function AtividadesClient() {
       data_prazo: `${form.data_prazo}T23:59:59`,
       etapa_id: Number(form.etapa_id),
       processo_id: form.processo_id ? Number(form.processo_id) : null,
-      responsaveis_ids: form.responsaveis_ids,
+      responsaveis_ids: cleanResponsaveisIds,
     };
 
     try {
@@ -311,12 +353,27 @@ export default function AtividadesClient() {
 
   const responsaveisOptions = useMemo(
     () =>
-      funcionarios.map((f) => ({
-        value: String(f.funcionario_id),
-        label: f.nome,
-      })),
+      funcionarios
+        .filter((f) => !isAdministratorAccount(f))
+        .map((f) => ({
+          value: String(f.funcionario_id),
+          label: f.nome,
+        })),
     [funcionarios]
   );
+
+  if (!canView) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.alertError} role="alert">
+          <div>
+            <h1>Acesso negado</h1>
+            <p>Você não possui permissão para visualizar as atividades.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -661,8 +718,13 @@ export default function AtividadesClient() {
                   <div>
                     <span className={styles.detailLabel}>Responsável</span>
                     <p className={styles.detailValue}>
-                      {viewing.responsaveis.length
-                        ? viewing.responsaveis.map((r) => r.nome).join(', ')
+                      {viewing.responsaveis.filter(
+                        (r) => !isAdministratorAccount(r)
+                      ).length
+                        ? viewing.responsaveis
+                            .filter((r) => !isAdministratorAccount(r))
+                            .map((r) => r.nome)
+                            .join(', ')
                         : 'Não atribuído'}
                     </p>
                   </div>
@@ -826,16 +888,20 @@ export default function AtividadesClient() {
             <div className={styles.field}>
               <span>Responsáveis</span>
               <div className={styles.checkList}>
-                {funcionarios.map((f) => (
-                  <label key={f.funcionario_id} className={styles.checkItem}>
-                    <input
-                      type="checkbox"
-                      checked={form.responsaveis_ids.includes(f.funcionario_id)}
-                      onChange={() => toggleResponsavel(f.funcionario_id)}
-                    />
-                    <span>{f.nome}</span>
-                  </label>
-                ))}
+                {funcionarios
+                  .filter((f) => !isAdministratorAccount(f))
+                  .map((f) => (
+                    <label key={f.funcionario_id} className={styles.checkItem}>
+                      <input
+                        type="checkbox"
+                        checked={form.responsaveis_ids.includes(
+                          f.funcionario_id
+                        )}
+                        onChange={() => toggleResponsavel(f.funcionario_id)}
+                      />
+                      <span>{f.nome}</span>
+                    </label>
+                  ))}
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { Shield, Plus, Trash2 } from 'lucide-react';
+import { isAdministratorRole } from '@/utils/funcionario';
 import styles from './RolesTable.module.css';
 
 const roleStyles = {
@@ -40,10 +41,13 @@ const getPermissionCount = (permission = {}) =>
 
 export default function RolesTable({
   roles = [],
+  canManage = true,
   onCreateRole,
   onEditPermissions,
   onDeleteRole,
 }) {
+  const visibleRoles = roles.filter((role) => !isAdministratorRole(role));
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -52,18 +56,20 @@ export default function RolesTable({
           Referência de Cargos de Acesso (RBAC)
         </h2>
 
-        <button
-          className={styles.addRoleBtn}
-          onClick={onCreateRole}
-          type="button"
-        >
-          <Plus size={18} />
-          Novo Cargo
-        </button>
+        {canManage && (
+          <button
+            className={styles.addRoleBtn}
+            onClick={onCreateRole}
+            type="button"
+          >
+            <Plus size={18} />
+            Novo Cargo
+          </button>
+        )}
       </div>
 
       <div className={styles.cardsGrid}>
-        {roles.map((role) => {
+        {visibleRoles.map((role) => {
           const roleStyle = getRoleStyles(role);
 
           return (
@@ -88,17 +94,21 @@ export default function RolesTable({
                   onClick={() => onEditPermissions?.(role)}
                   type="button"
                 >
-                  Editar permissões →
+                  {canManage
+                    ? 'Editar permissões →'
+                    : 'Visualizar permissões →'}
                 </button>
-                <button
-                  className={styles.deleteLink}
-                  onClick={() => onDeleteRole?.(role)}
-                  type="button"
-                  aria-label={`Excluir cargo ${role.nome_cargo}`}
-                >
-                  <Trash2 size={14} />
-                  Excluir
-                </button>
+                {canManage && (
+                  <button
+                    className={styles.deleteLink}
+                    onClick={() => onDeleteRole?.(role)}
+                    type="button"
+                    aria-label={`Excluir cargo ${role.nome_cargo}`}
+                  >
+                    <Trash2 size={14} />
+                    Excluir
+                  </button>
+                )}
               </div>
             </div>
           );

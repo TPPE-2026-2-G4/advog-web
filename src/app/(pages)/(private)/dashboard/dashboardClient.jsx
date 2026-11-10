@@ -10,6 +10,7 @@ import ProcessDetailsModal from '@/components/features/processos/ProcessDetailsM
 import ProcessSummary from '@/components/features/processos/ProcessSummary/ProcessSummary';
 import UpcomingDeadlines from '@/components/features/processos/UpcomingDeadlines/UpcomingDeadlines';
 import { useKanbanAtividades } from '@/hooks/useKanbanAtividades';
+import { getSavedDashboardPrefs } from '@/hooks/useAjustes';
 import { usePrazosProximos } from '@/hooks/usePrazosProximos';
 import { useProcessosCriticos } from '@/hooks/useProcessosCriticos';
 import { useResumoAtividades } from '@/hooks/useResumoAtividades';
@@ -18,6 +19,7 @@ import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { getRecentActivities } from '@/utils/atividade';
 import { getCurrentUser } from '@/utils/authSession';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import { enrichProcess } from '@/utils/processo';
 import styles from './dashboard.module.css';
 
@@ -30,22 +32,54 @@ export default function DashboardClient() {
     () => '{}'
   );
   const permissions = JSON.parse(permissionsJson);
-  const canView = permissions.visualizar_processos === true;
-  const canEdit = permissions.editar_processos === true;
+  const currentUser = getCurrentUser();
+  const isUserAdmin = isAdministratorAccount(currentUser);
+  const canView =
+    isUserAdmin ||
+    permissions.visualizar_processos === true ||
+    permissions.gerenciar_processos === true;
+  const canEdit = isUserAdmin || permissions.gerenciar_processos === true;
+
+  const dashboardPrefsJson = useSyncExternalStore(
+    emptySubscribe,
+    () => {
+      const prefs = getSavedDashboardPrefs();
+      const user = getCurrentUser();
+      const funcionarioId =
+        prefs.escopoProcessos === 'meus_processos'
+          ? (user?.funcionario_id ?? user?.id)
+          : undefined;
+      return JSON.stringify({ ...prefs, funcionarioId });
+    },
+    () =>
+      JSON.stringify({
+        escopoProcessos: 'escritorio',
+        diasPrazo: 15,
+        diasCritico: 15,
+      })
+  );
+  const {
+    diasPrazo,
+    diasCritico,
+    funcionarioId: filterFuncionarioId,
+  } = JSON.parse(dashboardPrefsJson);
 
   const {
     summary: processSummary,
     isLoading: isProcessSummaryLoading,
     error: processSummaryError,
     reload: reloadProcessSummary,
-  } = useResumoProcessos({ enabled: canView });
+  } = useResumoProcessos({
+    enabled: canView,
+    funcionarioId: filterFuncionarioId,
+  });
 
   const {
     processos: upcomingProcesses,
     isLoading: isUpcomingLoading,
     error: upcomingError,
     reload: reloadUpcoming,
-  } = usePrazosProximos({ enabled: canView });
+  } = usePrazosProximos({ enabled: canView, diasPrazo });
 
   const {
     summary: activitySummary,
@@ -83,7 +117,8 @@ export default function DashboardClient() {
     retryDetail,
   } = useProcessosCriticos({
     enabled: canView,
-    diasSemMovimentacao: 15,
+    diasSemMovimentacao: diasCritico,
+    funcionarioId: filterFuncionarioId,
   });
 
   useEffect(() => {
@@ -205,6 +240,7 @@ export default function DashboardClient() {
                 error={upcomingError}
                 onRetry={reloadUpcoming}
                 onView={openDetail}
+                windowDays={diasPrazo}
               />
               <RecentActivities
                 activities={recentActivities}
@@ -221,7 +257,7 @@ export default function DashboardClient() {
               error={error}
               onRetry={reload}
               onAnalyze={openDetail}
-              thresholdDays={15}
+              thresholdDays={diasCritico}
             />
           </>
         ) : (

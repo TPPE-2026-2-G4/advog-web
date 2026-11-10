@@ -12,6 +12,8 @@ import {
   listarProcessos,
   listarProcessosCriticos,
   obterResumoProcessos,
+  obterStatusDatajud,
+  obterStatusInfraestrutura,
   obterUrlDocumento,
   uploadDocumento,
 } from './processos';
@@ -395,6 +397,34 @@ describe('serviço de processos', () => {
         'http://localhost:8000/processos/resumo?dias_proximo_prazo=10&funcionario_id=2',
         { cache: 'no-store', headers: authorization }
       );
+    });
+
+    it('consulta o status da integração DataJud e da infraestrutura', async () => {
+      const status = {
+        online: true,
+        status: 'online',
+        mensagem: 'Integração conectada · Sincronização automática ativa',
+      };
+      fetch.mockResolvedValueOnce(jsonResponse(status));
+
+      await expect(obterStatusDatajud()).resolves.toEqual(status);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/processos/datajud/status',
+        { cache: 'no-store', headers: authorization }
+      );
+
+      const infra = {
+        status: 'ready',
+        database: 'ok',
+        storage: 'ok',
+      };
+      fetch.mockResolvedValueOnce(jsonResponse(infra));
+
+      await expect(obterStatusInfraestrutura()).resolves.toEqual(infra);
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8000/health/ready', {
+        cache: 'no-store',
+        headers: authorization,
+      });
     });
   });
 });

@@ -106,4 +106,35 @@ describe('Sidebar', () => {
     const activeLink = screen.getByRole('link', { name: 'Início' });
     expect(activeLink).toHaveStyle({ color: '#E2B857' });
   });
+
+  it('oculta links de páginas quando o usuário não possui permissão de visualização', () => {
+    usePathname.mockReturnValue('/dashboard');
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 15,
+        nome: 'Advogado Júnior',
+        email: 'junior@carreiro.adv.br',
+        cargo: {
+          nome_cargo: 'Advogado Júnior',
+          permissao: {
+            visualizar_processos: true,
+          },
+        },
+      })
+    );
+
+    render(<Sidebar />);
+
+    expect(screen.getByRole('link', { name: 'Início' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Casos/Processos' })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Atividades' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Finanças' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Calendário' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Equipe' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Site' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Ajustes' })).toBeInTheDocument();
+  });
 });

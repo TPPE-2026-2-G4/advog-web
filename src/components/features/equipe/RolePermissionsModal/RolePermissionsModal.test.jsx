@@ -111,11 +111,17 @@ describe('RolePermissionsModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('não renderiza o modal quando o cargo é o de administrador', () => {
+    const adminRole = { cargo_id: 1, nome_cargo: 'Administrador' };
+    renderModal({ role: adminRole });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('atualiza o preenchimento quando o cargo aberto muda', () => {
     const { rerender } = renderModal();
-    const adminRole = {
-      cargo_id: 1,
-      nome_cargo: 'Administrador',
+    const supervisorRole = {
+      cargo_id: 5,
+      nome_cargo: 'Supervisor',
       permissao: Object.fromEntries(
         permissionEntries.map(([permissionName]) => [permissionName, true])
       ),
@@ -126,7 +132,7 @@ describe('RolePermissionsModal', () => {
     );
     rerender(
       <RolePermissionsModal
-        role={adminRole}
+        role={supervisorRole}
         isOpen
         onClose={vi.fn()}
         onSave={vi.fn()}
@@ -218,5 +224,55 @@ describe('RolePermissionsModal', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Não foi possível salvar as permissões.'
     );
+  });
+
+  it('autoativa o checkbox de visualizar correspondente quando o usuário clica em gerenciar', () => {
+    renderModal({
+      role: {
+        cargo_id: 10,
+        nome_cargo: 'Editor',
+        permissao: createEmptyPermission(),
+      },
+    });
+
+    const checkVisualizar = screen.getByRole('checkbox', {
+      name: 'Visualizar processos',
+    });
+    const checkGerenciar = screen.getByRole('checkbox', {
+      name: 'Gerenciar processos',
+    });
+
+    expect(checkVisualizar).not.toBeChecked();
+    expect(checkGerenciar).not.toBeChecked();
+
+    fireEvent.click(checkGerenciar);
+
+    expect(checkGerenciar).toBeChecked();
+    expect(checkVisualizar).toBeChecked();
+  });
+
+  it('renderiza em modo somente leitura quando readOnly é true', () => {
+    const onClose = vi.fn();
+    renderModal({
+      readOnly: true,
+      onClose,
+    });
+
+    expect(
+      screen.queryByRole('button', { name: 'Salvar' })
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Fechar' })).toHaveLength(2);
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    checkboxes.forEach((checkbox) => {
+      expect(checkbox).toBeDisabled();
+    });
+
+    fireEvent.click(checkboxes[0]);
+    expect(checkboxes[0]).toBeChecked();
+
+    const closeButtons = screen.getAllByRole('button', { name: 'Fechar' });
+    fireEvent.click(closeButtons[1]);
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

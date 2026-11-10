@@ -55,8 +55,12 @@ describe('RolesTable', () => {
     expect(container.querySelectorAll(`.${styles.card}`)).toHaveLength(0);
   });
 
+  it('não renderiza o cargo de Administrador na listagem de cargos', () => {
+    render(<RolesTable roles={roles} />);
+    expect(screen.queryByText('Administrador')).not.toBeInTheDocument();
+  });
+
   it.each([
-    ['Administrador', '9 permissões', 'cardAdmin', 'badgeBlue'],
     ['Advogado', '6 permissões', 'cardAdvogado', 'badgeGreen'],
     ['Estagiário', '3 permissões', 'cardEstagiario', 'badgeYellow'],
   ])(
@@ -93,7 +97,7 @@ describe('RolesTable', () => {
     render(<RolesTable roles={roles} onEditPermissions={onEditPermissions} />);
 
     fireEvent.click(
-      screen.getAllByRole('button', { name: 'Editar permissões →' })[1]
+      screen.getAllByRole('button', { name: 'Editar permissões →' })[0]
     );
 
     expect(onEditPermissions).toHaveBeenCalledWith(roles[1]);
@@ -123,5 +127,39 @@ describe('RolesTable', () => {
     expect(screen.getByText('Paralegal')).toHaveClass(styles.badgeDefault);
     expect(screen.getByText('1 permissões')).toBeInTheDocument();
     expect(container.querySelector(`.${styles.cardDefault}`)).not.toBeNull();
+  });
+
+  it('oculta criação e exclusão, mas exibe visualização de permissões quando canManage é falso', () => {
+    const customRole = {
+      cargo_id: 4,
+      nome_cargo: 'Paralegal',
+      descricao: 'Cargo personalizado.',
+      permissao: withAllowedPermissions('visualizar_processos'),
+    };
+    const onEditPermissions = vi.fn();
+    render(
+      <RolesTable
+        roles={[customRole]}
+        canManage={false}
+        onEditPermissions={onEditPermissions}
+      />
+    );
+
+    expect(
+      screen.queryByRole('button', { name: 'Novo Cargo' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Editar permissões →' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Excluir cargo Paralegal' })
+    ).not.toBeInTheDocument();
+
+    const viewButton = screen.getByRole('button', {
+      name: 'Visualizar permissões →',
+    });
+    expect(viewButton).toBeInTheDocument();
+    fireEvent.click(viewButton);
+    expect(onEditPermissions).toHaveBeenCalledWith(customRole);
   });
 });

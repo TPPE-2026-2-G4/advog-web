@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { getSavedInitialPage } from '@/hooks/useAjustes';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
@@ -24,7 +25,7 @@ export function useLogin() {
 
     try {
       await login(email, senha);
-      router.push('/dashboard');
+      router.push(getSavedInitialPage());
     } catch (error) {
       setErro(
         error instanceof Error ? error.message : 'Não foi possível entrar.'

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
+import { isAdministratorRole } from '@/utils/funcionario';
 import styles from './AddUserModal.module.css';
 
 const emptyFormData = { nome: '', email: '', cargo_id: '' };
@@ -13,6 +14,7 @@ export default function AddUserModal({
   onClose,
   onCreated,
 }) {
+  const availableRoles = roles.filter((role) => !isAdministratorRole(role));
   const [formData, setFormData] = useState(emptyFormData);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,20 +106,20 @@ export default function AddUserModal({
             value={formData.cargo_id}
             onChange={handleChange}
             required
-            disabled={isSubmitting || roles.length === 0}
+            disabled={isSubmitting || availableRoles.length === 0}
           >
             <option value="" disabled>
-              {roles.length === 0
+              {availableRoles.length === 0
                 ? 'Nenhum cargo disponível'
                 : 'Selecione um cargo'}
             </option>
-            {roles.map((role) => (
+            {availableRoles.map((role) => (
               <option key={role.cargo_id} value={role.cargo_id}>
                 {role.nome_cargo}
               </option>
             ))}
           </select>
-          {roles.length === 0 && (
+          {availableRoles.length === 0 && (
             <p className={styles.helperText}>
               Crie um cargo antes de adicionar um usuário.
             </p>
@@ -134,7 +136,7 @@ export default function AddUserModal({
         <button
           type="submit"
           className={styles.addBtn}
-          disabled={isSubmitting || roles.length === 0}
+          disabled={isSubmitting || availableRoles.length === 0}
         >
           {isSubmitting ? <LoadingDots /> : 'Adicionar'}
         </button>

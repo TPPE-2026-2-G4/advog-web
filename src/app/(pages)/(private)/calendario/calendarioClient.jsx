@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useSyncExternalStore } from 'react';
 import {
   AlertCircle,
   ArrowDownRight,
@@ -14,7 +14,11 @@ import {
 } from 'lucide-react';
 import { formatCurrency, toLancamento } from '@/utils/financas';
 import { exportarCalendarioIcs, obterCalendario } from '@/services/financas';
+import { getCurrentUser } from '@/utils/authSession';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import styles from './calendario.module.css';
+
+const emptySubscribe = () => () => {};
 
 const MESES = [
   'Janeiro',
@@ -114,6 +118,20 @@ export default function CalendarioClient({
   onSelectDay,
   onMonthChange,
 }) {
+  const userJson = useSyncExternalStore(
+    emptySubscribe,
+    () => JSON.stringify(getCurrentUser() ?? null),
+    () => 'null'
+  );
+  const currentUser = JSON.parse(userJson);
+  const isUserAdmin = isAdministratorAccount(currentUser);
+  const perms = currentUser?.cargo?.permissao ?? {};
+  const canView =
+    !currentUser ||
+    isUserAdmin ||
+    perms.visualizar_financeiro === true ||
+    perms.gerenciar_financeiro === true;
+
   const [currentDate, setCurrentDate] = useState(() =>
     resolveInitialDate(initialData, initialDate)
   );
@@ -259,6 +277,21 @@ export default function CalendarioClient({
   const hoje = new Date();
   const isMesAtual =
     hoje.getFullYear() === currentYear && hoje.getMonth() === currentMonth;
+
+  if (!canView) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorMessage} role="alert">
+          <div>
+            <h1>Acesso negado</h1>
+            <p>
+              Você não possui permissão para visualizar os dados financeiros.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>

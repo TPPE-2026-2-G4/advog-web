@@ -1,14 +1,15 @@
 'use client';
 
 import { Users, Check } from 'lucide-react';
-import { getLawyerInitials } from '@/utils/funcionario';
+import { getLawyerInitials, isAdministratorAccount } from '@/utils/funcionario';
 import styles from './site.module.css';
 
 export default function TeamTab({ team = [], onToggleLawyer }) {
-  const visibleCount = team.filter(
+  const cleanTeam = team.filter((member) => !isAdministratorAccount(member));
+  const visibleCount = cleanTeam.filter(
     (member) => member.exibicaoInstitucional
   ).length;
-  const totalCount = team.length;
+  const totalCount = cleanTeam.length;
 
   return (
     <div className={styles.card}>
@@ -22,7 +23,7 @@ export default function TeamTab({ team = [], onToggleLawyer }) {
       </p>
 
       <div className={styles.teamList}>
-        {team.map((member) => {
+        {cleanTeam.map((member) => {
           const initials = getLawyerInitials(member.nome);
           const cargo = !member.cargo
             ? ''

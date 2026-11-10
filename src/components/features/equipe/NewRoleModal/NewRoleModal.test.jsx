@@ -267,4 +267,23 @@ describe('NewRoleModal', () => {
 
     await waitFor(() => expect(onCreate).toHaveBeenCalledOnce());
   });
+
+  it('autoativa o checkbox de visualizar correspondente quando o usuário clica em gerenciar', () => {
+    renderModal();
+
+    const checkVisualizar = screen.getByRole('checkbox', {
+      name: 'Visualizar processos',
+    });
+    const checkGerenciar = screen.getByRole('checkbox', {
+      name: 'Gerenciar processos',
+    });
+
+    expect(checkVisualizar).not.toBeChecked();
+    expect(checkGerenciar).not.toBeChecked();
+
+    fireEvent.click(checkGerenciar);
+
+    expect(checkGerenciar).toBeChecked();
+    expect(checkVisualizar).toBeChecked();
+  });
 });

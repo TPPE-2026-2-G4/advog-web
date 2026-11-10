@@ -54,11 +54,28 @@ describe('EditUserModal', () => {
     expect(screen.queryByLabelText('Telefone')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Nível de Acesso')).toHaveValue('2');
 
-    roles.forEach((role) => {
-      expect(
-        screen.getByRole('option', { name: role.nome_cargo })
-      ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: 'Admin' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'Advogado' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'Estagiário' })
+    ).toBeInTheDocument();
+  });
+
+  it('não renderiza o modal quando o membro é uma conta administradora', () => {
+    renderModal({
+      member: {
+        funcionario_id: 1,
+        nome_func: 'Administrador',
+        cargo: 'Administrador',
+        cargo_id: 1,
+      },
     });
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('encontra o cargo pelo nome quando o membro não possui cargo_id', () => {

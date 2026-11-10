@@ -235,10 +235,11 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
       'href',
       '/equipe'
     );
-    expect(screen.getByRole('link', { name: 'Finanças' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Clientes/CRM' })).toHaveAttribute(
       'href',
-      '/financas'
+      '/clientes'
     );
+    expect(screen.queryByRole('link', { name: 'Finanças' })).toBeNull();
 
     // Verifica conteúdo protegido consumindo AuthContext + getPermissionLabel
     expect(screen.getByTestId('protected-content')).toHaveTextContent(
@@ -259,6 +260,11 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
     expect(
       screen.queryByText('camila@carreiro.adv.br')
     ).not.toBeInTheDocument();
+
+    // Reabre dropdown, navega para /ajustes ao clicar em Configurações
+    fireEvent.click(screen.getByText('Dra. C.'));
+    fireEvent.click(screen.getByRole('button', { name: /configurações/i }));
+    expect(mockPush).toHaveBeenCalledWith('/ajustes');
 
     // Reabre dropdown, abre modal de logout, cancela e depois confirma saída
     fireEvent.click(screen.getByText('Dra. C.'));

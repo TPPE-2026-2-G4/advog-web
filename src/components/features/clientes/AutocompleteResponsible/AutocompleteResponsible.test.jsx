@@ -220,4 +220,26 @@ describe('AutocompleteResponsible', () => {
     expect(screen.getByRole('listbox')).toBeInTheDocument();
     fireEvent.keyDown(input, { key: 'Enter' });
   });
+
+  it('não exibe e não permite selecionar a conta de administrador', () => {
+    const mixed = [
+      {
+        funcionario_id: 99,
+        nome: 'Administrador',
+        cargo: { nome_cargo: 'Administrador' },
+        email: 'advog@advog.com',
+      },
+      ...mockFuncionarios,
+    ];
+    const onChange = vi.fn();
+    render(
+      <AutocompleteResponsible funcionarios={mixed} onChange={onChange} />
+    );
+
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+
+    expect(screen.queryByText('Administrador')).not.toBeInTheDocument();
+    expect(screen.getByText('Alexandre Carreiro')).toBeInTheDocument();
+  });
 });

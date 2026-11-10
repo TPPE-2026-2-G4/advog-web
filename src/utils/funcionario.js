@@ -94,3 +94,65 @@ export function toTeamMember(funcionario) {
     }),
   };
 }
+
+export function normalizeRoleName(roleName = '') {
+  return String(roleName || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLocaleLowerCase('pt-BR');
+}
+
+export function isAdministratorRole(roleOrName) {
+  if (!roleOrName) return false;
+  const name =
+    typeof roleOrName === 'string'
+      ? roleOrName
+      : roleOrName.nome_cargo || roleOrName.nome || roleOrName.cargo || '';
+  const normalized = normalizeRoleName(name);
+  return normalized === 'administrador' || normalized === 'admin';
+}
+
+export function isAdministratorAccount(member, roles = []) {
+  if (!member) return false;
+
+  const roleValue =
+    member.cargo || member.cargo_nome || member.nome_cargo || '';
+  if (isAdministratorRole(roleValue)) return true;
+
+  if (
+    member.cargo_id !== undefined &&
+    member.cargo_id !== null &&
+    Array.isArray(roles) &&
+    roles.length > 0
+  ) {
+    const matchingRole = roles.find(
+      (r) => String(r.cargo_id) === String(member.cargo_id)
+    );
+    if (matchingRole && isAdministratorRole(matchingRole)) return true;
+  }
+
+  const name = normalizeRoleName(
+    member.nome_func ?? member.nome ?? member.nome_completo ?? ''
+  );
+  if (name === 'administrador' || name === 'admin') return true;
+
+  const email = String(member.email_func ?? member.email ?? '')
+    .trim()
+    .toLowerCase();
+  if (
+    email === 'advog@advog.com' ||
+    email === 'admin@admin.com' ||
+    email.startsWith('admin@') ||
+    email === 'administrador@advog.com'
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+export function filterNonAdministratorMembers(members = [], roles = []) {
+  if (!Array.isArray(members)) return [];
+  return members.filter((member) => !isAdministratorAccount(member, roles));
+}

@@ -14,6 +14,19 @@ import {
 } from '@/services/institucional';
 import { getContrastTextColor } from '@/utils/institucional';
 
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  const originalError = console.error;
+  console.error = (...args) => {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('Encountered a script tag')
+    ) {
+      return;
+    }
+    originalError.apply(console, args);
+  };
+}
+
 export const InstitucionalContext = createContext({
   institucional: DEFAULT_INSTITUCIONAL,
   atualizarInstitucional: () => {},

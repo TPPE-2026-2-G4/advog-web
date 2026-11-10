@@ -7,6 +7,7 @@ import {
   uploadImagemInstitucional,
 } from '@/services/institucional';
 import { validarDadosInstitucionais } from '@/utils/institucional';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import {
   listarFuncionarios,
   mudarExibicaoInstitucional,
@@ -41,8 +42,8 @@ export function useInstitucional(initialData, options = {}) {
   );
   const [team, setTeam] = useState(
     Array.isArray(options.initialTeam)
-      ? options.initialTeam
-      : DEFAULT_EQUIPE_SITE
+      ? options.initialTeam.filter((m) => !isAdministratorAccount(m))
+      : DEFAULT_EQUIPE_SITE.filter((m) => !isAdministratorAccount(m))
   );
   const [areas, setAreas] = useState(
     Array.isArray(options.initialAreas)
@@ -71,7 +72,7 @@ export function useInstitucional(initialData, options = {}) {
     ) {
       listarFuncionarios().then((lista) => {
         if (Array.isArray(lista) && lista.length > 0) {
-          setTeam(lista);
+          setTeam(lista.filter((m) => !isAdministratorAccount(m)));
         }
       });
     }
@@ -187,7 +188,8 @@ export function useInstitucional(initialData, options = {}) {
   const handleToggleLawyerVisibility = (funcionarioId) => {
     setTeam((prevTeam) =>
       prevTeam.map((member) =>
-        member.funcionario_id === funcionarioId
+        member.funcionario_id === funcionarioId &&
+        !isAdministratorAccount(member)
           ? { ...member, exibicaoInstitucional: !member.exibicaoInstitucional }
           : member
       )
@@ -265,12 +267,14 @@ export function useInstitucional(initialData, options = {}) {
 
       if (team && team.length > 0) {
         await Promise.allSettled(
-          team.map((member) =>
-            mudarExibicaoInstitucional(
-              member.funcionario_id,
-              Boolean(member.exibicaoInstitucional)
+          team
+            .filter((member) => !isAdministratorAccount(member))
+            .map((member) =>
+              mudarExibicaoInstitucional(
+                member.funcionario_id,
+                Boolean(member.exibicaoInstitucional)
+              )
             )
-          )
         );
       }
 

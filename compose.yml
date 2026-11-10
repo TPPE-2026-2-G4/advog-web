@@ -4,8 +4,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - '3000:3000'
+      args:
+        - NEXT_PUBLIC_API_URL
+        - NEXT_PUBLIC_MINIO_INTERNAL
+        - NEXT_PUBLIC_MINIO_EXTERNAL
+        - NEXT_PUBLIC_MINIO_ALIAS
+        - NEXT_PUBLIC_MINIO_ALIAS_EXTERNAL
+    network_mode: host
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
