@@ -281,14 +281,7 @@ export default function PerfilClient({ atuacoes = [] }) {
             disabled={isSubmitting}
           >
             <span className={styles.avatar} aria-label={`Iniciais ${initials}`}>
-              {profileImage ? (
-                <img
-                  src={profileImage}
-                  alt={`Foto de ${getName(currentUser)}`}
-                />
-              ) : (
-                initials
-              )}
+              {profileImage ? <img src={profileImage} /> : initials}
             </span>
           </button>
           <input

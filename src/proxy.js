@@ -10,7 +10,7 @@ export function proxy(request) {
   }
 
   if (token && isLoginPage) {
-    const dashboardUrl = new URL('/equipe', request.url);
+    const dashboardUrl = new URL('/dashboard', request.url);
     return NextResponse.redirect(dashboardUrl);
   }
 

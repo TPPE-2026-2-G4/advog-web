@@ -40,11 +40,11 @@ describe('proxy', () => {
       '/login',
     ],
     [
-      'redireciona para /equipe se houver token e a rota for /login',
+      'redireciona para /dashboard se houver token e a rota for /login',
       '/login',
       true,
       'redirect',
-      '/equipe',
+      '/dashboard',
     ],
     [
       'permite o acesso se houver token em rota privada (/equipe)',
