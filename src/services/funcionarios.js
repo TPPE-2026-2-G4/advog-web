@@ -229,6 +229,11 @@ export async function uploadFotoPerfilFuncionario(arquivo) {
   if (!response.ok) {
     throw new Error(
       await getErrorMessage(response, 'Não foi possível atualizar sua foto.')
+    );
+  }
+
+  return response.json();
+}
 
 export async function mudarReceberEmails(funcionarioId, receberEmails) {
   const token = getAccessToken();
