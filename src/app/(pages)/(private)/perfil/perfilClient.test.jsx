@@ -7,6 +7,16 @@ import {
   uploadFotoPerfilFuncionario,
 } from '@/services/funcionarios';
 
+const { routerReplaceMock } = vi.hoisted(() => ({
+  routerReplaceMock: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: routerReplaceMock,
+  }),
+}));
+
 vi.mock('@/services/funcionarios', () => ({
   atualizarPerfilFuncionario: vi.fn(),
   uploadFotoPerfilFuncionario: vi.fn(),
@@ -70,7 +80,7 @@ describe('PerfilClient', () => {
 
     expect(await screen.findByDisplayValue('Ana Souza')).toBeInTheDocument();
     expect(screen.getByLabelText('E-mail')).toHaveValue('ana@exemplo.com');
-    expect(screen.getByLabelText('E-mail')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('E-mail')).toBeDisabled();
     expect(screen.getByLabelText('Área de atuação')).toHaveValue('4');
     expect(screen.getByLabelText('Área de atuação')).not.toBeDisabled();
     expect(screen.getAllByText('Direito Civil')).toHaveLength(2);
@@ -178,7 +188,7 @@ describe('PerfilClient', () => {
     submitForm();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Informe a UF e os 5 dígitos da OAB.'
+      'Informe a UF e os 5 dígitos da sua OAB.'
     );
     expect(atualizarPerfilFuncionario).not.toHaveBeenCalled();
   });
@@ -301,7 +311,7 @@ describe('PerfilClient', () => {
     });
     await waitFor(() => expect(saveButton).toBeDisabled());
     expect(screen.queryByRole('status', { name: 'Carregando' })).toBeNull();
-    expect(screen.queryByText('Salvando')).not.toBeInTheDocument();
+    expect(saveButton).toHaveTextContent('Salvar alterações');
 
     finishRequest({ ...user });
     await screen.findByText('Suas informações foram atualizadas com sucesso!');
@@ -352,10 +362,9 @@ describe('PerfilClient', () => {
   it('informa quando não há dados de usuário na sessão', async () => {
     renderPerfil(null);
 
-    expect(
-      await screen.findByText(
-        'Não foi possível carregar os dados do seu perfil. Entre novamente.'
-      )
-    ).toHaveAttribute('role', 'alert');
+    await waitFor(() =>
+      expect(routerReplaceMock).toHaveBeenCalledWith('/login')
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
