@@ -127,4 +127,46 @@ describe('serviço de cargos', () => {
       await expect(excluirCargo(4)).rejects.toThrow(mensagemEsperada);
     }
   );
+
+  it('envia header de Authorization quando token é fornecido via opções ou getAccessToken', async () => {
+    fetch.mockResolvedValue(respostaJson([]));
+    await listarCargos({ token: 'token-abc' });
+    expect(fetch).toHaveBeenCalledWith('http://localhost:8000/cargos', {
+      cache: 'no-store',
+      headers: { Authorization: 'Bearer token-abc' },
+    });
+
+    fetch.mockResolvedValue(respostaJson({ cargo_id: 10 }));
+    await criarCargo({ nome_cargo: 'Novo' }, { token: 'token-abc' });
+    expect(fetch).toHaveBeenCalledWith('http://localhost:8000/cargos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token-abc',
+      },
+      body: JSON.stringify({ nome_cargo: 'Novo' }),
+    });
+
+    fetch.mockResolvedValue(respostaJson({ cargo_id: 10 }));
+    await atualizarCargo(
+      10,
+      { nome_cargo: 'Atualizado' },
+      { token: 'token-abc' }
+    );
+    expect(fetch).toHaveBeenCalledWith('http://localhost:8000/cargos/10', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token-abc',
+      },
+      body: JSON.stringify({ nome_cargo: 'Atualizado' }),
+    });
+
+    fetch.mockResolvedValue(respostaJson({ cargo_id: 10 }));
+    await excluirCargo(10, { token: 'token-abc' });
+    expect(fetch).toHaveBeenCalledWith('http://localhost:8000/cargos/10', {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer token-abc' },
+    });
+  });
 });

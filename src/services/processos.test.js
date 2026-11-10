@@ -403,7 +403,7 @@ describe('serviço de processos', () => {
       const status = {
         online: true,
         status: 'online',
-        mensagem: 'API conectada · Sincronização automática ativa',
+        mensagem: 'Integração conectada · Sincronização automática ativa',
       };
       fetch.mockResolvedValueOnce(jsonResponse(status));
 

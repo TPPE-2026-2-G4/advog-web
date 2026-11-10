@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import PermissionChecklist from '@/components/features/equipe/PermissionChecklist/PermissionChecklist';
-import { createEmptyPermission } from '@/constants/permissions';
+import {
+  createEmptyPermission,
+  togglePermission,
+} from '@/constants/permissions';
+import { isAdministratorRole } from '@/utils/funcionario';
 import styles from './RolePermissionsModal.module.css';
 
 export default function RolePermissionsModal({
@@ -12,8 +16,9 @@ export default function RolePermissionsModal({
   isOpen,
   onClose,
   onSave,
+  readOnly = false,
 }) {
-  if (!isOpen || !role) return null;
+  if (!isOpen || !role || isAdministratorRole(role)) return null;
 
   return (
     <RolePermissionsForm
@@ -21,11 +26,12 @@ export default function RolePermissionsModal({
       role={role}
       onClose={onClose}
       onSave={onSave}
+      readOnly={readOnly}
     />
   );
 }
 
-function RolePermissionsForm({ role, onClose, onSave }) {
+function RolePermissionsForm({ role, onClose, onSave, readOnly = false }) {
   const [permission, setPermission] = useState(() => ({
     ...(role.permissao ?? createEmptyPermission()),
   }));
@@ -59,14 +65,16 @@ function RolePermissionsForm({ role, onClose, onSave }) {
   };
 
   const handleToggle = (permissionName) => {
-    setPermission((current) => ({
-      ...current,
-      [permissionName]: !current[permissionName],
-    }));
+    if (readOnly) return;
+    setPermission((current) => togglePermission(current, permissionName));
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (readOnly) {
+      onClose();
+      return;
+    }
     setError('');
     setIsSubmitting(true);
 
@@ -118,20 +126,30 @@ function RolePermissionsForm({ role, onClose, onSave }) {
 
         <div className={styles.body}>
           <p className={styles.description} id={descriptionId}>
-            Marque as permissões que o perfil <strong>{role.nome_cargo}</strong>{' '}
-            deve ter.
+            {readOnly ? (
+              <>
+                Visualização das permissões associadas ao perfil{' '}
+                <strong>{role.nome_cargo}</strong>.
+              </>
+            ) : (
+              <>
+                Marque as permissões que o perfil{' '}
+                <strong>{role.nome_cargo}</strong> deve ter.
+              </>
+            )}
           </p>
 
           <PermissionChecklist
             legend={`Permissões do perfil ${role.nome_cargo}`}
             permission={permission}
             onToggle={handleToggle}
-            disabled={isSubmitting}
+            disabled={readOnly || isSubmitting}
           />
 
           <p className={styles.counter} aria-live="polite">
             {Object.values(permission).filter(Boolean).length} de{' '}
-            {Object.keys(permission).length} permissões selecionadas
+            {Object.keys(permission).length} permissões{' '}
+            {readOnly ? 'ativas' : 'selecionadas'}
           </p>
 
           {error && (
@@ -143,23 +161,27 @@ function RolePermissionsForm({ role, onClose, onSave }) {
 
         <div className={styles.footer}>
           <p className={styles.impactMessage}>
-            Alterações se aplicam a todos os usuários com este cargo.
+            {readOnly
+              ? 'Modo de visualização.'
+              : 'Alterações se aplicam a todos os usuários com este cargo.'}
           </p>
           <button
             type="button"
             onClick={onClose}
-            className={styles.cancelButton}
+            className={readOnly ? styles.saveButton : styles.cancelButton}
             disabled={isSubmitting}
           >
-            Cancelar
+            {readOnly ? 'Fechar' : 'Cancelar'}
           </button>
-          <button
-            type="submit"
-            className={styles.saveButton}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? <LoadingDots /> : 'Salvar'}
-          </button>
+          {!readOnly && (
+            <button
+              type="submit"
+              className={styles.saveButton}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? <LoadingDots /> : 'Salvar'}
+            </button>
+          )}
         </div>
       </form>
     </div>

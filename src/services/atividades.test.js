@@ -47,6 +47,18 @@ describe('serviço de atividades', () => {
     );
   });
 
+  it('filtra registros da conta administradora na produtividade retornada', async () => {
+    const raw = [
+      { funcionario_id: 1, nome: 'Administrador', finalizadas: 0 },
+      { funcionario_id: 2, nome: 'Ana Paula', finalizadas: 3 },
+    ];
+    fetch.mockResolvedValue(respostaJson(raw));
+
+    await expect(listarProdutividadeEquipe()).resolves.toEqual([
+      { funcionario_id: 2, nome: 'Ana Paula', finalizadas: 3 },
+    ]);
+  });
+
   it('lança erro e não consulta a API quando não há token', async () => {
     getAccessToken.mockReturnValue(null);
 

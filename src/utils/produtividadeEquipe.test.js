@@ -3,6 +3,7 @@ import {
   EMPTY_TEAM_SUMMARY,
   formatarSumarioEquipe,
   obterProgressoEquipe,
+  filtrarProdutividadeSemAdmin,
 } from './produtividadeEquipe';
 
 describe('utilitários de produtividade da equipe', () => {
@@ -111,6 +112,24 @@ describe('utilitários de produtividade da equipe', () => {
     it('mantém valores exatamente nos limites permitidos', () => {
       expect(obterProgressoEquipe({ progresso: 0 })).toBe(0);
       expect(obterProgressoEquipe({ progresso: 100 })).toBe(100);
+    });
+  });
+
+  describe('filtrarProdutividadeSemAdmin', () => {
+    it('filtra registros pertencentes ao administrador', () => {
+      const list = [
+        { funcionario_id: 1, nome: 'Administrador', finalizadas: 0 },
+        { funcionario_id: 2, nome: 'Ana Paula', finalizadas: 5 },
+        { funcionario_id: 3, nome: 'Admin', finalizadas: 2 },
+      ];
+      const result = filtrarProdutividadeSemAdmin(list);
+      expect(result).toHaveLength(1);
+      expect(result[0].nome).toBe('Ana Paula');
+    });
+
+    it('retorna array vazio para entradas não-array', () => {
+      expect(filtrarProdutividadeSemAdmin(null)).toEqual([]);
+      expect(filtrarProdutividadeSemAdmin(undefined)).toEqual([]);
     });
   });
 });

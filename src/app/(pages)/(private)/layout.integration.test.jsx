@@ -154,10 +154,11 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
       'href',
       '/equipe'
     );
-    expect(screen.getByRole('link', { name: 'Finanças' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Clientes/CRM' })).toHaveAttribute(
       'href',
-      '/financas'
+      '/clientes'
     );
+    expect(screen.queryByRole('link', { name: 'Finanças' })).toBeNull();
 
     // Verifica conteúdo protegido consumindo AuthContext + getPermissionLabel
     expect(screen.getByTestId('protected-content')).toHaveTextContent(

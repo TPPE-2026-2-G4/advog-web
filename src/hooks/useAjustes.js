@@ -32,9 +32,17 @@ export const VALID_INITIAL_PAGES = [
 export const VALID_PROCESS_SCOPES = ['escritorio', 'meus_processos'];
 export const VALID_DEADLINE_DAYS = [7, 15, 30, 60];
 
-const DEFAULT_ONLINE_MESSAGE = 'API conectada · Sincronização automática ativa';
+const DEFAULT_ONLINE_MESSAGE =
+  'Integração conectada · Sincronização automática ativa';
 const DEFAULT_OFFLINE_MESSAGE =
-  'API indisponível · Sincronização automática pausada';
+  'Integração indisponível · Sincronização automática pausada';
+
+function formatDatajudMensagem(mensagem, online) {
+  if (!mensagem) {
+    return online ? DEFAULT_ONLINE_MESSAGE : DEFAULT_OFFLINE_MESSAGE;
+  }
+  return mensagem.replace(/\bAPI\b/gi, 'Integração');
+}
 
 const DEFAULT_INFRA_ONLINE_MESSAGE =
   'Serviço de anexos e banco de dados operacionais';
@@ -197,7 +205,7 @@ export function useAjustes(initialTeam = []) {
     isLoading: true,
     online: false,
     status: 'verificando',
-    mensagem: 'Verificando conexão com a API do DataJud…',
+    mensagem: 'Verificando conexão com o DataJud…',
   });
 
   const [infraStatus, setInfraStatus] = useState({
@@ -212,7 +220,7 @@ export function useAjustes(initialTeam = []) {
       ...prev,
       isLoading: true,
       status: 'verificando',
-      mensagem: 'Verificando conexão com a API do DataJud…',
+      mensagem: 'Verificando conexão com o DataJud…',
     }));
 
     try {
@@ -222,9 +230,7 @@ export function useAjustes(initialTeam = []) {
         isLoading: false,
         online,
         status: res?.status || (online ? 'online' : 'offline'),
-        mensagem:
-          res?.mensagem ||
-          (online ? DEFAULT_ONLINE_MESSAGE : DEFAULT_OFFLINE_MESSAGE),
+        mensagem: formatDatajudMensagem(res?.mensagem, online),
       });
     } catch {
       setDatajudStatus({
@@ -278,9 +284,7 @@ export function useAjustes(initialTeam = []) {
           isLoading: false,
           online,
           status: res?.status || (online ? 'online' : 'offline'),
-          mensagem:
-            res?.mensagem ||
-            (online ? DEFAULT_ONLINE_MESSAGE : DEFAULT_OFFLINE_MESSAGE),
+          mensagem: formatDatajudMensagem(res?.mensagem, online),
         });
       })
       .catch(() => {

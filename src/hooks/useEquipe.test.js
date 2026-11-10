@@ -24,9 +24,13 @@ vi.mock('@/services/cargos', () => ({
   excluirCargo: vi.fn(),
 }));
 
-vi.mock('@/utils/funcionario', () => ({
-  toTeamMember: vi.fn(),
-}));
+vi.mock('@/utils/funcionario', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    toTeamMember: vi.fn(),
+  };
+});
 
 const createMember = (overrides = {}) => ({
   funcionario_id: 1,
@@ -72,6 +76,10 @@ const initialRoles = [
   },
 ];
 
+const visibleRoles = initialRoles.filter(
+  (role) => role.nome_cargo !== 'Administrador'
+);
+
 describe('useEquipe', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -106,7 +114,7 @@ describe('useEquipe', () => {
     expect(result.current.isUpdatingAccess).toBe(false);
     expect(result.current.deleteError).toBe('');
     expect(result.current.accessError).toBe('');
-    expect(result.current.roles).toEqual(initialRoles);
+    expect(result.current.roles).toEqual(visibleRoles);
     expect(result.current.editingMember).toBeNull();
     expect(result.current.permissionsRole).toBeNull();
     expect(result.current.isNewRoleModalOpen).toBe(false);
@@ -469,26 +477,47 @@ describe('useEquipe', () => {
     expect(mudarCargoFuncionario).not.toHaveBeenCalled();
   });
 
-  it('protege a troca de cargo apenas do único administrador', () => {
+  it('não permite exibir, editar, revogar ou excluir a conta administradora', async () => {
     const admin = createMember({
       cargo_id: 1,
       cargo: 'Administrador',
+      nome_func: 'Administrador',
     });
-    const secondAdmin = createMember({
+    const regularMember = createMember({
       funcionario_id: 2,
-      cargo_id: 1,
-      cargo: 'Administrador',
+      nome_func: 'Carlos Eduardo',
     });
-    const { result } = renderHook(() => useEquipe([admin], initialRoles));
-
-    act(() => result.current.handleOpenEditModal(admin));
-    expect(result.current.isEditingOnlyAdmin).toBe(true);
-
-    const { result: multipleAdminsResult } = renderHook(() =>
-      useEquipe([admin, secondAdmin], initialRoles)
+    const { result } = renderHook(() =>
+      useEquipe([admin, regularMember], initialRoles)
     );
-    act(() => multipleAdminsResult.current.handleOpenEditModal(admin));
-    expect(multipleAdminsResult.current.isEditingOnlyAdmin).toBe(false);
+
+    // Conta administradora não deve aparecer na lista de membros
+    expect(result.current.members).toEqual([regularMember]);
+    expect(result.current.totalUsers).toBe(1);
+
+    // Não deve ser possível editar a conta administradora
+    act(() => result.current.handleOpenEditModal(admin));
+    expect(result.current.editingMember).toBeNull();
+    await act(async () => {
+      await result.current.handleUpdateUser({ cargo: 2 });
+    });
+    expect(mudarCargoFuncionario).not.toHaveBeenCalled();
+
+    // Não deve ser possível revogar/alterar acesso da conta administradora
+    act(() => result.current.handleOpenAccessModal(admin));
+    expect(result.current.accessMember).toBeNull();
+    await act(async () => {
+      await result.current.handleChangeAccess();
+    });
+    expect(mudarAcessoFuncionario).not.toHaveBeenCalled();
+
+    // Não deve ser possível excluir a conta administradora
+    act(() => result.current.handleOpenDeleteModal(admin));
+    expect(result.current.selectedMember).toBeNull();
+    await act(async () => {
+      await result.current.handleDeleteUser();
+    });
+    expect(excluirFuncionario).not.toHaveBeenCalled();
   });
 
   it('abre, persiste e fecha as permissões de um cargo', async () => {
@@ -599,7 +628,7 @@ describe('useEquipe', () => {
     });
 
     expect(excluirCargo).not.toHaveBeenCalled();
-    expect(result.current.roles).toEqual(initialRoles);
+    expect(result.current.roles).toEqual(visibleRoles);
   });
 
   it('exclui o cargo selecionado pela API e fecha o modal', async () => {
@@ -613,7 +642,7 @@ describe('useEquipe', () => {
 
     expect(excluirCargo).toHaveBeenCalledOnce();
     expect(excluirCargo).toHaveBeenCalledWith(3);
-    expect(result.current.roles).toEqual(initialRoles.slice(0, 2));
+    expect(result.current.roles).toEqual([visibleRoles[0]]);
     expect(result.current.roleToDelete).toBeNull();
     expect(result.current.isDeletingRole).toBe(false);
   });
@@ -628,7 +657,7 @@ describe('useEquipe', () => {
       await result.current.handleDeleteRole();
     });
 
-    expect(result.current.roles).toEqual(initialRoles);
+    expect(result.current.roles).toEqual(visibleRoles);
     expect(result.current.roleToDelete).toEqual(initialRoles[1]);
     expect(result.current.deleteRoleError).toBe(message);
     expect(result.current.isDeletingRole).toBe(false);
@@ -638,18 +667,48 @@ describe('useEquipe', () => {
     excluirCargo.mockRejectedValueOnce(new Error('Falha ao excluir'));
     const { result } = renderHook(() => useEquipe([], initialRoles));
 
-    act(() => result.current.handleOpenDeleteRoleModal(initialRoles[0]));
+    act(() => result.current.handleOpenDeleteRoleModal(initialRoles[1]));
     await act(async () => {
       await result.current.handleDeleteRole();
     });
     expect(result.current.deleteRoleError).toBe('Falha ao excluir');
 
-    act(() => result.current.handleOpenDeleteRoleModal(initialRoles[1]));
-    expect(result.current.roleToDelete).toEqual(initialRoles[1]);
+    act(() => result.current.handleOpenDeleteRoleModal(initialRoles[2]));
+    expect(result.current.roleToDelete).toEqual(initialRoles[2]);
     expect(result.current.deleteRoleError).toBe('');
 
     act(() => result.current.handleCloseDeleteRoleModal());
     expect(result.current.roleToDelete).toBeNull();
+  });
+
+  it('não permite abrir modal ou excluir o cargo de administrador', async () => {
+    const adminRole = initialRoles[0];
+    const { result } = renderHook(() => useEquipe([], initialRoles));
+
+    act(() => result.current.handleOpenDeleteRoleModal(adminRole));
+    expect(result.current.roleToDelete).toBeNull();
+
+    await act(async () => {
+      await result.current.handleDeleteRole();
+    });
+    expect(excluirCargo).not.toHaveBeenCalled();
+  });
+
+  it('não permite abrir modal ou editar permissões do cargo de administrador', async () => {
+    const adminRole = initialRoles[0];
+    const { result } = renderHook(() => useEquipe([], initialRoles));
+
+    act(() => result.current.handleOpenPermissionsModal(adminRole));
+    expect(result.current.permissionsRole).toBeNull();
+
+    await expect(
+      result.current.handleUpdateRolePermissions({
+        cargo_id: adminRole.cargo_id,
+        permissao: {},
+      })
+    ).rejects.toThrow(
+      'Não é possível editar as permissões do cargo de administrador.'
+    );
   });
 
   it('não fecha o modal de cargo enquanto a exclusão está em andamento', async () => {
@@ -690,7 +749,7 @@ describe('useEquipe', () => {
       })
     ).rejects.toThrow(message);
     expect(criarCargo).not.toHaveBeenCalled();
-    expect(result.current.roles).toHaveLength(initialRoles.length);
+    expect(result.current.roles).toHaveLength(visibleRoles.length);
   });
 
   it('inicializa os cargos com os dados fornecidos pela página', () => {

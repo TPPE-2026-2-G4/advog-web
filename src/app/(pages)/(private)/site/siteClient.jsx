@@ -1,5 +1,6 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import {
   Eye,
   Save,
@@ -14,7 +15,11 @@ import TeamTab from '@/components/ui/site/teamTab';
 import AreasTab from '@/components/ui/site/areasTab';
 import ColorsTab from '@/components/ui/site/colorsTab';
 import PreviewModal from '@/components/ui/site/previewModal';
+import { getCurrentUser } from '@/utils/authSession';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import styles from '@/components/ui/site/site.module.css';
+
+const emptySubscribe = () => () => {};
 
 export default function SiteClient({
   initialData,
@@ -22,6 +27,19 @@ export default function SiteClient({
   initialAreas,
   isAdmin = true,
 }) {
+  const userJson = useSyncExternalStore(
+    emptySubscribe,
+    () => JSON.stringify(getCurrentUser() ?? null),
+    () => 'null'
+  );
+  const currentUser = JSON.parse(userJson);
+  const isUserAdmin = isAdministratorAccount(currentUser);
+  const perms = currentUser?.cargo?.permissao ?? {};
+  const hasAccess =
+    isUserAdmin ||
+    perms.gerenciar_site === true ||
+    (currentUser === null && isAdmin);
+
   const {
     formData,
     activeTab,
@@ -47,9 +65,13 @@ export default function SiteClient({
     handleUpdateArea,
     handleDeleteArea,
     handleSave,
-  } = useInstitucional(initialData, { isAdmin, initialTeam, initialAreas });
+  } = useInstitucional(initialData, {
+    isAdmin: hasAccess,
+    initialTeam,
+    initialAreas,
+  });
 
-  if (!isAdmin) {
+  if (!hasAccess) {
     return (
       <div className={styles.container}>
         <div

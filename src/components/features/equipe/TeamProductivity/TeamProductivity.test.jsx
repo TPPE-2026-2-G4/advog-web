@@ -173,4 +173,36 @@ describe('ProdutividadeEquipe', () => {
       screen.getByText('Não foi possível carregar a produtividade da equipe.')
     ).toBeInTheDocument();
   });
+
+  it('não renderiza linha correspondente à conta administradora', () => {
+    useProdutividadeEquipe.mockReturnValue({
+      productivity: [
+        {
+          funcionario_id: 1,
+          nome: 'Administrador',
+          finalizadas: 0,
+          em_andamento: 0,
+          a_fazer: 0,
+          atrasadas: 0,
+          progresso: 0,
+        },
+        {
+          funcionario_id: 2,
+          nome: 'Ana Costa',
+          finalizadas: 4,
+          em_andamento: 2,
+          a_fazer: 3,
+          atrasadas: 1,
+          progresso: 76,
+        },
+      ],
+      isLoading: false,
+      error: '',
+    });
+
+    render(<ProdutividadeEquipe canView />);
+
+    expect(screen.queryByText('Administrador')).not.toBeInTheDocument();
+    expect(screen.getByText('Ana Costa')).toBeInTheDocument();
+  });
 });

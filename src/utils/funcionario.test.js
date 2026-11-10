@@ -3,6 +3,10 @@ import {
   formatOab,
   getInitials,
   getLawyerInitials,
+  isAdministratorAccount,
+  isAdministratorRole,
+  filterNonAdministratorMembers,
+  normalizeRoleName,
   toTeamMember,
 } from './funcionario';
 
@@ -195,5 +199,105 @@ describe('formatOab', () => {
 
   it('preserva strings que já começam com OAB', () => {
     expect(formatOab({ oab: 'OAB/DF 12.345' })).toBe('OAB/DF 12.345');
+  });
+});
+
+describe('normalizeRoleName', () => {
+  it.each([
+    ['Administrador', 'administrador'],
+    ['  ADMIN  ', 'admin'],
+    ['Estagiário', 'estagiario'],
+    ['', ''],
+    [null, ''],
+    [undefined, ''],
+  ])('normaliza "%s" para "%s"', (input, expected) => {
+    expect(normalizeRoleName(input)).toBe(expected);
+  });
+});
+
+describe('isAdministratorRole', () => {
+  it.each([
+    ['Administrador', true],
+    ['ADMIN', true],
+    ['  administrador  ', true],
+    [{ nome_cargo: 'Administrador' }, true],
+    [{ cargo: 'Admin' }, true],
+    [{ nome: 'Administrador' }, true],
+    ['Advogado', false],
+    ['Estagiário', false],
+    [{ nome_cargo: 'Advogado' }, false],
+    [null, false],
+    [undefined, false],
+    ['', false],
+  ])('retorna %s para %j', (input, expected) => {
+    expect(isAdministratorRole(input)).toBe(expected);
+  });
+});
+
+describe('isAdministratorAccount', () => {
+  const roles = [
+    { cargo_id: 1, nome_cargo: 'Administrador' },
+    { cargo_id: 2, nome_cargo: 'Advogado' },
+  ];
+
+  it('identifica a conta administradora pelo cargo', () => {
+    expect(isAdministratorAccount({ cargo: 'Administrador' })).toBe(true);
+    expect(isAdministratorAccount({ cargo: 'Admin' })).toBe(true);
+  });
+
+  it('identifica a conta administradora pelo cargo_id', () => {
+    expect(isAdministratorAccount({ cargo_id: 1 }, roles)).toBe(true);
+    expect(isAdministratorAccount({ cargo_id: 2 }, roles)).toBe(false);
+  });
+
+  it('identifica a conta administradora pelo nome', () => {
+    expect(isAdministratorAccount({ nome_func: 'Administrador' })).toBe(true);
+    expect(isAdministratorAccount({ nome: 'Admin' })).toBe(true);
+  });
+
+  it('identifica a conta administradora pelo email', () => {
+    expect(isAdministratorAccount({ email_func: 'advog@advog.com' })).toBe(
+      true
+    );
+    expect(isAdministratorAccount({ email: 'admin@carreiro.adv.br' })).toBe(
+      true
+    );
+  });
+
+  it('retorna false para contas normais', () => {
+    expect(
+      isAdministratorAccount({
+        funcionario_id: 2,
+        nome_func: 'Maria Silva',
+        email_func: 'maria@teste.local',
+        cargo: 'Advogado',
+        cargo_id: 2,
+      })
+    ).toBe(false);
+  });
+
+  it('retorna false para valores nulos ou vazios', () => {
+    expect(isAdministratorAccount(null)).toBe(false);
+    expect(isAdministratorAccount(undefined)).toBe(false);
+  });
+});
+
+describe('filterNonAdministratorMembers', () => {
+  it('filtra contas administradoras e mantém membros normais', () => {
+    const members = [
+      { funcionario_id: 1, nome: 'Administrador', cargo: 'Administrador' },
+      { funcionario_id: 2, nome: 'Ana Paula', cargo: 'Advogada' },
+      { funcionario_id: 3, nome: 'Admin', email: 'admin@advog.com' },
+      { funcionario_id: 4, nome: 'Carlos Silva', cargo: 'Estagiário' },
+    ];
+    const filtered = filterNonAdministratorMembers(members);
+    expect(filtered).toHaveLength(2);
+    expect(filtered.map((m) => m.nome)).toEqual(['Ana Paula', 'Carlos Silva']);
+  });
+
+  it('retorna array vazio quando entrada é nula ou vazia', () => {
+    expect(filterNonAdministratorMembers(null)).toEqual([]);
+    expect(filterNonAdministratorMembers(undefined)).toEqual([]);
+    expect(filterNonAdministratorMembers([])).toEqual([]);
   });
 });

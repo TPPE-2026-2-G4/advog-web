@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { Plus } from 'lucide-react';
 import FinancialDashboard from '@/components/features/financas/FinancialDashboard/FinancialDashboard';
 import ExportMenu from '@/components/ui/ExportMenu/ExportMenu';
@@ -8,7 +8,11 @@ import LancamentosTable from '@/components/features/financas/LancamentosTable/La
 import LancamentoModal from '@/components/features/financas/LancamentoModal/LancamentoModal';
 import DeleteLancamentoModal from '@/components/features/financas/DeleteLancamentoModal/DeleteLancamentoModal';
 import { useFinancas } from '@/hooks/useFinancas';
+import { getCurrentUser } from '@/utils/authSession';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import styles from './financas.module.css';
+
+const emptySubscribe = () => () => {};
 
 export default function FinancasClient({
   initialData,
@@ -18,6 +22,22 @@ export default function FinancasClient({
   onSaveLancamento,
   onToggleStatus,
 }) {
+  const userJson = useSyncExternalStore(
+    emptySubscribe,
+    () => JSON.stringify(getCurrentUser() ?? null),
+    () => 'null'
+  );
+  const currentUser = JSON.parse(userJson);
+  const isUserAdmin = isAdministratorAccount(currentUser);
+  const perms = currentUser?.cargo?.permissao ?? {};
+  const canView =
+    !currentUser ||
+    isUserAdmin ||
+    perms.visualizar_financeiro === true ||
+    perms.gerenciar_financeiro === true;
+  const canManage =
+    !currentUser || isUserAdmin || perms.gerenciar_financeiro === true;
+
   const {
     lancamentos,
     categorias,
@@ -95,6 +115,19 @@ export default function FinancasClient({
     setLancamentoToDelete(null);
   };
 
+  if (!canView) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorMessage} role="alert">
+          <div>
+            <h1>Acesso negado</h1>
+            <p>Você não possui permissão para visualizar o financeiro.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.headerRow}>
@@ -111,14 +144,16 @@ export default function FinancasClient({
             onExport={exportReport}
           />
 
-          <button
-            type="button"
-            className={styles.addButton}
-            onClick={handleOpenNewEntry}
-          >
-            <Plus size={18} />
-            Novo Lançamento
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              className={styles.addButton}
+              onClick={handleOpenNewEntry}
+            >
+              <Plus size={18} />
+              Novo Lançamento
+            </button>
+          )}
         </div>
       </div>
 
@@ -138,6 +173,7 @@ export default function FinancasClient({
         lancamentos={lancamentos}
         categorias={categorias}
         pagination={pagination}
+        canManage={canManage}
         onEdit={handleEditLancamento}
         onDelete={handleTableDelete}
         onToggleStatus={handleTableToggleStatus}

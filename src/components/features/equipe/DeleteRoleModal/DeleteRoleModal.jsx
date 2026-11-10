@@ -3,6 +3,7 @@
 import { AlertTriangle, X } from 'lucide-react';
 import { useEffect, useId } from 'react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
+import { isAdministratorRole } from '@/utils/funcionario';
 import styles from './DeleteRoleModal.module.css';
 
 export default function DeleteRoleModal({
@@ -35,7 +36,7 @@ export default function DeleteRoleModal({
     };
   }, [isOpen, isDeleting, onClose]);
 
-  if (!isOpen || !role) return null;
+  if (!isOpen || !role || isAdministratorRole(role)) return null;
 
   const handleOverlayClick = (event) => {
     if (event.target === event.currentTarget && !isDeleting) {

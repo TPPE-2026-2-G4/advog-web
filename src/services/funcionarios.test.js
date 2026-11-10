@@ -47,6 +47,33 @@ describe('serviço de funcionários', () => {
       });
     });
 
+    it('filtra contas administradoras retornadas pela API', async () => {
+      const apiResponse = [
+        {
+          funcionario_id: 1,
+          nome: 'Administrador',
+          cargo: 'Administrador',
+          email: 'advog@advog.com',
+        },
+        {
+          funcionario_id: 2,
+          nome: 'João Santos',
+          cargo: 'Advogado',
+          email: 'joao@teste.com',
+        },
+      ];
+      fetch.mockResolvedValue(respostaJson(apiResponse));
+
+      await expect(listarFuncionarios()).resolves.toEqual([
+        {
+          funcionario_id: 2,
+          nome: 'João Santos',
+          cargo: 'Advogado',
+          email: 'joao@teste.com',
+        },
+      ]);
+    });
+
     it.each([
       ['resposta HTTP inválida', () => respostaComErro('Falha interna')],
       ['falha de rede', () => Promise.reject(new Error('NetworkError'))],

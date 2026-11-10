@@ -37,7 +37,7 @@ describe('AjustesClient', () => {
           isLoading: false,
           online: true,
           status: 'online',
-          mensagem: 'API conectada · Sincronização automática ativa',
+          mensagem: 'Integração conectada · Sincronização automática ativa',
         },
         infraStatus: {
           isLoading: false,
@@ -49,7 +49,7 @@ describe('AjustesClient', () => {
       'Ativo',
       'Bloquear notificações por e-mail',
       'Online',
-      'API conectada · Sincronização automática ativa',
+      'Integração conectada · Sincronização automática ativa',
       'Online',
     ],
     [
@@ -65,7 +65,8 @@ describe('AjustesClient', () => {
           isLoading: false,
           online: false,
           status: 'offline',
-          mensagem: 'API indisponível · Sincronização automática pausada',
+          mensagem:
+            'Integração indisponível · Sincronização automática pausada',
         },
         infraStatus: {
           isLoading: false,
@@ -78,7 +79,7 @@ describe('AjustesClient', () => {
       'Bloqueado',
       'Ativar notificações por e-mail',
       'Offline',
-      'API indisponível · Sincronização automática pausada',
+      'Integração indisponível · Sincronização automática pausada',
       'Offline',
     ],
     [
@@ -94,7 +95,7 @@ describe('AjustesClient', () => {
           isLoading: true,
           online: false,
           status: 'verificando',
-          mensagem: 'Verificando conexão com a API do DataJud…',
+          mensagem: 'Verificando conexão com o DataJud…',
         },
         infraStatus: {
           isLoading: true,
@@ -106,7 +107,7 @@ describe('AjustesClient', () => {
       'Ativo',
       'Bloquear notificações por e-mail',
       'Verificando...',
-      'Verificando conexão com a API do DataJud…',
+      'Verificando conexão com o DataJud…',
       'Verificando...',
     ],
   ])(
@@ -181,7 +182,7 @@ describe('AjustesClient', () => {
         isLoading: false,
         online: true,
         status: 'online',
-        mensagem: 'API conectada · Sincronização automática ativa',
+        mensagem: 'Integração conectada · Sincronização automática ativa',
       },
       infraStatus: {
         isLoading: false,
@@ -271,7 +272,7 @@ describe('AjustesClient', () => {
         isLoading: false,
         online: true,
         status: 'online',
-        mensagem: 'API conectada · Sincronização automática ativa',
+        mensagem: 'Integração conectada · Sincronização automática ativa',
       },
       handleOpenConfirmModal: mockOpenModal,
       handleCloseConfirmModal: mockCloseModal,
@@ -295,5 +296,89 @@ describe('AjustesClient', () => {
       screen.getByRole('button', { name: 'Desabilitar notificações' })
     );
     expect(mockToggle).toHaveBeenCalledOnce();
+  });
+
+  it('oculta DataJud, armazenamento, alerta de prazos e processos críticos quando usuário não possui configuracoes_sistema', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 2,
+        nome: 'Advogado Regular',
+        email: 'regular@carreiro.adv.br',
+        cargo: {
+          nome_cargo: 'Advogado',
+          permissao: {
+            visualizar_processos: true,
+            configuracoes_sistema: false,
+          },
+        },
+      })
+    );
+
+    useAjustes.mockReturnValue({
+      receberEmails: true,
+      userEmail: 'regular@carreiro.adv.br',
+      isConfirmModalOpen: false,
+      isUpdatingEmail: false,
+      emailError: '',
+      emailSuccess: '',
+      datajudStatus: {
+        isLoading: false,
+        online: true,
+        status: 'online',
+        mensagem: 'Integração ativa',
+      },
+      infraStatus: {
+        isLoading: false,
+        online: true,
+        status: 'online',
+        mensagem: 'Infra ok',
+      },
+      paginaInicial: '/dashboard',
+      escopoProcessos: 'escritorio',
+      diasPrazoProximo: 15,
+      diasProcessoCritico: '30',
+      handleOpenConfirmModal: mockOpenModal,
+      handleCloseConfirmModal: mockCloseModal,
+      handleToggleReceberEmails: mockToggle,
+      handleSaveSettings: mockSaveSettings,
+    });
+
+    render(<AjustesClient initialTeam={[]} />);
+
+    expect(screen.queryByText('Acesso Restrito')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Ajustes' })
+    ).toBeInTheDocument();
+
+    expect(screen.getByText('Notificações por e-mail')).toBeInTheDocument();
+    expect(
+      screen.getByText('Receba alertas de prazos e movimentações')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/\(regular@carreiro\.adv\.br\)/i)
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Selecionar página inicial padrão')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Selecionar filtro padrão de processos')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Salvar/i })).toBeInTheDocument();
+
+    expect(screen.queryByText('Integração DataJud')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Armazenamento e Banco de Dados')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Alerta de Prazos Próximos')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Selecionar antecedência de prazos próximos')
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Processos Críticos')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Dias sem movimentação para processo crítico')
+    ).not.toBeInTheDocument();
   });
 });

@@ -1,7 +1,11 @@
 import { buscarDadosInstitucionais } from '@/services/institucional';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { listarAtuacoes } from '@/services/atuacoes';
-import { getLawyerInitials, formatOab } from '@/utils/funcionario';
+import {
+  getLawyerInitials,
+  formatOab,
+  isAdministratorAccount,
+} from '@/utils/funcionario';
 import {
   getImageUrl,
   formatParagraphs,
@@ -45,9 +49,9 @@ export default async function Home() {
   const atuacoesVisiveis = (atuacoes || []).filter(
     (area) => area.exibicaoInstitucional
   );
-  const visibleTeam = (funcionarios || []).filter(
-    (f) => f.exibicaoInstitucional
-  );
+  const visibleTeam = (funcionarios || [])
+    .filter((f) => !isAdministratorAccount(f))
+    .filter((f) => f.exibicaoInstitucional);
 
   const areasSubtitle =
     institucional?.sobreAreas ||

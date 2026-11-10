@@ -40,7 +40,7 @@ describe('useAjustes', () => {
     obterStatusDatajud.mockResolvedValue({
       online: true,
       status: 'online',
-      mensagem: 'API conectada · Sincronização automática ativa',
+      mensagem: 'Integração conectada · Sincronização automática ativa',
     });
     obterStatusInfraestrutura.mockResolvedValue({
       status: 'ready',
@@ -111,37 +111,37 @@ describe('useAjustes', () => {
 
   it.each([
     [
-      'online com mensagem da API',
+      'online com mensagem da integração',
       () =>
         Promise.resolve({
           online: true,
           status: 'online',
-          mensagem: 'API conectada · Sincronização automática ativa',
+          mensagem: 'Integração conectada · Sincronização automática ativa',
         }),
       true,
       'online',
-      'API conectada · Sincronização automática ativa',
+      'Integração conectada · Sincronização automática ativa',
     ],
     [
       'online com mensagem padrão quando mensagem vem vazia',
       () => Promise.resolve({ online: true }),
       true,
       'online',
-      'API conectada · Sincronização automática ativa',
+      'Integração conectada · Sincronização automática ativa',
     ],
     [
       'offline com mensagem padrão quando online é false sem mensagem',
       () => Promise.resolve({ online: false }),
       false,
       'offline',
-      'API indisponível · Sincronização automática pausada',
+      'Integração indisponível · Sincronização automática pausada',
     ],
     [
       'offline quando a requisição ao DataJud falha',
       () => Promise.reject(new Error('Falha de rede')),
       false,
       'offline',
-      'API indisponível · Sincronização automática pausada',
+      'Integração indisponível · Sincronização automática pausada',
     ],
   ])(
     'atualiza status do DataJud para %s',

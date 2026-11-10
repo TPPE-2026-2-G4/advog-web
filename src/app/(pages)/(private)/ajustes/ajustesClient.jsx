@@ -1,5 +1,6 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import {
   AlertTriangle,
   CircleCheck,
@@ -16,9 +17,34 @@ import {
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import { useAjustes } from '@/hooks/useAjustes';
+import { getCurrentUser } from '@/utils/authSession';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import styles from './ajustes.module.css';
 
+const emptySubscribe = () => () => {};
+
 export default function AjustesClient({ initialTeam = [] }) {
+  const userJson = useSyncExternalStore(
+    emptySubscribe,
+    () => JSON.stringify(getCurrentUser() ?? null),
+    () => 'null'
+  );
+  const currentUser = JSON.parse(userJson);
+  const isUserAdmin = isAdministratorAccount(currentUser);
+  const cargoPerms = currentUser?.cargo?.permissao ?? {};
+  const arrayPerms = Array.isArray(currentUser?.permissoes)
+    ? Object.fromEntries(currentUser.permissoes.map((p) => [p, true]))
+    : {};
+  const perms = { ...arrayPerms, ...cargoPerms };
+  const hasExplicitRole = Boolean(
+    currentUser?.cargo || currentUser?.permissoes
+  );
+  const canManageSystem =
+    !currentUser ||
+    !hasExplicitRole ||
+    isUserAdmin ||
+    Boolean(perms.configuracoes_sistema);
+
   const {
     receberEmails,
     userEmail,
@@ -131,7 +157,6 @@ export default function AjustesClient({ initialTeam = [] }) {
               <h2 className={styles.settingTitle}>Notificações por e-mail</h2>
               <p className={styles.settingDescription}>
                 Receba alertas de prazos e movimentações
-                {userEmail ? ` (${userEmail})` : ''}
               </p>
             </div>
           </div>
@@ -174,83 +199,87 @@ export default function AjustesClient({ initialTeam = [] }) {
           </div>
         </div>
 
-        <div className={styles.settingItem}>
-          <div className={styles.settingLeft}>
-            <div className={styles.iconBox}>
-              <Wifi size={20} aria-hidden="true" />
+        {canManageSystem && (
+          <>
+            <div className={styles.settingItem}>
+              <div className={styles.settingLeft}>
+                <div className={styles.iconBox}>
+                  <Wifi size={20} aria-hidden="true" />
+                </div>
+                <div className={styles.settingInfo}>
+                  <h2 className={styles.settingTitle}>Integração DataJud</h2>
+                  <p className={styles.settingDescription}>
+                    {datajudStatus.mensagem}
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.settingRight}>
+                <span
+                  className={`${styles.badge} ${datajudBadgeClass}`}
+                  data-testid="datajud-status-badge"
+                >
+                  {datajudBadgeLabel}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={handleRefreshDatajud}
+                  disabled={datajudStatus.isLoading}
+                  aria-label="Testar conexão com o DataJud"
+                  title="Testar conexão com o DataJud"
+                  className={styles.refreshBtn}
+                >
+                  <RefreshCw
+                    size={16}
+                    aria-hidden="true"
+                    className={datajudStatus.isLoading ? styles.spinning : ''}
+                  />
+                </button>
+              </div>
             </div>
-            <div className={styles.settingInfo}>
-              <h2 className={styles.settingTitle}>Integração DataJud</h2>
-              <p className={styles.settingDescription}>
-                {datajudStatus.mensagem}
-              </p>
+
+            <div className={styles.settingItem}>
+              <div className={styles.settingLeft}>
+                <div className={styles.iconBox}>
+                  <HardDrive size={20} aria-hidden="true" />
+                </div>
+                <div className={styles.settingInfo}>
+                  <h2 className={styles.settingTitle}>
+                    Armazenamento e Banco de Dados
+                  </h2>
+                  <p className={styles.settingDescription}>
+                    {infraStatus.mensagem}
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.settingRight}>
+                <span
+                  className={`${styles.badge} ${infraBadgeClass}`}
+                  data-testid="infra-status-badge"
+                >
+                  {infraBadgeLabel}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={handleRefreshInfra}
+                  disabled={infraStatus.isLoading}
+                  aria-label="Testar conexão com o armazenamento"
+                  title="Testar conexão com o armazenamento"
+                  className={styles.refreshBtn}
+                >
+                  <RefreshCw
+                    size={16}
+                    aria-hidden="true"
+                    className={infraStatus.isLoading ? styles.spinning : ''}
+                  />
+                </button>
+              </div>
             </div>
-          </div>
-
-          <div className={styles.settingRight}>
-            <span
-              className={`${styles.badge} ${datajudBadgeClass}`}
-              data-testid="datajud-status-badge"
-            >
-              {datajudBadgeLabel}
-            </span>
-
-            <button
-              type="button"
-              onClick={handleRefreshDatajud}
-              disabled={datajudStatus.isLoading}
-              aria-label="Testar conexão com o DataJud"
-              title="Testar conexão com o DataJud"
-              className={styles.refreshBtn}
-            >
-              <RefreshCw
-                size={16}
-                aria-hidden="true"
-                className={datajudStatus.isLoading ? styles.spinning : ''}
-              />
-            </button>
-          </div>
-        </div>
-
-        <div className={styles.settingItem}>
-          <div className={styles.settingLeft}>
-            <div className={styles.iconBox}>
-              <HardDrive size={20} aria-hidden="true" />
-            </div>
-            <div className={styles.settingInfo}>
-              <h2 className={styles.settingTitle}>
-                Armazenamento e Banco de Dados
-              </h2>
-              <p className={styles.settingDescription}>
-                {infraStatus.mensagem}
-              </p>
-            </div>
-          </div>
-
-          <div className={styles.settingRight}>
-            <span
-              className={`${styles.badge} ${infraBadgeClass}`}
-              data-testid="infra-status-badge"
-            >
-              {infraBadgeLabel}
-            </span>
-
-            <button
-              type="button"
-              onClick={handleRefreshInfra}
-              disabled={infraStatus.isLoading}
-              aria-label="Testar conexão com o armazenamento"
-              title="Testar conexão com o armazenamento"
-              className={styles.refreshBtn}
-            >
-              <RefreshCw
-                size={16}
-                aria-hidden="true"
-                className={infraStatus.isLoading ? styles.spinning : ''}
-              />
-            </button>
-          </div>
-        </div>
+          </>
+        )}
 
         <div className={styles.settingItem}>
           <div className={styles.settingLeft}>
@@ -309,78 +338,102 @@ export default function AjustesClient({ initialTeam = [] }) {
             </select>
           </div>
         </div>
-
-        <div className={styles.settingItem}>
-          <div className={styles.settingLeft}>
-            <div className={styles.iconBox}>
-              <Clock size={20} aria-hidden="true" />
-            </div>
-            <div className={styles.settingInfo}>
-              <h2 className={styles.settingTitle}>Alerta de prazos próximos</h2>
-              <p className={styles.settingDescription}>
-                Antecedência para destacar prazos próximos no painel principal
-              </p>
-            </div>
-          </div>
-
-          <div className={styles.settingRight}>
-            <select
-              aria-label="Selecionar antecedência de prazos próximos"
-              value={String(diasPrazoProximo)}
-              onChange={(e) => handleChangeDiasPrazoProximo?.(e.target.value)}
-              className={styles.selectControl}
-            >
-              <option value="7">Próximos 7 dias</option>
-              <option value="15">Próximos 15 dias</option>
-              <option value="30">Próximos 30 dias</option>
-              <option value="60">Próximos 60 dias</option>
-            </select>
-          </div>
-        </div>
       </div>
 
-      <section
-        className={styles.criticalCard}
-        aria-labelledby="critical-processes-settings-title"
-      >
-        <div className={styles.criticalHeader}>
-          <AlertTriangle
-            size={20}
-            className={styles.criticalIcon}
-            aria-hidden="true"
-          />
-          <h2
-            id="critical-processes-settings-title"
-            className={styles.criticalTitle}
-          >
-            Processos Críticos
-          </h2>
-        </div>
-
-        <p className={styles.criticalDescription}>
-          Defina após quantos dias sem movimentação um processo passa a ser
-          considerado <strong>crítico</strong> e destacado no painel.
-        </p>
-
-        <div className={styles.criticalForm}>
-          <label htmlFor="critical-days-input" className={styles.criticalLabel}>
-            Considerar crítico após
-          </label>
-          <div className={styles.criticalInputRow}>
-            <input
-              id="critical-days-input"
-              type="number"
-              min="1"
-              max="365"
-              aria-label="Dias sem movimentação para processo crítico"
-              value={diasProcessoCritico}
-              onChange={(e) => setDiasProcessoCritico?.(e.target.value)}
-              className={styles.criticalInput}
+      {canManageSystem && (
+        <section
+          className={styles.criticalCard}
+          aria-labelledby="deadline-settings-title"
+        >
+          <div className={styles.criticalHeader}>
+            <Clock
+              size={20}
+              className={styles.criticalIcon}
+              aria-hidden="true"
             />
-            <span className={styles.criticalUnit}>dias sem movimentação</span>
+            <h2 id="deadline-settings-title" className={styles.criticalTitle}>
+              Alerta de Prazos Próximos
+            </h2>
           </div>
-        </div>
-      </section>
+
+          <p className={styles.criticalDescription}>
+            Defina a antecedência para destacar prazos próximos de processos e
+            atividades no painel principal para todos os usuários.
+          </p>
+
+          <div className={styles.criticalForm}>
+            <label
+              htmlFor="deadline-days-select"
+              className={styles.criticalLabel}
+            >
+              Destacar prazos com antecedência de
+            </label>
+            <div className={styles.criticalInputRow}>
+              <select
+                id="deadline-days-select"
+                aria-label="Selecionar antecedência de prazos próximos"
+                value={String(diasPrazoProximo)}
+                onChange={(e) => handleChangeDiasPrazoProximo?.(e.target.value)}
+                className={styles.selectControl}
+              >
+                <option value="7">Próximos 7 dias</option>
+                <option value="15">Próximos 15 dias</option>
+                <option value="30">Próximos 30 dias</option>
+                <option value="60">Próximos 60 dias</option>
+              </select>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {canManageSystem && (
+        <section
+          className={styles.criticalCard}
+          aria-labelledby="critical-processes-settings-title"
+        >
+          <div className={styles.criticalHeader}>
+            <AlertTriangle
+              size={20}
+              className={styles.criticalIcon}
+              aria-hidden="true"
+            />
+            <h2
+              id="critical-processes-settings-title"
+              className={styles.criticalTitle}
+            >
+              Processos Críticos
+            </h2>
+          </div>
+
+          <p className={styles.criticalDescription}>
+            Defina após quantos dias sem movimentação um processo passa a ser
+            considerado <strong>crítico</strong> e destacado no painel para
+            todos os usuários.
+          </p>
+
+          <div className={styles.criticalForm}>
+            <label
+              htmlFor="critical-days-input"
+              className={styles.criticalLabel}
+            >
+              Considerar crítico após
+            </label>
+            <div className={styles.criticalInputRow}>
+              <input
+                id="critical-days-input"
+                type="number"
+                min="1"
+                max="365"
+                aria-label="Dias sem movimentação para processo crítico"
+                value={diasProcessoCritico}
+                onChange={(e) => setDiasProcessoCritico?.(e.target.value)}
+                className={styles.criticalInput}
+              />
+              <span className={styles.criticalUnit}>dias sem movimentação</span>
+            </div>
+          </div>
+        </section>
+      )}
 
       <Modal
         isOpen={isConfirmModalOpen}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -9,13 +10,17 @@ import {
   CheckSquare,
   DollarSign,
   Users,
-  Search,
   UsersRound,
   Calendar,
   Palette,
   Settings,
 } from 'lucide-react';
 import { useInstitucionalContext } from '@/contexts/InstitucionalContext';
+import { getCurrentUser } from '@/utils/authSession';
+import {
+  isAdministratorAccount,
+  isAdministratorRole,
+} from '@/utils/funcionario';
 import { getImageUrl } from '@/utils/institucional';
 import styles from './sidebar.module.css';
 
@@ -26,15 +31,60 @@ const menuItems = [
   { path: '/financas', icon: DollarSign, label: 'Finanças' },
   { path: '/calendario', icon: Calendar, label: 'Calendário' },
   { path: '/clientes', icon: Users, label: 'Clientes/CRM' },
-  { path: '/pesquisa', icon: Search, label: 'Pesquisa' },
   { path: '/equipe', icon: UsersRound, label: 'Equipe' },
   { path: '/site', icon: Palette, label: 'Site' },
   { path: '/ajustes', icon: Settings, label: 'Ajustes' },
 ];
 
+export function canViewMenuItem(user, path) {
+  if (!user) return true;
+  if (isAdministratorAccount(user) || isAdministratorRole(user?.cargo)) {
+    return true;
+  }
+  const cargoPerms = user?.cargo?.permissao ?? {};
+  const arrayPerms = Array.isArray(user?.permissoes)
+    ? Object.fromEntries(user.permissoes.map((p) => [p, true]))
+    : {};
+  const perms = { ...arrayPerms, ...cargoPerms };
+  switch (path) {
+    case '/dashboard':
+      return true;
+    case '/processos':
+      return Boolean(perms.visualizar_processos || perms.gerenciar_processos);
+    case '/atividades':
+      return Boolean(perms.visualizar_atividades || perms.gerenciar_atividades);
+    case '/financas':
+    case '/calendario':
+      return Boolean(perms.visualizar_financeiro || perms.gerenciar_financeiro);
+    case '/clientes':
+      return true;
+    case '/equipe':
+      return Boolean(perms.visualizar_equipe || perms.gerenciar_equipe);
+    case '/site':
+      return Boolean(perms.gerenciar_site);
+    case '/ajustes':
+      return true;
+    default:
+      return true;
+  }
+}
+
+const emptySubscribe = () => () => {};
+
 export default function Sidebar() {
   const pathname = usePathname();
   const { institucional } = useInstitucionalContext();
+
+  const userJson = useSyncExternalStore(
+    emptySubscribe,
+    () => JSON.stringify(getCurrentUser() ?? null),
+    () => 'null'
+  );
+  const currentUser = JSON.parse(userJson);
+
+  const visibleMenuItems = menuItems.filter((item) =>
+    canViewMenuItem(currentUser, item.path)
+  );
 
   const corPrimaria = institucional?.corPrimaria || '#172133';
   const corSecundaria = institucional?.corSecundaria || '#B79A63';
@@ -85,7 +135,7 @@ export default function Sidebar() {
       </div>
 
       <nav className={styles.nav}>
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.path;
 

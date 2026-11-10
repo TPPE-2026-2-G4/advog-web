@@ -1,8 +1,9 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import {
   CNJ_PATTERN,
   CNJ_REGEX,
@@ -31,6 +32,11 @@ export default function ProcessFormModal({
   onClose,
   onSave,
 }) {
+  const availableFuncionarios = useMemo(
+    () => (funcionarios || []).filter((f) => !isAdministratorAccount(f)),
+    [funcionarios]
+  );
+
   if (!isOpen) return null;
 
   return (
@@ -38,7 +44,7 @@ export default function ProcessFormModal({
       key={process?.processo_id ?? 'new-process'}
       process={process}
       clientes={clientes}
-      funcionarios={funcionarios}
+      funcionarios={availableFuncionarios}
       onClose={onClose}
       onSave={onSave}
     />
@@ -58,6 +64,11 @@ function ProcessFormDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const titleId = useId();
   const errorId = useId();
+
+  const availableFuncionarios = useMemo(
+    () => (funcionarios || []).filter((f) => !isAdministratorAccount(f)),
+    [funcionarios]
+  );
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -90,6 +101,18 @@ function ProcessFormDialog({
       )
     ) {
       setError('Informe datas válidas.');
+      return;
+    }
+
+    const selectedFunc = availableFuncionarios.find(
+      (f) =>
+        String(f.funcionario_id || f.id) === String(formData.funcionario_id)
+    );
+    if (
+      formData.funcionario_id &&
+      (!selectedFunc || isAdministratorAccount(selectedFunc))
+    ) {
+      setError('A conta de administrador não pode ser atribuída a processos.');
       return;
     }
 
@@ -277,7 +300,7 @@ function ProcessFormDialog({
               disabled={isSubmitting}
             >
               <option value="">Sem responsável</option>
-              {funcionarios.map((funcionario) => (
+              {availableFuncionarios.map((funcionario) => (
                 <option
                   key={funcionario.funcionario_id || funcionario.id}
                   value={funcionario.funcionario_id || funcionario.id}

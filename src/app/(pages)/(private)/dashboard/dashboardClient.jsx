@@ -19,6 +19,7 @@ import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { getRecentActivities } from '@/utils/atividade';
 import { getCurrentUser } from '@/utils/authSession';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import { enrichProcess } from '@/utils/processo';
 import styles from './dashboard.module.css';
 
@@ -31,8 +32,13 @@ export default function DashboardClient() {
     () => '{}'
   );
   const permissions = JSON.parse(permissionsJson);
-  const canView = permissions.visualizar_processos === true;
-  const canEdit = permissions.editar_processos === true;
+  const currentUser = getCurrentUser();
+  const isUserAdmin = isAdministratorAccount(currentUser);
+  const canView =
+    isUserAdmin ||
+    permissions.visualizar_processos === true ||
+    permissions.gerenciar_processos === true;
+  const canEdit = isUserAdmin || permissions.gerenciar_processos === true;
 
   const dashboardPrefsJson = useSyncExternalStore(
     emptySubscribe,

@@ -72,7 +72,7 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
           json: async () => ({
             online: true,
             status: 'online',
-            mensagem: 'API conectada · Sincronização automática ativa',
+            mensagem: 'Integração conectada · Sincronização automática ativa',
           }),
         };
       }
@@ -131,7 +131,7 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
       );
     });
     expect(
-      screen.getByText('API conectada · Sincronização automática ativa')
+      screen.getByText('Integração conectada · Sincronização automática ativa')
     ).toBeInTheDocument();
     expect(
       screen.getByText('Serviço de anexos e banco de dados operacionais')
@@ -305,7 +305,9 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
       );
     });
     expect(
-      screen.getByText('API indisponível · Sincronização automática pausada')
+      screen.getByText(
+        'Integração indisponível · Sincronização automática pausada'
+      )
     ).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -425,7 +427,7 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
           json: async () => ({
             online: true,
             status: 'online',
-            mensagem: 'API conectada · Sincronização automática ativa',
+            mensagem: 'Integração conectada · Sincronização automática ativa',
           }),
         };
       }
@@ -456,7 +458,7 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/\(alexandre@carreiro\.adv\.br\)/i)
+        screen.getByText('Receba alertas de prazos e movimentações')
       ).toBeInTheDocument();
     });
 

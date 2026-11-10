@@ -1,4 +1,5 @@
 import { getAccessToken } from '@/utils/authSession';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import { API_URL } from './api';
 
 const getErrorMessage = async (
@@ -48,13 +49,17 @@ const request = async (path, options, fallbackMessage, forbiddenMessage) => {
   return response.json();
 };
 
-export function listarProdutividadeEquipe() {
-  return request(
+export async function listarProdutividadeEquipe() {
+  const data = await request(
     '/atividades/produtividade',
     { method: 'GET', cache: 'no-store' },
     'Não foi possível carregar a produtividade da equipe.',
     'Você não possui permissão para visualizar a produtividade da equipe.'
   );
+
+  return Array.isArray(data)
+    ? data.filter((item) => !isAdministratorAccount(item))
+    : data;
 }
 
 export function obterKanbanAtividades() {

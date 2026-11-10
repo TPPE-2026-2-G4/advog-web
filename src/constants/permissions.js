@@ -1,12 +1,20 @@
+export const PERMISSOES_IMPLICADAS = Object.freeze({
+  gerenciar_processos: 'visualizar_processos',
+  gerenciar_atividades: 'visualizar_atividades',
+  gerenciar_financeiro: 'visualizar_financeiro',
+  gerenciar_equipe: 'visualizar_equipe',
+});
+
 export const PERMISSION_LABELS = Object.freeze({
   visualizar_processos: 'Visualizar processos',
-  criar_processos: 'Criar processos',
-  editar_processos: 'Editar processos',
-  excluir_processos: 'Excluir processos',
+  gerenciar_processos: 'Gerenciar processos',
+  visualizar_atividades: 'Visualizar atividades',
+  gerenciar_atividades: 'Gerenciar atividades',
   visualizar_financeiro: 'Visualizar financeiro',
   gerenciar_financeiro: 'Gerenciar financeiro',
   visualizar_equipe: 'Visualizar equipe',
   gerenciar_equipe: 'Gerenciar equipe',
+  gerenciar_site: 'Gerenciar site',
   configuracoes_sistema: 'Configurações do sistema',
 });
 
@@ -17,6 +25,18 @@ export const createEmptyPermission = () =>
       false,
     ])
   );
+
+export const togglePermission = (currentPermissions, permissionName) => {
+  const nextValue = !currentPermissions[permissionName];
+  const updated = {
+    ...currentPermissions,
+    [permissionName]: nextValue,
+  };
+  if (nextValue && PERMISSOES_IMPLICADAS[permissionName]) {
+    updated[PERMISSOES_IMPLICADAS[permissionName]] = true;
+  }
+  return updated;
+};
 
 export const getPermissionLabel = (permissionName) => {
   if (PERMISSION_LABELS[permissionName]) {

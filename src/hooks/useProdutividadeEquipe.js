@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { listarProdutividadeEquipe } from '@/services/atividades';
 import { formatarSumarioEquipe } from '@/utils/produtividadeEquipe';
+import { isAdministratorAccount } from '@/utils/funcionario';
 
 export function useProdutividadeEquipe(enabled = false) {
   const [productivity, setProductivity] = useState([]);
@@ -25,7 +26,11 @@ export function useProdutividadeEquipe(enabled = false) {
         const received = await listarProdutividadeEquipe();
         if (ignore) return;
 
-        setProductivity(received.map(formatarSumarioEquipe));
+        setProductivity(
+          (Array.isArray(received) ? received : [])
+            .filter((row) => !isAdministratorAccount(row))
+            .map(formatarSumarioEquipe)
+        );
       } catch (receivedError) {
         if (ignore) return;
 

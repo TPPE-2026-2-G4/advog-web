@@ -6,33 +6,28 @@ import {
   mudarCargoFuncionario,
 } from '@/services/funcionarios';
 import { atualizarCargo, criarCargo, excluirCargo } from '@/services/cargos';
-import { toTeamMember } from '@/utils/funcionario';
+import {
+  isAdministratorAccount,
+  isAdministratorRole,
+  normalizeRoleName,
+  toTeamMember,
+} from '@/utils/funcionario';
 
-const cloneRoles = (roles) =>
+const cloneRoles = (roles = []) =>
   roles.map((role) => ({
     ...role,
     ...(role.permissao && { permissao: { ...role.permissao } }),
   }));
 
-const normalizeRoleName = (roleName = '') =>
-  roleName
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .toLocaleLowerCase('pt-BR');
-
-const isAdministrator = (member, roles) => {
-  const role = roles.find(
-    (currentRole) => String(currentRole.cargo_id) === String(member?.cargo_id)
+export function useEquipe(initialData = [], initialRoles = []) {
+  const [members, setMembers] = useState(() =>
+    (initialData || []).filter(
+      (member) => !isAdministratorAccount(member, initialRoles)
+    )
   );
-  const roleName = normalizeRoleName(role?.nome_cargo ?? member?.cargo);
-
-  return roleName === 'admin' || roleName === 'administrador';
-};
-
-export function useEquipe(initialData, initialRoles = []) {
-  const [members, setMembers] = useState(initialData);
-  const [roles, setRoles] = useState(() => cloneRoles(initialRoles));
+  const [roles, setRoles] = useState(() =>
+    cloneRoles(initialRoles).filter((role) => !isAdministratorRole(role))
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -50,11 +45,14 @@ export function useEquipe(initialData, initialRoles = []) {
   const handleCreateUser = async (dados) => {
     const funcionario = await criarFuncionario(dados);
     const newMember = toTeamMember(funcionario);
-    setMembers((current) => [...current, newMember]);
+    if (!isAdministratorAccount(newMember, initialRoles)) {
+      setMembers((current) => [...current, newMember]);
+    }
     return funcionario;
   };
 
   const handleOpenDeleteModal = (member) => {
+    if (isAdministratorAccount(member, initialRoles)) return;
     setSelectedMember(member);
     setDeleteError('');
   };
@@ -64,7 +62,12 @@ export function useEquipe(initialData, initialRoles = []) {
   };
 
   const handleDeleteUser = async () => {
-    if (!selectedMember) return;
+    if (
+      !selectedMember ||
+      isAdministratorAccount(selectedMember, initialRoles)
+    ) {
+      return;
+    }
 
     setDeleteError('');
     setIsDeleting(true);
@@ -85,6 +88,7 @@ export function useEquipe(initialData, initialRoles = []) {
   };
 
   const handleOpenAccessModal = (member) => {
+    if (isAdministratorAccount(member, initialRoles)) return;
     setAccessMember(member);
     setAccessError('');
   };
@@ -94,7 +98,9 @@ export function useEquipe(initialData, initialRoles = []) {
   };
 
   const handleChangeAccess = async () => {
-    if (!accessMember) return;
+    if (!accessMember || isAdministratorAccount(accessMember, initialRoles)) {
+      return;
+    }
 
     setAccessError('');
     setIsUpdatingAccess(true);
@@ -123,6 +129,7 @@ export function useEquipe(initialData, initialRoles = []) {
   };
 
   const handleOpenEditModal = (member) => {
+    if (isAdministratorAccount(member, initialRoles)) return;
     setEditingMember(member);
   };
 
@@ -131,7 +138,9 @@ export function useEquipe(initialData, initialRoles = []) {
   };
 
   const handleUpdateUser = async ({ cargo }) => {
-    if (!editingMember) return;
+    if (!editingMember || isAdministratorAccount(editingMember, initialRoles)) {
+      return;
+    }
 
     const funcionario = await mudarCargoFuncionario(
       editingMember.funcionario_id,
@@ -151,6 +160,7 @@ export function useEquipe(initialData, initialRoles = []) {
   };
 
   const handleOpenPermissionsModal = (role) => {
+    if (isAdministratorRole(role)) return;
     setPermissionsRole(role);
   };
 
@@ -159,6 +169,20 @@ export function useEquipe(initialData, initialRoles = []) {
   };
 
   const handleUpdateRolePermissions = async ({ cargo_id, permissao }) => {
+    const isTargetAdmin =
+      isAdministratorRole(
+        initialRoles.find((r) => String(r.cargo_id) === String(cargo_id))
+      ) ||
+      isAdministratorRole(
+        roles.find((r) => String(r.cargo_id) === String(cargo_id))
+      );
+
+    if (isTargetAdmin) {
+      throw new Error(
+        'Não é possível editar as permissões do cargo de administrador.'
+      );
+    }
+
     const updatedRole = await atualizarCargo(cargo_id, { permissao });
 
     setRoles((current) =>
@@ -174,15 +198,18 @@ export function useEquipe(initialData, initialRoles = []) {
 
   const handleCreateRole = async ({ nome_cargo, descricao, permissao }) => {
     const roleName = nome_cargo.trim();
-    const duplicatedRole = roles.some(
-      (role) =>
-        role.nome_cargo.toLocaleLowerCase('pt-BR') ===
-        roleName.toLocaleLowerCase('pt-BR')
-    );
-
     if (!roleName) {
       throw new Error('Informe o nome do cargo.');
     }
+
+    if (isAdministratorRole(roleName)) {
+      throw new Error('Já existe um cargo com esse nome.');
+    }
+
+    const duplicatedRole = roles.some(
+      (role) =>
+        normalizeRoleName(role.nome_cargo) === normalizeRoleName(roleName)
+    );
 
     if (duplicatedRole) {
       throw new Error('Já existe um cargo com esse nome.');
@@ -199,6 +226,7 @@ export function useEquipe(initialData, initialRoles = []) {
   };
 
   const handleOpenDeleteRoleModal = (role) => {
+    if (isAdministratorRole(role)) return;
     setRoleToDelete(role);
     setDeleteRoleError('');
   };
@@ -208,7 +236,7 @@ export function useEquipe(initialData, initialRoles = []) {
   };
 
   const handleDeleteRole = async () => {
-    if (!roleToDelete) return;
+    if (!roleToDelete || isAdministratorRole(roleToDelete)) return;
 
     setDeleteRoleError('');
     setIsDeletingRole(true);
@@ -228,10 +256,6 @@ export function useEquipe(initialData, initialRoles = []) {
     }
   };
 
-  const adminCount = members.filter((member) =>
-    isAdministrator(member, roles)
-  ).length;
-
   return {
     members,
     roles,
@@ -248,8 +272,7 @@ export function useEquipe(initialData, initialRoles = []) {
     roleToDelete,
     isDeletingRole,
     deleteRoleError,
-    isEditingOnlyAdmin:
-      isAdministrator(editingMember, roles) && adminCount === 1,
+    isEditingOnlyAdmin: false,
     totalUsers: members.length,
     activeUsers: members.filter((member) => member.status === 'Ativo').length,
     pendingUsers: members.filter((member) => member.status === 'Pendente')

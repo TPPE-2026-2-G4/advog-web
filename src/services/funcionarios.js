@@ -1,4 +1,5 @@
 import { getAccessToken } from '@/utils/authSession';
+import { isAdministratorAccount } from '@/utils/funcionario';
 import { API_URL } from './api';
 
 const validationFieldLabels = {
@@ -33,15 +34,23 @@ const getErrorMessage = async (response, fallbackMessage) => {
   return fallbackMessage;
 };
 
-export async function listarFuncionarios() {
+export async function listarFuncionarios(options) {
   try {
+    const token =
+      typeof options === 'string'
+        ? options
+        : options?.token || getAccessToken();
     const response = await fetch(`${API_URL}/funcionarios`, {
       cache: 'no-store',
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
 
     if (!response.ok) return [];
 
-    return await response.json();
+    const data = await response.json();
+    return Array.isArray(data)
+      ? data.filter((f) => !isAdministratorAccount(f))
+      : [];
   } catch {
     return [];
   }
