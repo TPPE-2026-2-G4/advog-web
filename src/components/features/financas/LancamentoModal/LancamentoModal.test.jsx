@@ -28,6 +28,48 @@ const renderModal = (props = {}) =>
   );
 
 describe('LancamentoModal', () => {
+  it('abre a recorrência personalizada sem fechar ou enviar o formulário principal', async () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+    renderModal({ onClose, onSave });
+    fireEvent.click(screen.getByLabelText('Este lançamento é recorrente'));
+    fireEvent.change(screen.getByLabelText('Repetição'), {
+      target: { value: 'custom' },
+    });
+    expect(
+      screen.getByRole('dialog', { name: 'Recorrência personalizada' })
+    ).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(
+      screen.queryByRole('dialog', { name: 'Recorrência personalizada' })
+    ).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('envia o alcance escolhido na edição de uma série', async () => {
+    const onSave = vi.fn();
+    renderModal({
+      onSave,
+      initialItem: {
+        id: 1,
+        serie_id: 'serie-1',
+        titulo: 'Honorários',
+        descricao: 'Assessoria',
+        valor: 100,
+        categoria: 'Honorários',
+        dataIso: '2027-01-04',
+        dataVencimentoIso: '2027-01-04',
+      },
+    });
+    fireEvent.click(screen.getByLabelText('Este e os próximos da série'));
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar Alterações' }));
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ alcance: 'serie' })
+      )
+    );
+  });
   it('não renderiza quando isOpen é falso', () => {
     renderModal({ isOpen: false });
 
@@ -42,15 +84,16 @@ describe('LancamentoModal', () => {
     expect(
       screen.getByRole('heading', { name: 'Novo Lançamento Financeiro' })
     ).toBeInTheDocument();
+    expect(screen.getByText(/Campos obrigatórios/i)).toBeInTheDocument();
 
     expect(screen.getByRole('button', { name: 'Entrada' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Saída' })).toBeInTheDocument();
     expect(screen.getByLabelText('Título')).toBeRequired();
-    expect(screen.getByLabelText('Descrição')).toBeInTheDocument();
+    expect(screen.getByLabelText('Descrição')).toBeRequired();
     expect(screen.getByLabelText('Valor')).toBeRequired();
     expect(screen.getByLabelText('Data de Criação')).toBeRequired();
     expect(screen.getByLabelText('Data de Vencimento')).toBeInTheDocument();
-    expect(screen.getByLabelText('Categoria')).toBeInTheDocument();
+    expect(screen.getByLabelText('Categoria')).toBeRequired();
     expect(
       screen.getByLabelText('Este lançamento é recorrente')
     ).toBeInTheDocument();
@@ -75,6 +118,7 @@ describe('LancamentoModal', () => {
       dataVencimentoIso: '2026-09-15',
       categoria: 'Despesas Operacionais',
       recorrente: true,
+      serie_id: 'serie-10',
       status: 'pendente',
     };
 
@@ -93,7 +137,13 @@ describe('LancamentoModal', () => {
     expect(screen.getByLabelText('Categoria')).toHaveValue(
       'Despesas Operacionais'
     );
-    expect(screen.getByLabelText('Este lançamento é recorrente')).toBeChecked();
+    expect(
+      screen.queryByLabelText('Este lançamento é recorrente')
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Somente este lançamento')).toBeChecked();
+    expect(
+      screen.getByLabelText('Este e os próximos da série')
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Salvar Alterações' })
     ).toBeInTheDocument();
@@ -121,31 +171,59 @@ describe('LancamentoModal', () => {
     {
       scenario: 'título em branco',
       titulo: '   ',
+      descricao: 'Assessoria',
       valor: '100',
+      categoria: 'Honorários',
       expectedError: 'Por favor, informe o título do lançamento.',
     },
     {
       scenario: 'valor igual a zero',
       titulo: 'Honorários',
+      descricao: 'Assessoria',
       valor: '0',
+      categoria: 'Honorários',
       expectedError: 'Por favor, informe um valor válido maior que zero.',
     },
     {
       scenario: 'valor inválido não numérico',
       titulo: 'Honorários',
+      descricao: 'Assessoria',
       valor: 'abc',
+      categoria: 'Honorários',
       expectedError: 'Por favor, informe um valor válido maior que zero.',
+    },
+    {
+      scenario: 'descrição em branco',
+      titulo: 'Honorários',
+      descricao: '   ',
+      valor: '100',
+      categoria: 'Honorários',
+      expectedError: 'Por favor, informe a descrição do lançamento.',
+    },
+    {
+      scenario: 'categoria em branco',
+      titulo: 'Honorários',
+      descricao: 'Assessoria',
+      valor: '100',
+      categoria: '   ',
+      expectedError: 'Por favor, selecione ou informe uma categoria.',
     },
   ])(
     'valida campos obrigatórios ao submeter com $scenario',
-    async ({ titulo, valor, expectedError }) => {
+    async ({ titulo, descricao, valor, categoria, expectedError }) => {
       renderModal();
 
       fireEvent.change(screen.getByLabelText('Título'), {
         target: { value: titulo },
       });
+      fireEvent.change(screen.getByLabelText('Descrição'), {
+        target: { value: descricao },
+      });
       fireEvent.change(screen.getByLabelText('Valor'), {
         target: { value: valor },
+      });
+      fireEvent.change(screen.getByLabelText('Categoria'), {
+        target: { value: categoria },
       });
       fireEvent.submit(
         screen.getByRole('button', { name: 'Salvar Lançamento' })
@@ -209,7 +287,9 @@ describe('LancamentoModal', () => {
       id: 99,
       tipo: 'entrada',
       titulo: 'Título Original',
+      descricao: 'Descrição Original',
       valor: 1000,
+      categoria: 'Honorários',
       data: '01/09/2026',
       dataIso: '2026-09-01',
       status: 'realizado',
@@ -301,7 +381,9 @@ describe('LancamentoModal', () => {
         id: 100,
         tipo: 'entrada',
         titulo: 'Título Original',
+        descricao: 'Descrição Original',
         valor: 1000,
+        categoria: 'Honorários',
         dataIso: initialData,
         data_pagamento: initialData,
         dataVencimentoIso: initialVencimento,
@@ -366,8 +448,14 @@ describe('LancamentoModal', () => {
       fireEvent.change(screen.getByLabelText('Título'), {
         target: { value: 'Teste' },
       });
+      fireEvent.change(screen.getByLabelText('Descrição'), {
+        target: { value: 'Descrição Teste' },
+      });
       fireEvent.change(screen.getByLabelText('Valor'), {
         target: { value: '100' },
+      });
+      fireEvent.change(screen.getByLabelText('Categoria'), {
+        target: { value: 'Honorários' },
       });
       fireEvent.submit(screen.getByRole('dialog'));
 
@@ -381,6 +469,7 @@ describe('LancamentoModal', () => {
     const onSave = vi.fn().mockResolvedValue({});
     const mockItem = {
       id: 99,
+      categoria_id: 1,
       status: 'pendente',
     };
     renderModal({ initialItem: mockItem, onSave, onClose: vi.fn() });
@@ -394,6 +483,9 @@ describe('LancamentoModal', () => {
 
     fireEvent.change(screen.getByLabelText('Título'), {
       target: { value: 'Teste Fallback Date' },
+    });
+    fireEvent.change(screen.getByLabelText('Descrição'), {
+      target: { value: 'Descrição Fallback' },
     });
     fireEvent.change(screen.getByLabelText('Valor'), {
       target: { value: '100' },

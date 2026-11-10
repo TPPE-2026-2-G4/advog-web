@@ -37,6 +37,32 @@ const respostaComErroSemJson = () => ({
 });
 
 describe('serviço de finanças', () => {
+  it('envia RRULE apenas no cadastro e encaminha o alcance nas operações em grupo', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        respostaJson({ lancamento_id: 1, serie_id: 'serie-1' })
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    const dados = {
+      titulo: 'Mensalidade',
+      rrule: 'FREQ=MONTHLY;COUNT=3',
+      alcance: 'serie',
+    };
+    await criarFinancas(dados);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).rrule).toBe(dados.rrule);
+    await atualizarFinancas(1, dados);
+    expect(fetchMock.mock.calls[1][0]).toMatch(
+      /\/lancamentos\/1\?alcance=serie$/
+    );
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).not.toHaveProperty(
+      'rrule'
+    );
+    await excluirFinancas(1, 'serie');
+    expect(fetchMock.mock.calls[2][0]).toMatch(
+      /\/lancamentos\/1\?alcance=serie$/
+    );
+  });
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.useFakeTimers({ toFake: ['Date'] });

@@ -23,6 +23,15 @@ const renderModal = (overrides = {}) => {
 };
 
 describe('DeleteLancamentoModal', () => {
+  it('envia o alcance escolhido para a exclusão da série', () => {
+    const props = renderModal({
+      lancamento: { ...lancamentoMock, serie_id: 'serie-1' },
+    });
+    expect(screen.getByLabelText('Somente este lançamento')).toBeChecked();
+    fireEvent.click(screen.getByLabelText('Este e os próximos da série'));
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir lançamento' }));
+    expect(props.onConfirm).toHaveBeenCalledWith('serie');
+  });
   it.each([
     {
       description: 'isOpen é falso',
