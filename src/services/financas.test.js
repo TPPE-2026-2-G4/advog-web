@@ -203,7 +203,7 @@ describe('serviço de finanças', () => {
       );
 
       await expect(criarFinancas(novoItem)).rejects.toThrow(
-        'data_vencimento: Campo obrigatório'
+        'Por favor, informe uma data de vencimento válida.'
       );
     });
 
