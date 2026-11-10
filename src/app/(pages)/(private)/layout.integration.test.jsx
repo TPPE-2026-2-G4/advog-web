@@ -90,7 +90,7 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
       cenario: 'usuário autenticado acessando /login',
       pathname: '/login',
       cookieToken: { value: validToken() },
-      esperadoLocation: 'http://localhost:3000/equipe',
+      esperadoLocation: 'http://localhost:3000/dashboard',
     },
     {
       cenario:

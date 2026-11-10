@@ -89,6 +89,11 @@ describe('Integração: Fluxo de Login (LoginPage + useLogin + AuthProvider + se
         senha: 'SenhaForte@2026',
       }),
     });
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => funcionarioMock,
+    });
 
     await act(async () => {
       resolveFetch({
@@ -105,6 +110,11 @@ describe('Integração: Fluxo de Login (LoginPage + useLogin + AuthProvider + se
       expect(mockPush).toHaveBeenCalledWith('/dashboard');
     });
 
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenLastCalledWith(`${apiUrl}/funcionarios/perfil`, {
+      headers: { Authorization: 'Bearer jwt-token-integracao-123' },
+      cache: 'no-store',
+    });
     expect(sessionStorage.getItem('access_token')).toBe(
       'jwt-token-integracao-123'
     );
@@ -146,18 +156,25 @@ describe('Integração: Fluxo de Login (LoginPage + useLogin + AuthProvider + se
 
     expect(submitButton).toBeDisabled();
 
+    const funcionarioMock = {
+      funcionario_id: 8,
+      nome: 'Usuário Teste',
+      email: 'usuario@carreiro.adv.br',
+      permissoes: [],
+    };
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => funcionarioMock,
+    });
+
     await act(async () => {
       resolveFetch({
         ok: true,
         status: 200,
         json: async () => ({
           access_token: 'jwt-token-duplicado',
-          funcionario: {
-            funcionario_id: 8,
-            nome: 'Usuário Teste',
-            email: 'usuario@carreiro.adv.br',
-            permissoes: [],
-          },
+          funcionario: funcionarioMock,
         }),
       });
     });
@@ -167,6 +184,7 @@ describe('Integração: Fluxo de Login (LoginPage + useLogin + AuthProvider + se
     });
 
     expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it.each([

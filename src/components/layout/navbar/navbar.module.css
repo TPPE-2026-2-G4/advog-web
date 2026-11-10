@@ -93,6 +93,13 @@
   color: var(--cor-secundaria-texto, #111827);
   background-color: var(--cor-secundaria, #c1a077);
   border-radius: 50%;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .userInfo {

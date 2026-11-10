@@ -74,10 +74,10 @@ describe('proxy', () => {
       true,
     ],
     [
-      'redireciona para /equipe se houver token válido e a rota for /login',
+      'redireciona para /dashboard se houver token válido e a rota for /login',
       '/login',
       'valid',
-      'http://localhost:3000/equipe',
+      'http://localhost:3000/dashboard',
       false,
     ],
   ])(

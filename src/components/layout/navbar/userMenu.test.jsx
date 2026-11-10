@@ -114,6 +114,20 @@ describe('UserMenu', () => {
     expect(screen.getByRole('button', { name: /Sair/i })).toBeInTheDocument();
   });
 
+  it('exibe a foto de perfil fornecida pela API no avatar do menu', async () => {
+    getCurrentUser.mockReturnValue({
+      nome: 'Alexandre Carreiro',
+      cargo: 'Advogado(a)',
+      email: 'alexandre@carreiro.adv.br',
+      foto_perfil_url: 'https://storage.exemplo.com/alexandre.png',
+    });
+    render(<UserMenu />);
+
+    expect(
+      await screen.findByAltText('Foto de Alexandre Carreiro')
+    ).toHaveAttribute('src', 'https://storage.exemplo.com/alexandre.png');
+  });
+
   it('fecha o menu ao clicar novamente no usuário', async () => {
     render(<UserMenu />);
     const triggerText = await screen.findByText('Alexandre C.');
@@ -146,6 +160,16 @@ describe('UserMenu', () => {
     fireEvent.mouseDown(screen.getByRole('button', { name: /Meu perfil/i }));
 
     expect(screen.getByText('Alexandre Carreiro')).toBeInTheDocument();
+  });
+
+  it('navega para o perfil e fecha o menu ao selecionar Meu perfil', async () => {
+    render(<UserMenu />);
+    const trigger = (await screen.findByText('Alexandre C.')).closest('button');
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('button', { name: /Meu perfil/i }));
+
+    expect(pushMock).toHaveBeenCalledWith('/perfil');
+    expect(screen.queryByText('Alexandre Carreiro')).not.toBeInTheDocument();
   });
 
   it('remove o listener de clique externo ao desmontar', async () => {

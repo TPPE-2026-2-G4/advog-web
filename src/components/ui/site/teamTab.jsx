@@ -1,6 +1,7 @@
 'use client';
 
 import { Users, Check } from 'lucide-react';
+import { getImageUrl } from '@/utils/institucional';
 import { getLawyerInitials, isAdministratorAccount } from '@/utils/funcionario';
 import styles from './site.module.css';
 
@@ -35,7 +36,16 @@ export default function TeamTab({ team = [], onToggleLawyer }) {
           return (
             <div key={member.funcionario_id} className={styles.teamItem}>
               <div className={styles.teamMemberLeft}>
-                <div className={styles.teamAvatar}>{initials}</div>
+                <div className={styles.teamAvatar}>
+                  {member.foto_perfil_url ? (
+                    <img
+                      src={getImageUrl(member.foto_perfil_url)}
+                      alt={`Foto de ${member.nome}`}
+                    />
+                  ) : (
+                    initials
+                  )}
+                </div>
                 <div className={styles.teamInfo}>
                   <span className={styles.teamName}>{member.nome}</span>
                   {cargo && <span className={styles.teamRole}>{cargo}</span>}

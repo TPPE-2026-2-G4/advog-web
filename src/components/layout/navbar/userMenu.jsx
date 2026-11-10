@@ -14,6 +14,7 @@ import LogoutConfirmModal from './LogoutConfirmModal/LogoutConfirmModal';
 import { AuthContext } from '@/contexts/AuthContext';
 import { clearAuthSession, getCurrentUser } from '@/utils/authSession';
 import { getInitials } from '@/utils/funcionario';
+import { getImageUrl } from '@/utils/institucional';
 
 const emptySubscribe = () => () => {};
 
@@ -84,6 +85,7 @@ export default function UserMenu() {
   const userName = activeUser.nome || activeUser.nome_func || '';
   const shortName = getShortName(userName);
   const userInitials = getInitials(userName);
+  const profileImage = getImageUrl(activeUser.foto_perfil_url);
   const userRole =
     typeof activeUser.cargo === 'string'
       ? activeUser.cargo
@@ -100,7 +102,13 @@ export default function UserMenu() {
           onClick={() => setIsOpen(!isOpen)}
           className={styles.triggerBtn}
         >
-          <div className={styles.avatar}>{userInitials}</div>
+          <div className={styles.avatar}>
+            {profileImage ? (
+              <img src={profileImage} alt={`Foto de ${userName}`} />
+            ) : (
+              userInitials
+            )}
+          </div>
           <div className={styles.userInfo}>
             <p className={styles.userName}>{shortName}</p>
             <p className={styles.userRole}>{userRole}</p>
@@ -116,7 +124,14 @@ export default function UserMenu() {
             </div>
 
             <div className={styles.menuGroup}>
-              <button className={styles.menuItem}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  router.push('/perfil');
+                }}
+                className={styles.menuItem}
+              >
                 <User size={16} className={styles.icon} />
                 Meu perfil
               </button>

@@ -1,0 +1,399 @@
+.container {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  color: var(--cor-primaria, #172133);
+}
+
+.pageHeader {
+  margin-bottom: 28px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(26px, 4vw, 32px);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.profileLayout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.75fr) minmax(0, 1.65fr);
+  align-items: start;
+  gap: 28px;
+}
+
+.summaryCard,
+.formCard {
+  background-color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 3px 14px rgb(23 33 51 / 7%);
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  padding: 40px 30px;
+  background-color: #fff;
+}
+
+.avatarButton {
+  display: block;
+  align-self: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.avatarButton:focus-visible,
+.photoChangeButton:focus-visible {
+  outline: 2px solid var(--cor-secundaria, #b79a63);
+  outline-offset: 4px;
+}
+
+.avatarButton:disabled,
+.photoChangeButton:disabled {
+  cursor: not-allowed;
+}
+
+.avatar {
+  display: grid;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
+  place-items: center;
+  color: var(--cor-primaria, #172133);
+  background: var(--cor-secundaria, #c1a077);
+  border-radius: 50%;
+  box-shadow: 0 3px 7px rgb(23 33 51 / 15%);
+  font-family: var(--font-cormorant), serif;
+  font-size: 48px;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoInput {
+  display: none;
+}
+
+.photoChangeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 18px auto 22px;
+  padding: 0;
+  color: #6b7280;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.summaryDivider {
+  width: 100%;
+  height: 0.5px;
+  margin: 0 0 20px;
+  background: #dedbd6;
+}
+
+.summaryStatus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: var(--cor-secundaria, #b79a63);
+}
+
+.summaryStatus > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.summaryLabel {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.roleBadge,
+.statusBadge {
+  padding: 4px 12px;
+  border: 1px solid #d6dce5;
+  border-radius: 999px;
+  color: #28527d;
+  background: #eef3f8;
+  font-size: 13px;
+}
+
+.statusBadge {
+  color: #5b6065;
+  background: #f3f3f2;
+  border-color: #e4e3e1;
+}
+
+.activeBadge {
+  color: #236449;
+  background: #eaf3ef;
+  border-color: #c9ded4;
+}
+
+.summaryDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summaryDetails li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  color: #172133;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.summaryDetails svg {
+  flex: 0 0 auto;
+  color: #92918e;
+}
+
+.formColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.formCard {
+  padding: 30px;
+}
+
+.sectionTitle {
+  margin: 0 0 28px;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.fieldsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.field label {
+  color: #172133;
+  font-size: 14px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 16px;
+  border: 1px solid #d9d5ce;
+  border-radius: 18px;
+  color: #172133;
+  background-color: #fff;
+  font: inherit;
+  font-size: 16px;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: var(--cor-secundaria, #b79a63);
+  outline: none;
+}
+
+.field input[readonly],
+.field select:disabled,
+.field input:disabled {
+  color: #172133;
+  background-color: #f9f8f6;
+  opacity: 1;
+}
+
+.fieldHint {
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.passwordHint {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 18px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.passwordHint svg {
+  flex: 0 0 auto;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.cancelButton,
+.saveButton {
+  display: inline-flex;
+  min-width: 124px;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 24px;
+  border: 1px solid #172133;
+  border-radius: 11px;
+  color: #172133;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.saveButton {
+  min-width: 192px;
+  border-color: var(--cor-secundaria, #b79a63);
+  background: var(--cor-secundaria, #b79a63);
+}
+
+.cancelButton:hover:not(:disabled) {
+  background-color: rgba(23, 33, 51, 0.05);
+}
+
+.saveButton:hover:not(:disabled) {
+  filter: brightness(0.88);
+}
+
+.cancelButton:disabled,
+.saveButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.error,
+.success {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  color: #a32626;
+  background: #fdf0ef;
+  font-size: 14px;
+}
+
+.success {
+  color: #236449;
+  background: #eaf3ef;
+}
+
+.alertSuccess,
+.alertError {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  color: #065f46;
+  background-color: #ecfdf5;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.alertError {
+  border-color: #fecaca;
+  color: #991b1b;
+  background-color: #fee2e2;
+}
+
+@media (max-width: 820px) {
+  .profileLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .summaryCard {
+    min-height: 0;
+    padding: 28px;
+  }
+
+  .summaryDetails {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .pageHeader {
+    margin-bottom: 20px;
+  }
+
+  .title {
+    font-size: 30px;
+  }
+
+  .formCard {
+    padding: 22px 18px;
+  }
+
+  .sectionTitle {
+    margin-bottom: 22px;
+  }
+
+  .fieldsGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fullWidth {
+    grid-column: auto;
+  }
+
+  .summaryDetails {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .cancelButton,
+  .saveButton {
+    width: 100%;
+  }
+}

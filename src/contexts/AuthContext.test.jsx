@@ -3,16 +3,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthProvider } from './AuthContext';
 
-const { loginServiceMock } = vi.hoisted(() => ({
+const { loginServiceMock, obterMeuPerfilMock } = vi.hoisted(() => ({
   loginServiceMock: vi.fn(),
+  obterMeuPerfilMock: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@/services/auth', () => ({
   login: loginServiceMock,
 }));
 
+vi.mock('@/services/funcionarios', () => ({
+  obterMeuPerfil: obterMeuPerfilMock,
+}));
+
 function AuthConsumer() {
-  const { user, login, logout } = useAuth();
+  const { user, login, updateUser, logout } = useAuth();
 
   return (
     <>
@@ -26,6 +31,12 @@ function AuthConsumer() {
       <button type="button" onClick={logout}>
         Sair
       </button>
+      <button
+        type="button"
+        onClick={() => updateUser({ nome: 'Ana Souza Atualizada' })}
+      >
+        Atualizar perfil
+      </button>
     </>
   );
 }
@@ -33,6 +44,8 @@ function AuthConsumer() {
 describe('AuthProvider', () => {
   afterEach(() => {
     loginServiceMock.mockReset();
+    obterMeuPerfilMock.mockReset();
+    obterMeuPerfilMock.mockResolvedValue(null);
     localStorage.clear();
     sessionStorage.clear();
   });
@@ -138,6 +151,67 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('Nenhum usuário');
     expect(localStorage.getItem('token')).toBeNull();
     expect(sessionStorage.getItem('access_token')).toBeNull();
+  });
+
+  it('atualiza o usuário e persiste os dados do perfil nos storages', async () => {
+    const user = {
+      funcionario_id: 1,
+      nome: 'Ana Souza',
+      email: 'ana@exemplo.com',
+    };
+    sessionStorage.setItem('current_user', JSON.stringify(user));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Atualizar perfil' }));
+
+    await waitFor(() => {
+      expect(sessionStorage.getItem('current_user')).toContain(
+        'Ana Souza Atualizada'
+      );
+    });
+    expect(JSON.parse(localStorage.getItem('current_user'))).toEqual({
+      ...user,
+      nome: 'Ana Souza Atualizada',
+    });
+  });
+
+  it('recupera foto de perfil atualizada do funcionário ao fazer login novamente', async () => {
+    loginServiceMock.mockResolvedValue({
+      access_token: 'token-de-teste',
+      funcionario: {
+        funcionario_id: 8,
+        nome: 'Ana Souza',
+        email: 'ana@exemplo.com',
+      },
+    });
+    obterMeuPerfilMock.mockResolvedValue({
+      funcionario_id: 8,
+      atuacao_id: 5,
+      foto_perfil_url: 'https://storage.exemplo.com/ana.png',
+    });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    await waitFor(() => {
+      expect(
+        JSON.parse(localStorage.getItem('current_user')).foto_perfil_url
+      ).toBe('https://storage.exemplo.com/ana.png');
+      expect(JSON.parse(localStorage.getItem('current_user')).atuacao_id).toBe(
+        5
+      );
+    });
+    expect(obterMeuPerfilMock).toHaveBeenCalledOnce();
   });
 
   it.each([

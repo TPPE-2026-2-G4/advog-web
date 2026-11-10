@@ -1,5 +1,6 @@
 import { CircleCheck, CircleSlash, Pencil, Trash2 } from 'lucide-react';
 import { createEmptyPermission } from '@/constants/permissions';
+import { getImageUrl } from '@/utils/institucional';
 import { isAdministratorAccount } from '@/utils/funcionario';
 import styles from './TeamTable.module.css';
 
@@ -81,7 +82,17 @@ export default function TeamTable({
                 <tr key={member.funcionario_id} className={styles.tr}>
                   <td className={styles.td} data-label="Nome">
                     <div className={styles.nameCell}>
-                      <div className={styles.avatar}>{member.initials}</div>
+                      <div className={styles.avatar}>
+                        {member.foto_perfil_url ? (
+                          <img
+                            src={getImageUrl(member.foto_perfil_url)}
+                            alt={`Foto de ${member.nome_func}`}
+                            className={styles.avatarImage}
+                          />
+                        ) : (
+                          member.initials
+                        )}
+                      </div>
                       <div className={styles.nameTextWrap}>
                         <p className={styles.nameText}>{member.nome_func}</p>
                         {member.telefone && (

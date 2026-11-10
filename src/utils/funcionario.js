@@ -83,6 +83,8 @@ export function toTeamMember(funcionario) {
     initials: getInitials(funcionario.nome),
     nome_func: funcionario.nome,
     email_func: funcionario.email,
+    foto_perfil_url:
+      funcionario.foto_perfil_url ?? funcionario.fotoPerfilUrl ?? null,
     cargo,
     status: funcionario.status,
     ...(cargoId !== undefined && { cargo_id: cargoId }),

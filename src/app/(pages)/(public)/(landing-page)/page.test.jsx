@@ -336,6 +336,30 @@ describe('Landing Page', () => {
       expect(screen.getByText('PL')).toBeInTheDocument(); // Iniciais
     });
 
+    it('renderiza a foto do advogado e mantém as iniciais dos membros sem foto', async () => {
+      listarFuncionarios.mockResolvedValue([
+        {
+          funcionario_id: 1,
+          nome: 'Dr. Pedro Lima',
+          foto_perfil_url: 'https://storage.example.com/pedro.png',
+          exibicaoInstitucional: true,
+        },
+        {
+          funcionario_id: 2,
+          nome: 'Ana Costa',
+          exibicaoInstitucional: true,
+        },
+      ]);
+
+      render(await Home());
+
+      expect(screen.getByAltText('Foto de Dr. Pedro Lima')).toHaveAttribute(
+        'src',
+        'https://storage.example.com/pedro.png'
+      );
+      expect(screen.getByText('AC')).toBeInTheDocument();
+    });
+
     it('renderiza membro com cargo, especialidade/descrição e OAB formatada conforme o layout', async () => {
       buscarDadosInstitucionais.mockResolvedValue({});
       listarFuncionarios.mockResolvedValue([
