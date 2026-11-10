@@ -218,9 +218,9 @@ export default function CalendarioClient({
         if (novos && Array.isArray(novos)) {
           setLancamentos((prev) => {
             const map = new Map();
-            prev.forEach((item) =>
-              map.set(item.id || item.lancamento_id, item)
-            );
+            prev
+              .filter((item) => !getItemDateIso(item).startsWith(monthPrefix))
+              .forEach((item) => map.set(item.id || item.lancamento_id, item));
             novos.forEach((item) =>
               map.set(item.id || item.lancamento_id, item)
             );
@@ -233,7 +233,7 @@ export default function CalendarioClient({
     return () => {
       ativo = false;
     };
-  }, [currentYear, currentMonth, daysInMonth]);
+  }, [currentYear, currentMonth, daysInMonth, monthPrefix]);
 
   const handlePrevMonth = () => {
     const newDate = new Date(currentYear, currentMonth - 1, 1);

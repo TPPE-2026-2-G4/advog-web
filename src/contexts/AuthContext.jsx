@@ -3,6 +3,9 @@
 import { createContext, useState, useEffect } from 'react';
 import { login as loginService } from '@/services/auth';
 import { clearAuthSession, getCurrentUser } from '@/utils/authSession';
+import { getTokenMaxAgeSeconds } from '@/utils/jwt';
+
+const DEFAULT_COOKIE_MAX_AGE_SECONDS = 3600;
 
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   const originalError = console.error;
@@ -41,7 +44,9 @@ export function AuthProvider({ children }) {
       localStorage.setItem('token', token);
       localStorage.setItem('access_token', token);
       sessionStorage.setItem('access_token', token);
-      document.cookie = `access_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+      const maxAge =
+        getTokenMaxAgeSeconds(token) ?? DEFAULT_COOKIE_MAX_AGE_SECONDS;
+      document.cookie = `access_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax`;
     }
 
     if (currentUser) {

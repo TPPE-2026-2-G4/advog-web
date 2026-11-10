@@ -411,6 +411,9 @@ describe('FinancasClient', () => {
     fireEvent.change(screen.getByLabelText('Título'), {
       target: { value: 'Novo Contrato Empresarial' },
     });
+    fireEvent.change(screen.getByLabelText('Descrição'), {
+      target: { value: 'Contrato de assessoria jurídica' },
+    });
     fireEvent.change(screen.getByLabelText('Valor'), {
       target: { value: '12000' },
     });

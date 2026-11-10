@@ -33,7 +33,7 @@ describe('enviarSolicitacaoServico', () => {
     const storageSpy = vi.spyOn(Storage.prototype, 'setItem');
 
     await expect(enviarSolicitacaoServico(dados)).resolves.toEqual(cliente);
-    expect(fetch).toHaveBeenCalledWith(`${API_URL}/solicitacoes`, {
+    expect(fetch).toHaveBeenCalledWith(`${API_URL}/clientes/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados),

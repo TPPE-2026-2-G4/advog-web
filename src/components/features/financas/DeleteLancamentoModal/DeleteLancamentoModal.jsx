@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import styles from './DeleteLancamentoModal.module.css';
+import SerieScope from '../LancamentoModal/SerieScope';
 
 export default function DeleteLancamentoModal({
   lancamento,
@@ -13,6 +15,7 @@ export default function DeleteLancamentoModal({
   onClose,
   onConfirm,
 }) {
+  const [alcance, setAlcance] = useState('individual');
   if (!isOpen || !lancamento) return null;
 
   return (
@@ -40,6 +43,13 @@ export default function DeleteLancamentoModal({
           <strong>{lancamento.titulo}</strong>? Esta ação não poderá ser
           desfeita.
         </p>
+        {lancamento.serie_id && (
+          <SerieScope
+            value={alcance}
+            onChange={setAlcance}
+            disabled={isDeleting}
+          />
+        )}
         {error && <p className={styles.error}>{error}</p>}
       </div>
 
@@ -54,7 +64,9 @@ export default function DeleteLancamentoModal({
         </button>
         <button
           type="button"
-          onClick={onConfirm}
+          onClick={() =>
+            lancamento.serie_id ? onConfirm(alcance) : onConfirm()
+          }
           className={styles.deleteButton}
           disabled={isDeleting}
         >
