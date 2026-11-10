@@ -372,6 +372,15 @@ export function agruparDespesasPorCategoria(lancamentos = [], filtros = {}) {
   }));
 }
 
+const FIELD_ERROR_MESSAGES = {
+  titulo: 'Por favor, informe o título do lançamento.',
+  descricao: 'Por favor, informe a descrição do lançamento.',
+  valor: 'Por favor, informe um valor válido maior que zero.',
+  data_vencimento: 'Por favor, informe uma data de vencimento válida.',
+  categoria_id: 'Por favor, selecione ou informe uma categoria.',
+  nome_categoria: 'Por favor, informe um nome válido para a categoria.',
+};
+
 export function parseApiError(
   error,
   defaultMessage = 'Ocorreu um erro na requisição.'
@@ -387,6 +396,9 @@ export function parseApiError(
           const loc = Array.isArray(d.loc)
             ? d.loc.filter((part) => part !== 'body').join('.')
             : '';
+          if (loc && FIELD_ERROR_MESSAGES[loc]) {
+            return FIELD_ERROR_MESSAGES[loc];
+          }
           return loc ? `${loc}: ${d.msg}` : d.msg;
         }
         return JSON.stringify(d);
@@ -456,7 +468,7 @@ export function toLancamento(apiItem) {
     categoria_id: apiItem.categoria_id || null,
     cliente_id: apiItem.cliente_id || null,
     status,
-    recorrente: Boolean(apiItem.recorrente),
+    recorrente: Boolean(apiItem.serie_id || apiItem.recorrente),
     google_calendar_url: apiItem.google_calendar_url || '',
     outlook_calendar_url: apiItem.outlook_calendar_url || '',
   };
@@ -523,5 +535,6 @@ export function toApiLancamento(item, dataReferencia = new Date()) {
     cliente_id: item.cliente_id || null,
     status,
     recorrente: Boolean(item.recorrente),
+    ...(item.rrule ? { rrule: item.rrule } : {}),
   };
 }

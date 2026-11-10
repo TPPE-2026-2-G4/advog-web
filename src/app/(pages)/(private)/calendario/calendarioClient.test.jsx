@@ -96,6 +96,30 @@ describe('CalendarioClient', () => {
     obterCalendario.mockResolvedValue([]);
   });
 
+  it('remove ocorrências excluídas ao consultar novamente o mês', async () => {
+    obterCalendario
+      .mockResolvedValueOnce([mockLancamentos[0]])
+      .mockResolvedValue([]);
+    render(
+      <CalendarioClient
+        initialData={[mockLancamentos[0]]}
+        initialDate={new Date(2026, 7, 1)}
+      />
+    );
+    await waitFor(() => expect(obterCalendario).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /Próximo mês/i }));
+    await waitFor(() => expect(obterCalendario).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByRole('button', { name: /Mês anterior/i }));
+    await waitFor(() => expect(obterCalendario).toHaveBeenCalledTimes(3));
+    fireEvent.click(screen.getByTestId('day-1'));
+    await waitFor(() =>
+      expect(screen.getByText('Sem lançamentos neste dia.')).toBeInTheDocument()
+    );
+    expect(
+      screen.queryByText(mockLancamentos[0].titulo)
+    ).not.toBeInTheDocument();
+  });
+
   it('renderiza o cabeçalho, título e subtítulo corretamente', () => {
     render(
       <CalendarioClient

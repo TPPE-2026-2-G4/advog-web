@@ -84,9 +84,9 @@ export default function FinancasClient({
     setLancamentoToDelete(item);
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = async (alcance = 'individual') => {
     try {
-      await handleDeleteLancamento(lancamentoToDelete);
+      await handleDeleteLancamento(lancamentoToDelete, alcance);
       setLancamentoToDelete(null);
     } catch {}
   };
@@ -152,6 +152,7 @@ export default function FinancasClient({
       />
 
       <DeleteLancamentoModal
+        key={lancamentoToDelete?.id || 'fechado'}
         lancamento={lancamentoToDelete}
         isOpen={Boolean(lancamentoToDelete)}
         isDeleting={isDeleting}

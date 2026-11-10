@@ -88,6 +88,36 @@ describe('useFinancas', () => {
     });
   });
 
+  it.each(['criar', 'editar', 'excluir'])(
+    'recarrega ocorrências e totais após %s em uma série',
+    async (operacao) => {
+      const item = { ...mockData[0], serie_id: 'serie-1', alcance: 'serie' };
+      listarFinancas.mockResolvedValueOnce({
+        itens: [item],
+        total: 8,
+        total_pages: 2,
+        page: 1,
+        page_size: 5,
+      });
+      const { result } = renderHook(() => useFinancas([item]));
+      await act(async () => {
+        if (operacao === 'criar')
+          await result.current.handleCreateLancamento(item);
+        if (operacao === 'editar')
+          await result.current.handleUpdateLancamento(item);
+        if (operacao === 'excluir')
+          await result.current.handleDeleteLancamento(item, 'serie');
+      });
+      expect(listarFinancas).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1 })
+      );
+      expect(result.current.pagination.total).toBe(8);
+      if (operacao === 'excluir')
+        expect(excluirFinancas).toHaveBeenCalledWith(item.id, 'serie');
+      expect(excluirCategoria).not.toHaveBeenCalled();
+    }
+  );
+
   it('inicializa com array vazio por padrão quando nenhum dado é fornecido', () => {
     const { result } = renderHook(() => useFinancas());
 
