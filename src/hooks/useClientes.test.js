@@ -1,11 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useClientes } from './useClientes';
 import {
   atualizarCliente,
   criarCliente,
   excluirCliente,
-  listarClientes,
+  listarClientesPaginado,
 } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 
@@ -13,7 +13,7 @@ vi.mock('@/services/clientes', () => ({
   criarCliente: vi.fn(),
   atualizarCliente: vi.fn(),
   excluirCliente: vi.fn(),
-  listarClientes: vi.fn().mockResolvedValue([]),
+  listarClientesPaginado: vi.fn(),
 }));
 
 vi.mock('@/services/funcionarios', () => ({
@@ -44,9 +44,31 @@ const mockFuncionarios = [
   { funcionario_id: 2, nome: 'Ana Paula' },
 ];
 
+const paginaCom = (itens, extra = {}) => ({
+  itens,
+  total: itens.length,
+  page: 1,
+  pageSize: 10,
+  totalPages: 1,
+  ...extra,
+});
+
+const aguardarDebounce = () =>
+  act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
 describe('useClientes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listarFuncionarios.mockResolvedValue([]);
+    // Por padrão a recarga após uma busca/mutação nunca conclui, o que preserva
+    // o estado otimista local; os testes de recarga sobrescrevem este retorno.
+    listarClientesPaginado.mockReturnValue(new Promise(() => {}));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('inicializa com os clientes e funcionários fornecidos', () => {
@@ -62,177 +84,155 @@ describe('useClientes', () => {
     expect(result.current.searchTerm).toBe('');
   });
 
-  it.each([
-    {
-      criterio: 'nome',
-      termo: 'João',
-      clientesEsperados: ['João Santos'],
-    },
-    {
-      criterio: 'email',
-      termo: 'maria@email.com',
-      clientesEsperados: ['Maria Oliveira'],
-    },
-    {
-      criterio: 'CPF',
-      termo: '12345678900',
-      clientesEsperados: ['João Santos'],
-    },
-    {
-      criterio: 'CNPJ',
-      termo: '86765432000112',
-      clientesEsperados: ['Maria Oliveira'],
-    },
-    {
-      criterio: 'documento alfanumérico',
-      termo: 'DOC-998877',
-      initialClientes: [
-        ...mockClientes,
-        { id: 3, nome: 'Doc Generico', documento: 'DOC-998877' },
-        { id: 4, nome: 'Sem Documento' },
-      ],
-      clientesEsperados: ['Doc Generico'],
-    },
-    {
-      criterio: 'termo inexistente',
-      termo: 'termo_inexistente',
-      clientesEsperados: [],
-    },
-  ])(
-    'filtra clientes por busca ($criterio: "$termo")',
-    ({ termo, initialClientes = mockClientes, clientesEsperados }) => {
-      const { result } = renderHook(() =>
-        useClientes({
-          initialClientes,
-          initialFuncionarios: mockFuncionarios,
-        })
-      );
+  it('inicializa a partir de uma página do servidor sem buscar novamente', () => {
+    const { result } = renderHook(() =>
+      useClientes({
+        initialPage: paginaCom(mockClientes, {
+          total: 25,
+          totalPages: 3,
+          page: 2,
+        }),
+        initialFuncionarios: mockFuncionarios,
+      })
+    );
 
-      act(() => {
-        result.current.setSearchTerm(termo);
-      });
+    expect(result.current.clientes).toEqual(mockClientes);
+    expect(result.current.totalItems).toBe(25);
+    expect(result.current.totalPages).toBe(3);
+    expect(result.current.currentPage).toBe(2);
+    expect(result.current.pageSize).toBe(10);
+    expect(result.current.isLoading).toBe(false);
+    expect(listarClientesPaginado).not.toHaveBeenCalled();
+  });
 
-      expect(result.current.filteredClientes.map((c) => c.nome)).toEqual(
-        clientesEsperados
-      );
-    }
-  );
+  it('envia a busca ao servidor após o debounce, voltando para a página 1', async () => {
+    vi.useFakeTimers();
+    const filtrados = [mockClientes[0]];
+    listarClientesPaginado.mockResolvedValue(paginaCom(filtrados));
 
-  it.each([
-    {
-      cenario: 'responsavel_id coincidente',
-      responsavelFilter: '1',
-      statusFilter: '',
-      initialClientes: mockClientes,
-      initialFuncionarios: mockFuncionarios,
-      idsEsperados: [1],
-    },
-    {
-      cenario: 'etapa_id coincidente',
-      responsavelFilter: '',
-      statusFilter: '1',
-      initialClientes: mockClientes,
-      initialFuncionarios: mockFuncionarios,
-      idsEsperados: [2],
-    },
-    {
-      cenario: 'status_id coincidente em clientes com .id',
-      responsavelFilter: '',
-      statusFilter: '2',
-      initialClientes: [
-        { id: 100, nome: 'Cliente ID 100', status_id: 2, responsavel_id: 99 },
-        { id: 200, nome: 'Cliente ID 200', status_id: 3, responsavel_id: 1 },
-      ],
-      initialFuncionarios: mockFuncionarios,
-      idsEsperados: [100],
-    },
-    {
-      cenario:
-        'responsavel_nome ou responsavel string/objeto quando responsavel_id é nulo',
-      responsavelFilter: '1',
-      statusFilter: '',
-      initialClientes: [
-        {
-          cliente_id: 11,
-          nome: 'Cliente Um',
-          responsavel_id: null,
-          responsavel_nome: 'Alexandre Carreiro',
-        },
-        {
-          cliente_id: 12,
-          nome: 'Cliente Dois',
-          responsavel_id: null,
-          responsavel: { nome: 'Ana Paula' },
-        },
-        {
-          cliente_id: 13,
-          nome: 'Cliente Três',
-          responsavel_id: null,
-          responsavel: 'Alexandre Carreiro',
-        },
-        {
-          cliente_id: 14,
-          nome: 'Cliente Quatro',
-          responsavel_id: null,
-          responsavel: null,
-        },
-      ],
-      initialFuncionarios: mockFuncionarios,
-      idsEsperados: [11, 13],
-    },
-    {
-      cenario: 'responsavel não encontrado na lista de funcionários',
-      responsavelFilter: '999',
-      statusFilter: '',
-      initialClientes: [
-        { id: 3, nome: 'Outro', responsavel_id: 15 },
-        { id: 4, nome: 'Sem Resp ID', responsavel_id: null },
-      ],
-      initialFuncionarios: [{ id: 99, nome: 'Dr. Sem Func ID' }],
-      idsEsperados: [],
-    },
-    {
-      cenario: 'responsavelFilter zero coincidindo com responsavel_id nulo',
-      responsavelFilter: '0',
-      statusFilter: '',
-      initialClientes: [{ id: 5, nome: 'Resp Zero', responsavel_id: null }],
-      initialFuncionarios: mockFuncionarios,
-      idsEsperados: [5],
-    },
-    {
-      cenario: 'funcionário identificado por .id sem clientes associados',
-      responsavelFilter: '99',
-      statusFilter: '',
-      initialClientes: [{ id: 1, nome: 'Sem Resp', responsavel_id: null }],
-      initialFuncionarios: [{ id: 99, nome: 'Dr. Sem Func ID' }],
-      idsEsperados: [],
-    },
-  ])(
-    'filtra clientes por responsável e etapa/status ($cenario)',
-    ({
-      responsavelFilter,
-      statusFilter,
-      initialClientes,
-      initialFuncionarios,
-      idsEsperados,
-    }) => {
-      const { result } = renderHook(() =>
-        useClientes({
-          initialClientes,
-          initialFuncionarios,
-        })
-      );
+    const { result } = renderHook(() =>
+      useClientes({
+        initialPage: paginaCom(mockClientes, { page: 2, totalPages: 3 }),
+        initialFuncionarios: mockFuncionarios,
+      })
+    );
 
-      act(() => {
-        result.current.setResponsavelFilter(responsavelFilter);
-        result.current.setStatusFilter(statusFilter);
-      });
+    act(() => {
+      result.current.setSearchTerm('  João ');
+    });
 
-      expect(
-        result.current.filteredClientes.map((c) => c.cliente_id ?? c.id)
-      ).toEqual(idsEsperados);
-    }
-  );
+    expect(result.current.searchTerm).toBe('  João ');
+    expect(result.current.currentPage).toBe(1);
+    expect(listarClientesPaginado).not.toHaveBeenCalledWith(
+      expect.objectContaining({ busca: 'João' })
+    );
+
+    await aguardarDebounce();
+
+    expect(listarClientesPaginado).toHaveBeenLastCalledWith({
+      busca: 'João',
+      responsavel_id: '',
+      etapa_id: '',
+      page: 1,
+      pageSize: 10,
+    });
+    expect(result.current.filteredClientes).toEqual(filtrados);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('envia responsável e status ao servidor e volta para a página 1', async () => {
+    listarClientesPaginado.mockResolvedValue(paginaCom([mockClientes[1]]));
+
+    const { result } = renderHook(() =>
+      useClientes({
+        initialPage: paginaCom(mockClientes, { page: 3, totalPages: 3 }),
+        initialFuncionarios: mockFuncionarios,
+      })
+    );
+
+    await act(async () => {
+      result.current.setResponsavelFilter('2');
+      result.current.setStatusFilter('1');
+    });
+
+    expect(listarClientesPaginado).toHaveBeenLastCalledWith({
+      busca: '',
+      responsavel_id: '2',
+      etapa_id: '1',
+      page: 1,
+      pageSize: 10,
+    });
+    expect(result.current.currentPage).toBe(1);
+    expect(result.current.clientes).toEqual([mockClientes[1]]);
+  });
+
+  it('busca a página solicitada ao navegar entre páginas', async () => {
+    const segundaPagina = [{ cliente_id: 11, nome: 'Cliente da página 2' }];
+    listarClientesPaginado.mockResolvedValue(
+      paginaCom(segundaPagina, { total: 11, page: 2, totalPages: 2 })
+    );
+
+    const { result } = renderHook(() =>
+      useClientes({
+        initialPage: paginaCom(mockClientes, { total: 11, totalPages: 2 }),
+        initialFuncionarios: mockFuncionarios,
+      })
+    );
+
+    await act(async () => {
+      result.current.setCurrentPage(2);
+    });
+
+    expect(listarClientesPaginado).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2, pageSize: 10 })
+    );
+    expect(result.current.clientes).toEqual(segundaPagina);
+    expect(result.current.currentPage).toBe(2);
+    expect(result.current.totalItems).toBe(11);
+  });
+
+  it('volta para a última página existente quando a página atual fica vazia', async () => {
+    listarClientesPaginado
+      .mockResolvedValueOnce(
+        paginaCom([], { total: 10, page: 3, totalPages: 1 })
+      )
+      .mockResolvedValueOnce(paginaCom(mockClientes, { total: 10 }));
+
+    const { result } = renderHook(() =>
+      useClientes({
+        initialPage: paginaCom(mockClientes, { total: 30, totalPages: 3 }),
+        initialFuncionarios: mockFuncionarios,
+      })
+    );
+
+    await act(async () => {
+      result.current.setCurrentPage(3);
+    });
+
+    expect(listarClientesPaginado).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1 })
+    );
+    expect(result.current.currentPage).toBe(1);
+    expect(result.current.clientes).toEqual(mockClientes);
+  });
+
+  it('mantém a lista atual e encerra o carregamento quando a busca falha', async () => {
+    listarClientesPaginado.mockRejectedValue(new Error('Falha'));
+
+    const { result } = renderHook(() =>
+      useClientes({
+        initialPage: paginaCom(mockClientes),
+        initialFuncionarios: mockFuncionarios,
+      })
+    );
+
+    await act(async () => {
+      result.current.setStatusFilter('4');
+    });
+
+    expect(result.current.clientes).toEqual(mockClientes);
+    expect(result.current.isLoading).toBe(false);
+  });
 
   it('cadastra cliente, preserva cpf/documento locais e atualiza o estado com sucesso', async () => {
     const payload = {
@@ -264,6 +264,28 @@ describe('useClientes', () => {
     expect(result.current.feedbackMessage).toBe(
       'Cliente cadastrado com sucesso!'
     );
+  });
+
+  it('após cadastrar, volta para a primeira página e recarrega do servidor', async () => {
+    criarCliente.mockResolvedValueOnce({ cliente_id: 3, nome: 'Novo' });
+    const recarregada = paginaCom([{ cliente_id: 3, nome: 'Novo' }]);
+
+    const { result } = renderHook(() =>
+      useClientes({
+        initialPage: paginaCom(mockClientes, { page: 2, totalPages: 2 }),
+      })
+    );
+    listarClientesPaginado.mockResolvedValue(recarregada);
+
+    await act(async () => {
+      await result.current.handleCreateClient({ nome: 'Novo' });
+    });
+
+    expect(listarClientesPaginado).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1 })
+    );
+    expect(result.current.currentPage).toBe(1);
+    expect(result.current.clientes).toEqual(recarregada.itens);
   });
 
   it('atualiza cliente com sucesso (por cliente_id ou id) e preserva documento', async () => {
@@ -329,6 +351,33 @@ describe('useClientes', () => {
     });
 
     expect(result.current.clientes.find((c) => c.id === 100)).toBeUndefined();
+  });
+
+  it('ao excluir o último cliente da última página, volta uma página', async () => {
+    excluirCliente.mockResolvedValue(true);
+    listarClientesPaginado.mockResolvedValue(
+      paginaCom(mockClientes, { total: 10, page: 1, totalPages: 1 })
+    );
+
+    const { result } = renderHook(() =>
+      useClientes({
+        initialPage: paginaCom([mockClientes[0]], {
+          total: 11,
+          page: 2,
+          totalPages: 2,
+        }),
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleDeleteClient(1);
+    });
+
+    expect(result.current.currentPage).toBe(1);
+    expect(listarClientesPaginado).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1 })
+    );
+    expect(result.current.totalItems).toBe(10);
   });
 
   it.each([
@@ -498,7 +547,7 @@ describe('useClientes', () => {
   });
 
   it('busca clientes e funcionários automaticamente ao montar quando as listas iniciais são vazias', async () => {
-    listarClientes.mockResolvedValueOnce(mockClientes);
+    listarClientesPaginado.mockResolvedValueOnce(paginaCom(mockClientes));
     listarFuncionarios.mockResolvedValueOnce(mockFuncionarios);
 
     const { result } = renderHook(() => useClientes());
@@ -509,15 +558,36 @@ describe('useClientes', () => {
       await Promise.resolve();
     });
 
-    expect(listarClientes).toHaveBeenCalled();
+    expect(listarClientesPaginado).toHaveBeenCalledWith({
+      busca: '',
+      responsavel_id: '',
+      etapa_id: '',
+      page: 1,
+      pageSize: 10,
+    });
     expect(listarFuncionarios).toHaveBeenCalled();
     expect(result.current.clientes).toEqual(mockClientes);
     expect(result.current.funcionarios).toEqual(mockFuncionarios);
     expect(result.current.isLoading).toBe(false);
   });
 
+  it('busca no cliente quando a página inicial do servidor veio vazia', async () => {
+    listarClientesPaginado.mockResolvedValueOnce(paginaCom(mockClientes));
+
+    const { result } = renderHook(() =>
+      useClientes({ initialPage: paginaCom([]) })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(listarClientesPaginado).toHaveBeenCalledOnce();
+    expect(result.current.clientes).toEqual(mockClientes);
+  });
+
   it('lida com falhas no carregamento inicial de clientes e funcionários sem quebrar', async () => {
-    listarClientes.mockRejectedValueOnce(new Error('Erro de rede'));
+    listarClientesPaginado.mockRejectedValueOnce(new Error('Erro de rede'));
     listarFuncionarios.mockRejectedValueOnce(new Error('Erro funcionários'));
 
     const { result } = renderHook(() => useClientes());
@@ -533,7 +603,7 @@ describe('useClientes', () => {
 
   it('cancela atualização de estado se o hook for desmontado antes das requisições terminarem', async () => {
     let resolverClientes;
-    listarClientes.mockImplementationOnce(
+    listarClientesPaginado.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           resolverClientes = resolve;
@@ -544,7 +614,7 @@ describe('useClientes', () => {
     unmount();
 
     await act(async () => {
-      resolverClientes?.(mockClientes);
+      resolverClientes?.(paginaCom(mockClientes));
     });
   });
 

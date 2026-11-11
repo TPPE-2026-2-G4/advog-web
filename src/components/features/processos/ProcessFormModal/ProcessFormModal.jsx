@@ -3,6 +3,7 @@
 import { useId, useMemo, useState } from 'react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
+import Toast from '@/components/ui/Toast/Toast';
 import AutocompleteClient from '@/components/features/clientes/AutocompleteClient/AutocompleteClient';
 import AutocompleteResponsible from '@/components/features/clientes/AutocompleteResponsible/AutocompleteResponsible';
 import { isAdministratorAccount } from '@/utils/funcionario';
@@ -18,7 +19,14 @@ import {
 } from '@/utils/processo';
 import styles from './ProcessFormModal.module.css';
 
-const requiredTextFields = ['titulo', 'tribunal', 'area'];
+const requiredFieldLabels = {
+  titulo: 'Título do Caso',
+  tribunal: 'Tribunal',
+  cliente_id: 'Cliente',
+  area: 'Área de Atuação',
+  data_inicio: 'Data de Início',
+  data_prazo: 'Próximo Prazo',
+};
 const dateFields = ['data_inicio', 'data_realizado', 'data_prazo'];
 
 const getErrorMessage = (error) =>
@@ -71,7 +79,6 @@ function ProcessFormDialog({
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const titleId = useId();
-  const errorId = useId();
 
   const availableFuncionarios = useMemo(
     () => (funcionarios || []).filter((f) => !isAdministratorAccount(f)),
@@ -91,15 +98,21 @@ function ProcessFormDialog({
     if (isSubmitting) return;
 
     if (!CNJ_REGEX.test(formData.cnj)) {
-      setError('Informe o número do processo no formato CNJ.');
+      setError(
+        'O número do processo deve seguir o formato CNJ: 0000000-00.0000.0.00.0000.'
+      );
       return;
     }
 
-    if (
-      !formData.cliente_id ||
-      requiredTextFields.some((field) => !formData[field].trim())
-    ) {
-      setError('Preencha todos os campos obrigatórios.');
+    const missingFields = Object.keys(requiredFieldLabels).filter(
+      (field) => !String(formData[field] ?? '').trim()
+    );
+    if (missingFields.length > 0) {
+      setError(
+        `Preencha os campos obrigatórios: ${missingFields
+          .map((field) => requiredFieldLabels[field])
+          .join(', ')}.`
+      );
       return;
     }
 
@@ -108,7 +121,7 @@ function ProcessFormDialog({
         (field) => formData[field] && !normalizeProcessDate(formData[field])
       )
     ) {
-      setError('Informe datas válidas.');
+      setError('Há uma data inválida. Confira as datas informadas.');
       return;
     }
 
@@ -120,7 +133,9 @@ function ProcessFormDialog({
       formData.funcionario_id &&
       (!selectedFunc || isAdministratorAccount(selectedFunc))
     ) {
-      setError('A conta de administrador não pode ser atribuída a processos.');
+      setError(
+        'A conta de administrador não pode ser responsável por processos. Escolha outro responsável.'
+      );
       return;
     }
 
@@ -338,10 +353,7 @@ function ProcessFormDialog({
 
         <div className={styles.grid}>
           <div className={styles.inputGroup}>
-            <label
-              className={styles.optionalLabel}
-              htmlFor={fieldId('data_inicio')}
-            >
+            <label className={styles.label} htmlFor={fieldId('data_inicio')}>
               Data de Início
             </label>
             <input
@@ -352,6 +364,7 @@ function ProcessFormDialog({
               value={formData.data_inicio}
               onChange={handleChange}
               disabled={isSubmitting}
+              required
             />
           </div>
           <div className={styles.inputGroup}>
@@ -374,10 +387,7 @@ function ProcessFormDialog({
         </div>
 
         <div className={styles.inputGroup}>
-          <label
-            className={styles.optionalLabel}
-            htmlFor={fieldId('data_prazo')}
-          >
+          <label className={styles.label} htmlFor={fieldId('data_prazo')}>
             Próximo Prazo
           </label>
           <input
@@ -388,14 +398,15 @@ function ProcessFormDialog({
             value={formData.data_prazo}
             onChange={handleChange}
             disabled={isSubmitting}
+            required
           />
         </div>
 
-        {error && (
-          <p id={errorId} className={styles.error} role="alert">
-            {error}
-          </p>
-        )}
+        <Toast
+          message={error}
+          onClose={() => setError('')}
+          fallback="Não foi possível salvar o processo."
+        />
       </div>
 
       <div className={styles.footer}>

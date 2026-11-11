@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './DeleteLancamentoModal.module.css';
 import SerieScope from '../LancamentoModal/SerieScope';
 
@@ -50,7 +51,7 @@ export default function DeleteLancamentoModal({
             disabled={isDeleting}
           />
         )}
-        {error && <p className={styles.error}>{error}</p>}
+        <Toast message={error} />
       </div>
 
       <div className={styles.footer}>

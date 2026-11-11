@@ -35,6 +35,7 @@ import { getValidFotoUrl, isAdministratorAccount } from '@/utils/funcionario';
 import { getCurrentUser } from '@/utils/authSession';
 import { getImageUrl } from '@/utils/institucional';
 import AutocompleteMultiResponsible from '@/components/features/atividades/AutocompleteMultiResponsible/AutocompleteMultiResponsible';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './atividades.module.css';
 
 const EMPTY_FORM = {
@@ -444,11 +445,7 @@ export default function AtividadesClient() {
           {feedback}
         </div>
       )}
-      {actionError && (
-        <div role="alert" className={styles.alertError}>
-          {actionError}
-        </div>
-      )}
+      <Toast message={actionError} onClose={() => setActionError('')} />
 
       <div className={styles.board}>
         {etapas.map((col) => {
@@ -687,11 +684,10 @@ export default function AtividadesClient() {
             <ModalCloseButton onClose={() => setStageModalOpen(false)} />
           </div>
           <div className={styles.modalBody}>
-            {stageFormError && (
-              <div role="alert" className={styles.alertError}>
-                {stageFormError}
-              </div>
-            )}
+            <Toast
+              message={stageFormError}
+              onClose={() => setStageFormError('')}
+            />
             <label className={styles.field}>
               <span className={styles.requiredLabel}>Nome da etapa</span>
               <input
@@ -966,11 +962,7 @@ export default function AtividadesClient() {
             <ModalCloseButton onClose={() => setModalOpen(false)} />
           </div>
           <div className={styles.modalBody}>
-            {formError && (
-              <div role="alert" className={styles.alertError}>
-                {formError}
-              </div>
-            )}
+            <Toast message={formError} onClose={() => setFormError('')} />
             <label className={styles.field}>
               <span className={styles.requiredLabel}>Título</span>
               <input

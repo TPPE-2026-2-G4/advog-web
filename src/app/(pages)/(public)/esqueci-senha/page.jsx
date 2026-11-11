@@ -7,6 +7,7 @@ import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import { useForgotPassword } from '@/hooks/useForgotPassword';
 import { useInstitucionalContext } from '@/contexts/InstitucionalContext';
 import { getContrastTextColor } from '@/utils/institucional';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './forgotPassword.module.css';
 
 export function ForgotPasswordContent({ resetMode = false }) {
@@ -125,7 +126,7 @@ export function ForgotPasswordContent({ resetMode = false }) {
           )}
         </button>
 
-        {erro && <span className={styles.error}>{erro}</span>}
+        <Toast message={erro} />
         <Link
           className={styles.backLink}
           href="/login"

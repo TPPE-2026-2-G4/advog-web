@@ -165,9 +165,9 @@ describe('integração da página de equipe', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
     const dialog = screen.getByRole('dialog');
-    expect(
-      await within(dialog).findByText('E-mail já cadastrado')
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'E-mail já cadastrado'
+    );
     expect(
       screen.getByRole('heading', { name: 'Adicionar Novo Usuário' })
     ).toBeInTheDocument();
@@ -208,11 +208,9 @@ describe('integração da página de equipe', () => {
       })
     );
 
-    expect(
-      await within(screen.getByRole('dialog')).findByText(
-        'Funcionário não encontrado'
-      )
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Funcionário não encontrado'
+    );
     expect(screen.getAllByText('Maria Silva')).toHaveLength(2);
   });
 
@@ -261,11 +259,9 @@ describe('integração da página de equipe', () => {
       })
     );
 
-    expect(
-      await within(screen.getByRole('dialog')).findByText(
-        'Funcionário ainda está pendente'
-      )
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Funcionário ainda está pendente'
+    );
     expect(screen.getByText('Ativo')).toBeInTheDocument();
   });
 
@@ -502,9 +498,7 @@ describe('integração da página de equipe', () => {
       })
     );
 
-    expect(
-      await within(screen.getByRole('dialog')).findByRole('alert')
-    ).toHaveTextContent(message);
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
     expect(screen.getAllByText('Advogado')).toHaveLength(2);
     expect(
       screen.getByRole('heading', { name: 'Excluir cargo?' })
@@ -624,7 +618,7 @@ describe('integração da página de equipe', () => {
     });
     fireEvent.click(within(dialog3).getByRole('button', { name: 'Salvar' }));
 
-    expect(await within(dialog3).findByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'Não foi possível alterar o cargo.'
     );
 
@@ -645,7 +639,7 @@ describe('integração da página de equipe', () => {
     fireEvent.click(
       within(newRoleDialog).getByRole('button', { name: 'Criar Cargo' })
     );
-    expect(within(newRoleDialog).getByRole('alert')).toHaveTextContent(
+    expect(screen.getByRole('alert')).toHaveTextContent(
       'Informe o nome do cargo.'
     );
 
@@ -655,7 +649,7 @@ describe('integração da página de equipe', () => {
     fireEvent.click(
       within(newRoleDialog).getByRole('button', { name: 'Criar Cargo' })
     );
-    expect(within(newRoleDialog).getByRole('alert')).toHaveTextContent(
+    expect(screen.getByRole('alert')).toHaveTextContent(
       'Já existe um cargo com esse nome.'
     );
 
@@ -677,7 +671,7 @@ describe('integração da página de equipe', () => {
       within(newRoleDialog).getByRole('button', { name: 'Criar Cargo' })
     );
 
-    expect(await within(newRoleDialog).findByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'Não foi possível criar o cargo.'
     );
 
@@ -710,7 +704,7 @@ describe('integração da página de equipe', () => {
     });
     fireEvent.click(within(permDialog).getByRole('button', { name: 'Salvar' }));
 
-    expect(await within(permDialog).findByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'Não foi possível atualizar o cargo.'
     );
     await waitFor(() => {
@@ -1307,7 +1301,7 @@ describe('integração da página de equipe', () => {
     });
 
     it.each([
-      ['texto livre', 'texto livre'],
+      ['texto livre', 'Texto livre'],
       [new Error(''), 'Não foi possível atualizar o usuário.'],
       [{}, 'Não foi possível atualizar o usuário.'],
       ['', 'Não foi possível atualizar o usuário.'],
@@ -1327,9 +1321,7 @@ describe('integração da página de equipe', () => {
         });
         fireEvent.submit(dialog);
 
-        expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-          message
-        );
+        expect(await screen.findByRole('alert')).toHaveTextContent(message);
       }
     );
 

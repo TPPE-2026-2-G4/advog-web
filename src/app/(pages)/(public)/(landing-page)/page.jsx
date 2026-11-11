@@ -1,5 +1,7 @@
-import { buscarDadosInstitucionais } from '@/services/institucional';
-import { listarFuncionarios } from '@/services/funcionarios';
+import {
+  buscarDadosInstitucionais,
+  listarEquipeInstitucional,
+} from '@/services/institucional';
 import { listarAtuacoes } from '@/services/atuacoes';
 import {
   getLawyerInitials,
@@ -32,7 +34,7 @@ export const dynamic = 'force-dynamic';
 export default async function Home() {
   const [institucional, funcionarios, atuacoes] = await Promise.all([
     buscarDadosInstitucionais(),
-    listarFuncionarios(),
+    listarEquipeInstitucional(),
     listarAtuacoes(),
   ]);
 
@@ -49,9 +51,9 @@ export default async function Home() {
   const atuacoesVisiveis = (atuacoes || []).filter(
     (area) => area.exibicaoInstitucional
   );
-  const visibleTeam = (funcionarios || [])
-    .filter((f) => !isAdministratorAccount(f))
-    .filter((f) => f.exibicaoInstitucional);
+  const visibleTeam = (funcionarios || []).filter(
+    (f) => !isAdministratorAccount(f)
+  );
 
   const areasSubtitle =
     institucional?.sobreAreas ||

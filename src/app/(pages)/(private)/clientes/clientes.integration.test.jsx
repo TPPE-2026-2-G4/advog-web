@@ -70,6 +70,55 @@ const mockClientesIniciais = [
   },
 ];
 
+const paginaCom = (itens) => ({
+  itens,
+  total: itens.length,
+  page: 1,
+  pageSize: 10,
+  totalPages: 1,
+});
+
+// Imita o GET /clientes/paginado do backend (filtros + paginação).
+function responderClientesPaginado(urlString, clientes) {
+  const params = new URL(urlString, 'http://localhost').searchParams;
+  const busca = (params.get('busca') || '').toLowerCase();
+  const responsavelId = params.get('responsavel_id');
+  const etapaId = params.get('etapa_id');
+  const page = Number(params.get('page') || 1);
+  const pageSize = Number(params.get('page_size') || 10);
+
+  const soDigitos = (texto) => String(texto || '').replace(/\D/g, '');
+  const buscaDeDocumento = /^[\d.\-/\s]+$/.test(busca);
+  const idDe = (c) => c.cliente_id ?? c.id;
+
+  const filtrados = clientes
+    .filter(
+      (c) =>
+        !busca ||
+        [c.nome, c.email, c.documento].some((campo) =>
+          String(campo || '')
+            .toLowerCase()
+            .includes(busca)
+        ) ||
+        (buscaDeDocumento && soDigitos(c.documento).includes(soDigitos(busca)))
+    )
+    .filter((c) => !responsavelId || String(c.responsavel_id) === responsavelId)
+    .filter((c) => !etapaId || String(c.etapa_id) === etapaId)
+    .sort((a, b) => idDe(b) - idDe(a));
+
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({
+      itens: filtrados.slice((page - 1) * pageSize, page * pageSize),
+      total: filtrados.length,
+      page,
+      page_size: pageSize,
+      total_pages: Math.max(1, Math.ceil(filtrados.length / pageSize)),
+    }),
+  };
+}
+
 describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -149,12 +198,8 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
         };
       }
 
-      if (method === 'GET' && /\/clientes\/?/.test(urlString)) {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => clientesAtuais,
-        };
+      if (method === 'GET' && /\/clientes\/paginado\?/.test(urlString)) {
+        return responderClientesPaginado(urlString, clientesAtuais);
       }
 
       throw new Error(`Requisição inesperada no teste: ${method} ${urlString}`);
@@ -162,7 +207,7 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientesIniciais}
+        initialPage={paginaCom(mockClientesIniciais)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -185,16 +230,17 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
       target: { value: 'alpha' },
     });
 
+    await waitFor(() => {
+      expect(screen.queryByText('Beatriz Pereira')).not.toBeInTheDocument();
+    });
     expect(screen.getByText('Empresa Alpha Ltda')).toBeInTheDocument();
-
-    expect(screen.queryByText('Beatriz Pereira')).not.toBeInTheDocument();
 
     // Limpar busca
     fireEvent.change(searchInput, {
       target: { value: '' },
     });
 
-    expect(screen.getByText('Beatriz Pereira')).toBeInTheDocument();
+    expect(await screen.findByText('Beatriz Pereira')).toBeInTheDocument();
 
     // 3. Abrir detalhes do cliente
     const viewAlphaButton = screen.getByLabelText(
@@ -443,7 +489,7 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
       render(
         <ClientesClient
-          initialClientes={mockClientesIniciais}
+          initialPage={paginaCom(mockClientesIniciais)}
           initialFuncionarios={mockFuncionarios}
         />
       );
@@ -498,7 +544,7 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
       render(
         <ClientesClient
-          initialClientes={mockClientesIniciais}
+          initialPage={paginaCom(mockClientesIniciais)}
           initialFuncionarios={mockFuncionarios}
         />
       );
@@ -522,11 +568,12 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
   it('renderiza ClientesPage (SSR) buscando clientes e funcionários via API', async () => {
     global.fetch
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => mockClientesIniciais,
-      })
+      .mockResolvedValueOnce(
+        responderClientesPaginado(
+          '/clientes/paginado?page=1',
+          mockClientesIniciais
+        )
+      )
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -539,17 +586,22 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
     expect(
       screen.getByRole('heading', { name: 'Clientes' })
     ).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/clientes\/paginado\?.*page=1/),
+      expect.anything()
+    );
     expect(screen.getByText('Empresa Alpha Ltda')).toBeInTheDocument();
     expect(screen.getByText('Beatriz Pereira')).toBeInTheDocument();
   });
 
-  it('busca clientes e funcionários no cliente quando initialClientes e initialFuncionarios estão vazios e trata falhas silenciosamente', async () => {
+  it('busca clientes e funcionários no cliente quando initialPage e initialFuncionarios estão vazios e initialFuncionarios estão vazios e trata falhas silenciosamente', async () => {
     global.fetch
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => mockClientesIniciais,
-      })
+      .mockResolvedValueOnce(
+        responderClientesPaginado(
+          '/clientes/paginado?page=1',
+          mockClientesIniciais
+        )
+      )
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -568,43 +620,48 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
       .mockRejectedValueOnce(new Error('Erro ao carregar clientes'))
       .mockRejectedValueOnce(new Error('Erro ao carregar funcionarios'));
 
-    render(<ClientesClient initialClientes={[]} initialFuncionarios={[]} />);
+    render(
+      <ClientesClient initialPage={paginaCom([])} initialFuncionarios={[]} />
+    );
 
     await waitFor(() => {
       expect(screen.getByText('Nenhum cliente encontrado')).toBeInTheDocument();
     });
   });
 
-  it('filtra clientes por texto (nome, email, CPF, CNPJ), responsável (teclado, limpar, clique fora) e status, e limpa filtros', async () => {
+  it('filtra clientes no servidor por texto (nome, email, CPF, CNPJ), responsável (teclado, limpar, clique fora) e status, e limpa filtros', async () => {
     const clientesVariados = [
       ...mockClientesIniciais,
       {
-        id: 104,
+        cliente_id: 104,
         nome: 'Cliente Responsavel String',
         documento: 'DOC-ESPECIAL-99',
         email: 'string@resp.com',
-        responsavel: 'Dr. Lucas Mendes',
-        status_id: 2,
+        responsavel_id: 1,
+        etapa_id: 2,
         ultima_interacao: 'data-invalida',
       },
       {
-        id: 105,
+        cliente_id: 105,
         nome: 'Cliente Responsavel Objeto',
         email: 'obj@resp.com',
-        responsavel: { nome: 'Dra. Beatriz Santos' },
+        responsavel_id: 2,
         etapa_id: 3,
       },
       {
-        id: 106,
+        cliente_id: 106,
         nome: 'Sem Responsavel',
         email: 'sem@resp.com',
         etapa_id: 5,
       },
     ];
+    global.fetch.mockImplementation(async (url) =>
+      responderClientesPaginado(String(url), clientesVariados)
+    );
 
     render(
       <ClientesClient
-        initialClientes={clientesVariados}
+        initialPage={paginaCom(clientesVariados)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -613,32 +670,39 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
     // Filtro por email
     fireEvent.change(searchInput, { target: { value: 'beatriz@gmail.com' } });
+    await waitFor(() => {
+      expect(screen.getByText('1 cliente cadastrado')).toBeInTheDocument();
+    });
     expect(screen.getByText('Beatriz Pereira')).toBeInTheDocument();
-    expect(screen.getByText('1 cliente cadastrado')).toBeInTheDocument();
     expect(screen.queryByText('Empresa Alpha Ltda')).not.toBeInTheDocument();
 
     // Filtro por CPF (dígitos)
     fireEvent.change(searchInput, { target: { value: '12345678900' } });
-    expect(screen.getByText('Beatriz Pereira')).toBeInTheDocument();
+    expect(await screen.findByText('Beatriz Pereira')).toBeInTheDocument();
 
     // Filtro por CNPJ (formatado)
     fireEvent.change(searchInput, { target: { value: '12.345.678/0001-90' } });
-    expect(screen.getByText('Empresa Alpha Ltda')).toBeInTheDocument();
+    expect(await screen.findByText('Empresa Alpha Ltda')).toBeInTheDocument();
+    expect(screen.queryByText('Beatriz Pereira')).not.toBeInTheDocument();
 
-    // Filtro por documento alfanumérico (sem dígitos suficientes)
+    // Filtro por documento alfanumérico
     fireEvent.change(searchInput, { target: { value: 'doc-especial' } });
-    expect(screen.getByText('Cliente Responsavel String')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Cliente Responsavel String')
+    ).toBeInTheDocument();
 
     // Busca sem resultados (Empty state da ClientTable)
     fireEvent.change(searchInput, {
       target: { value: 'inexistente-xyz-9999' },
     });
-    expect(screen.getByText('Nenhum cliente encontrado')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Nenhum cliente encontrado')
+    ).toBeInTheDocument();
 
     // Limpar filtros pelo botão
     fireEvent.click(screen.getByRole('button', { name: /limpar filtros/i }));
     expect(searchInput).toHaveValue('');
-    expect(screen.getByText('Empresa Alpha Ltda')).toBeInTheDocument();
+    expect(await screen.findByText('Empresa Alpha Ltda')).toBeInTheDocument();
 
     // Filtro por Responsável via AutocompleteResponsible usando teclado (ArrowDown, ArrowUp, Enter, Escape)
     const filtroRespInput = screen.getByLabelText('Filtrar por responsável');
@@ -664,9 +728,11 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
     fireEvent.keyDown(filtroRespInput, { key: 'Enter' }); // seleciona Dr. Lucas Mendes (id 1)
 
     expect(filtroRespInput).toHaveValue('Dr. Lucas Mendes');
+    await waitFor(() => {
+      expect(screen.queryByText('Beatriz Pereira')).not.toBeInTheDocument();
+    });
     expect(screen.getByText('Empresa Alpha Ltda')).toBeInTheDocument();
     expect(screen.getByText('Cliente Responsavel String')).toBeInTheDocument();
-    expect(screen.queryByText('Beatriz Pereira')).not.toBeInTheDocument();
     expect(
       screen.queryByText('Cliente Responsavel Objeto')
     ).not.toBeInTheDocument();
@@ -684,18 +750,20 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
     );
     fireEvent.click(clearRespBtn);
     expect(filtroRespInput).toHaveValue('');
-    expect(screen.getByText('Beatriz Pereira')).toBeInTheDocument();
+    expect(await screen.findByText('Beatriz Pereira')).toBeInTheDocument();
 
     // Filtro por status/etapa
     const statusSelect = screen.getByLabelText('Filtrar por status');
     fireEvent.change(statusSelect, { target: { value: '3' } }); // Em negociação
-    expect(screen.getByText('Cliente Responsavel Objeto')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Cliente Responsavel Objeto')
+    ).toBeInTheDocument();
     expect(screen.queryByText('Empresa Alpha Ltda')).not.toBeInTheDocument();
 
     // Limpar filtros gerais
     fireEvent.click(screen.getByRole('button', { name: /limpar filtros/i }));
     expect(statusSelect).toHaveValue('');
-    expect(screen.getByText('Empresa Alpha Ltda')).toBeInTheDocument();
+    expect(await screen.findByText('Empresa Alpha Ltda')).toBeInTheDocument();
   });
 
   it('exibe ClientDetailsModal com diferentes representações de responsável e campos opcionais ausentes, e transiciona para EditClientModal ao clicar em Editar', async () => {
@@ -735,7 +803,7 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
     render(
       <ClientesClient
-        initialClientes={clientesDetalhes}
+        initialPage={paginaCom(clientesDetalhes)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -856,7 +924,7 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
   it('valida campos em AddClientModal e EditClientModal, altera etapa, responsável e observações, e trata erros na edição e cancelamento de exclusão', async () => {
     render(
       <ClientesClient
-        initialClientes={mockClientesIniciais}
+        initialPage={paginaCom(mockClientesIniciais)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -939,12 +1007,12 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
     fireEvent.keyDown(addRespInput, { key: 'Enter' });
     fireEvent.keyDown(addRespInput, { key: 'Tab' });
 
-    // Submete com falha sem mensagem (cobre fallback 'Erro ao salvar cliente.')
+    // Submete com falha sem mensagem (cobre fallback 'Erro ao salvar cliente.' do modal)
     global.fetch.mockRejectedValueOnce({});
     fireEvent.click(submitAddBtn);
     await waitFor(() => {
       expect(
-        screen.getAllByText('Erro ao cadastrar cliente.').length
+        screen.getAllByText('Erro ao salvar cliente.').length
       ).toBeGreaterThanOrEqual(1);
     });
 
@@ -1209,7 +1277,7 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientesIniciais}
+        initialPage={paginaCom(mockClientesIniciais)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -1236,7 +1304,7 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientesIniciais}
+        initialPage={paginaCom(mockClientesIniciais)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -1260,7 +1328,7 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientesIniciais}
+        initialPage={paginaCom(mockClientesIniciais)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -1293,7 +1361,7 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
     const { unmount } = render(
       <ClientesClient
-        initialClientes={mockClientesIniciais}
+        initialPage={paginaCom(mockClientesIniciais)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -1324,7 +1392,7 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
     render(
       <ClientesClient
-        initialClientes={[clienteComFoto]}
+        initialPage={paginaCom([clienteComFoto])}
         initialFuncionarios={[funcionarioComFoto]}
       />
     );
@@ -1399,7 +1467,7 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientesIniciais}
+        initialPage={paginaCom(mockClientesIniciais)}
         initialFuncionarios={[funcionarioFoto]}
       />
     );

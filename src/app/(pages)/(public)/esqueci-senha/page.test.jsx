@@ -94,7 +94,7 @@ describe('ForgotPasswordContent', () => {
     render(<ForgotPasswordContent resetMode />);
 
     expect(screen.getByText('Token inválido')).toBeInTheDocument();
-    expect(screen.getByRole('button')).toBeDisabled();
+    expect(screen.getByRole('button', { name: /redefinindo/i })).toBeDisabled();
     expect(
       screen.getByRole('status', { name: 'Carregando' })
     ).toBeInTheDocument();

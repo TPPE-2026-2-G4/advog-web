@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CLIENT_PAGE_SIZE,
+  DEFAULT_CLIENT_PAGE,
   ETAPAS,
   formatarCpfCnpj,
   formatarDataInteracao,
@@ -7,10 +9,36 @@ import {
   obterEtapaPorId,
   obterEtapaPorLabel,
   obterIniciais,
+  toClientPage,
   validarDadosCliente,
 } from './cliente';
 
 describe('cliente utils', () => {
+  describe('toClientPage', () => {
+    it('converte a resposta paginada da API para o formato do frontend', () => {
+      expect(
+        toClientPage({
+          itens: [{ cliente_id: 1 }],
+          total: 21,
+          page: 3,
+          page_size: 10,
+          total_pages: 3,
+        })
+      ).toEqual({
+        itens: [{ cliente_id: 1 }],
+        total: 21,
+        page: 3,
+        pageSize: 10,
+        totalPages: 3,
+      });
+    });
+
+    it.each([undefined, null, {}])('usa valores padrão para %j', (resposta) => {
+      expect(toClientPage(resposta)).toEqual(DEFAULT_CLIENT_PAGE);
+      expect(DEFAULT_CLIENT_PAGE.pageSize).toBe(CLIENT_PAGE_SIZE);
+    });
+  });
+
   describe('ETAPAS e buscas de etapa', () => {
     it('possui 5 etapas padrão configuradas corretamente', () => {
       expect(ETAPAS).toHaveLength(5);

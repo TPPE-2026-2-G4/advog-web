@@ -17,6 +17,7 @@ import ColorsTab from '@/components/ui/site/colorsTab';
 import PreviewModal from '@/components/ui/site/previewModal';
 import { getCurrentUser } from '@/utils/authSession';
 import { isAdministratorAccount } from '@/utils/funcionario';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from '@/components/ui/site/site.module.css';
 
 const emptySubscribe = () => () => {};
@@ -134,12 +135,7 @@ export default function SiteClient({
         </div>
       )}
 
-      {saveError && (
-        <div className={styles.alertError} role="alert">
-          <AlertCircle size={18} />
-          <span>{saveError}</span>
-        </div>
-      )}
+      <Toast message={saveError} />
 
       {/* Barra de Abas */}
       <div className={styles.tabsBar} role="tablist">

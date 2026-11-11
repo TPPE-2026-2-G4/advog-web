@@ -5,6 +5,7 @@ import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import { useSolicitarAtendimento } from '@/hooks/useSolicitarAtendimento';
 import { LIMITES_SOLICITACAO } from '@/services/solicitacoes';
 import { formatarTelefone } from '@/utils/cliente';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './SolicitarAtendimento.module.css';
 
 const fields = [
@@ -139,11 +140,7 @@ export default function SolicitarAtendimento() {
                 }
               )}
             </div>
-            {erro && (
-              <p className={styles.error} role="alert">
-                {erro}
-              </p>
-            )}
+            <Toast message={erro} />
             <div className={styles.actions}>
               <button
                 type="submit"

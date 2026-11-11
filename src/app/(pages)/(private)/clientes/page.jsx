@@ -1,18 +1,18 @@
 import { Suspense } from 'react';
 import ClientesClient from './clientesClient';
-import { listarClientes } from '@/services/clientes';
+import { listarClientesPaginado } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 
 export default async function ClientesPage() {
-  const [clientes, funcionarios] = await Promise.all([
-    listarClientes(),
+  const [initialPage, funcionarios] = await Promise.all([
+    listarClientesPaginado({ page: 1 }),
     listarFuncionarios(),
   ]);
 
   return (
     <Suspense fallback={null}>
       <ClientesClient
-        initialClientes={clientes}
+        initialPage={initialPage}
         initialFuncionarios={funcionarios}
       />
     </Suspense>

@@ -3,6 +3,7 @@
 import { AlertTriangle } from 'lucide-react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './DeleteProcessModal.module.css';
 
 export default function DeleteProcessModal({
@@ -39,11 +40,7 @@ export default function DeleteProcessModal({
           Tem certeza que deseja excluir <strong>{process.titulo}</strong> (
           {process.cnj})? Esta ação não poderá ser desfeita.
         </p>
-        {error && (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        )}
+        <Toast message={error} />
       </div>
 
       <div className={styles.footer}>

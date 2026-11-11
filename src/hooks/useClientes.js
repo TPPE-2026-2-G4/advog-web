@@ -1,44 +1,113 @@
-'use client';
-
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   atualizarCliente,
   criarCliente,
   excluirCliente,
-  listarClientes,
+  listarClientesPaginado,
 } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { isAdministratorAccount } from '@/utils/funcionario';
+import { CLIENT_PAGE_SIZE, DEFAULT_CLIENT_PAGE } from '@/utils/cliente';
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export function useClientes({
+  initialPage,
   initialClientes = [],
   initialFuncionarios = [],
 } = {}) {
-  const [clientes, setClientes] = useState(initialClientes);
+  const startingPage = useMemo(() => {
+    if (initialPage) return { ...DEFAULT_CLIENT_PAGE, ...initialPage };
+    if (initialClientes.length === 0) return DEFAULT_CLIENT_PAGE;
+    return {
+      ...DEFAULT_CLIENT_PAGE,
+      itens: initialClientes,
+      total: initialClientes.length,
+    };
+    // Apenas o estado inicial importa: depois dele, os dados vêm do servidor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Uma página inicial vazia também pode ser o resultado de uma falha no
+  // servidor; nesse caso o cliente busca os dados ao montar.
+  const hasInitialData = initialPage
+    ? initialPage.itens?.length > 0
+    : initialClientes.length > 0;
+
+  const [pageData, setPageData] = useState(startingPage);
+  const [currentPage, setCurrentPage] = useState(startingPage.page);
   const [funcionarios, setFuncionarios] = useState(() =>
     (initialFuncionarios || []).filter((f) => !isAdministratorAccount(f))
   );
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [responsavelFilter, setResponsavelFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [isLoading, setIsLoading] = useState(
-    () => initialClientes.length === 0
+  const [reloadKey, setReloadKey] = useState(0);
+  const skipInitialFetch = useRef(hasInitialData);
+
+  const requestKey = JSON.stringify([
+    debouncedSearch,
+    responsavelFilter,
+    statusFilter,
+    currentPage,
+    reloadKey,
+  ]);
+  const [settledKey, setSettledKey] = useState(
+    hasInitialData ? requestKey : ''
   );
+  const isLoading = settledKey !== requestKey;
+
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebouncedSearch(searchTerm.trim()),
+      SEARCH_DEBOUNCE_MS
+    );
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false;
+      return;
+    }
+
+    let ignore = false;
+
+    listarClientesPaginado({
+      busca: debouncedSearch,
+      responsavel_id: responsavelFilter,
+      etapa_id: statusFilter,
+      page: currentPage,
+      pageSize: CLIENT_PAGE_SIZE,
+    })
+      .then((page) => {
+        if (ignore) return;
+        if (page.itens.length === 0 && page.total > 0 && currentPage > 1) {
+          setCurrentPage(Math.max(1, page.totalPages));
+          return;
+        }
+        setPageData(page);
+        setSettledKey(requestKey);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setSettledKey(requestKey);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [
+    debouncedSearch,
+    responsavelFilter,
+    statusFilter,
+    currentPage,
+    reloadKey,
+    requestKey,
+  ]);
 
   useEffect(() => {
     let isMounted = true;
-    if (initialClientes.length === 0) {
-      listarClientes()
-        .then((dados) => {
-          if (isMounted && Array.isArray(dados)) {
-            setClientes(dados);
-          }
-        })
-        .catch(() => {})
-        .finally(() => {
-          if (isMounted) setIsLoading(false);
-        });
-    }
     if (initialFuncionarios.length === 0) {
       listarFuncionarios()
         .then((dados) => {
@@ -51,7 +120,28 @@ export function useClientes({
     return () => {
       isMounted = false;
     };
-  }, [initialClientes.length, initialFuncionarios.length]);
+  }, [initialFuncionarios.length]);
+
+  const clientes = pageData.itens;
+  const setClientes = (updater) =>
+    setPageData((current) => ({
+      ...current,
+      itens: typeof updater === 'function' ? updater(current.itens) : updater,
+    }));
+  const reloadClientes = () => setReloadKey((key) => key + 1);
+
+  const changeSearchTerm = (value) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+  const changeResponsavelFilter = (value) => {
+    setResponsavelFilter(value);
+    setCurrentPage(1);
+  };
+  const changeStatusFilter = (value) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -73,62 +163,6 @@ export function useClientes({
     }, 4000);
   };
 
-  const filteredClientes = useMemo(() => {
-    return clientes.filter((c) => {
-      if (searchTerm.trim()) {
-        const termo = searchTerm.toLowerCase();
-        const nomeMatch = c.nome?.toLowerCase().includes(termo);
-        const emailMatch = c.email?.toLowerCase().includes(termo);
-        const doc = c.cpf || c.cnpj || c.documento || '';
-        const termoDigits = termo.replace(/\D/g, '');
-        const docDigits = doc.replace(/\D/g, '');
-        const docMatch =
-          (termoDigits.length > 0 && docDigits.includes(termoDigits)) ||
-          (doc.length > 0 && doc.toLowerCase().includes(termo));
-
-        if (!nomeMatch && !emailMatch && !docMatch) {
-          return false;
-        }
-      }
-
-      if (responsavelFilter) {
-        const respIdNum = Number(responsavelFilter);
-        const cRespId = Number(c.responsavel_id);
-
-        if (respIdNum && cRespId) {
-          if (cRespId !== respIdNum) return false;
-        } else {
-          const func = funcionarios.find(
-            (f) =>
-              String(f.funcionario_id || f.id) === String(responsavelFilter)
-          );
-          const funcNome = func ? func.nome.toLowerCase() : '';
-          const cRespNome = (
-            c.responsavel_nome ||
-            (typeof c.responsavel === 'string'
-              ? c.responsavel
-              : c.responsavel?.nome) ||
-            ''
-          ).toLowerCase();
-
-          if (!funcNome || !cRespNome.includes(funcNome)) {
-            if (cRespId !== respIdNum) return false;
-          }
-        }
-      }
-
-      if (statusFilter) {
-        const statusIdNum = Number(statusFilter);
-        const cEtapaId = Number(c.etapa_id || c.status_id);
-        if (cEtapaId !== statusIdNum) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [clientes, searchTerm, responsavelFilter, statusFilter, funcionarios]);
-
   const handleCreateClient = async (dados) => {
     setIsSaving(true);
     setErrorMessage('');
@@ -148,7 +182,11 @@ export function useClientes({
         documento:
           criado?.documento || cleanDados.documento || cleanDados.cpf || null,
       };
-      setClientes((prev) => [clienteComDados, ...prev]);
+      setCurrentPage(1);
+      setClientes((prev) =>
+        [clienteComDados, ...prev].slice(0, CLIENT_PAGE_SIZE)
+      );
+      reloadClientes();
       setIsAddOpen(false);
       showFeedback('Cliente cadastrado com sucesso!');
       return clienteComDados;
@@ -195,6 +233,7 @@ export function useClientes({
             : c
         )
       );
+      reloadClientes();
       setIsEditOpen(false);
       setEditingClient(null);
       showFeedback('Cliente atualizado com sucesso!');
@@ -218,6 +257,12 @@ export function useClientes({
     try {
       await excluirCliente(id);
       setClientes((prev) => prev.filter((c) => (c.cliente_id || c.id) !== id));
+      const remainingPages = Math.max(
+        1,
+        Math.ceil((pageData.total - 1) / CLIENT_PAGE_SIZE)
+      );
+      setCurrentPage((page) => Math.min(page, remainingPages));
+      reloadClientes();
       setIsDeleteOpen(false);
       setDeletingClient(null);
       showFeedback('Cliente excluído com sucesso!');
@@ -229,8 +274,14 @@ export function useClientes({
     }
   };
 
-  const handleOpenAdd = () => setIsAddOpen(true);
-  const handleCloseAdd = () => setIsAddOpen(false);
+  const handleOpenAdd = () => {
+    setErrorMessage('');
+    setIsAddOpen(true);
+  };
+  const handleCloseAdd = () => {
+    setErrorMessage('');
+    setIsAddOpen(false);
+  };
 
   const handleOpenDetails = (client) => {
     setViewingClient(client);
@@ -242,27 +293,33 @@ export function useClientes({
   };
 
   const handleOpenEdit = (client) => {
+    setErrorMessage('');
     setEditingClient(client);
     setIsEditOpen(true);
   };
   const handleCloseEdit = () => {
+    setErrorMessage('');
     setIsEditOpen(false);
     setEditingClient(null);
   };
 
   const handleOpenDelete = (client) => {
+    setErrorMessage('');
     setDeletingClient(client);
     setIsDeleteOpen(true);
   };
   const handleCloseDelete = () => {
+    setErrorMessage('');
     setIsDeleteOpen(false);
     setDeletingClient(null);
   };
 
   const handleClearFilters = () => {
     setSearchTerm('');
+    setDebouncedSearch('');
     setResponsavelFilter('');
     setStatusFilter('');
+    setCurrentPage(1);
   };
 
   return {
@@ -271,12 +328,17 @@ export function useClientes({
     funcionarios,
     setFuncionarios,
     searchTerm,
-    setSearchTerm,
+    setSearchTerm: changeSearchTerm,
     responsavelFilter,
-    setResponsavelFilter,
+    setResponsavelFilter: changeResponsavelFilter,
     statusFilter,
-    setStatusFilter,
-    filteredClientes,
+    setStatusFilter: changeStatusFilter,
+    filteredClientes: clientes,
+    currentPage,
+    setCurrentPage,
+    totalPages: pageData.totalPages,
+    totalItems: pageData.total,
+    pageSize: CLIENT_PAGE_SIZE,
     isAddOpen,
     handleOpenAdd,
     handleCloseAdd,

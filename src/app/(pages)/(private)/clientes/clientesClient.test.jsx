@@ -12,7 +12,7 @@ vi.mock('@/services/clientes', () => ({
   criarCliente: vi.fn(),
   atualizarCliente: vi.fn(),
   excluirCliente: vi.fn(),
-  listarClientes: vi.fn(),
+  listarClientesPaginado: vi.fn(),
   obterCliente: vi.fn(),
 }));
 
@@ -45,11 +45,23 @@ const mockClientes = [
   },
 ];
 
+const paginaCom = (itens, extra = {}) => ({
+  itens,
+  total: itens.length,
+  page: 1,
+  pageSize: 10,
+  totalPages: 1,
+  ...extra,
+});
+
 describe('ClientesClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useSearchParams.mockReturnValue(new URLSearchParams());
-    clientesService.listarClientes.mockResolvedValue([]);
+    // A recarga após buscar/alterar nunca conclui por padrão (estado otimista).
+    clientesService.listarClientesPaginado.mockReturnValue(
+      new Promise(() => {})
+    );
   });
 
   it.each([
@@ -76,7 +88,7 @@ describe('ClientesClient', () => {
     ({ clientes, textoEsperado }) => {
       render(
         <ClientesClient
-          initialClientes={clientes}
+          initialPage={paginaCom(clientes)}
           initialFuncionarios={mockFuncionarios}
         />
       );
@@ -95,8 +107,7 @@ describe('ClientesClient', () => {
         fireEvent.change(screen.getByLabelText('Buscar clientes'), {
           target: { value: 'Clarice' },
         }),
-      visivel: 'Clarice Lispector',
-      oculto: 'Carlos Drummond',
+      filtros: { busca: 'Clarice', responsavel_id: '', etapa_id: '' },
     },
     {
       cenario: 'responsável selecionado no autocomplete',
@@ -109,8 +120,7 @@ describe('ClientesClient', () => {
           screen.getByRole('option', { name: /dr\. roberto silva/i })
         );
       },
-      visivel: 'Carlos Drummond',
-      oculto: 'Clarice Lispector',
+      filtros: { busca: '', responsavel_id: '1', etapa_id: '' },
     },
     {
       cenario: 'status / etapa selecionado',
@@ -118,27 +128,110 @@ describe('ClientesClient', () => {
         fireEvent.change(screen.getByLabelText('Filtrar por status'), {
           target: { value: '4' },
         }),
-      visivel: 'Clarice Lispector',
-      oculto: 'Carlos Drummond',
+      filtros: { busca: '', responsavel_id: '', etapa_id: '4' },
     },
-  ])('filtra clientes por $cenario', ({ acao, visivel, oculto }) => {
+  ])('filtra clientes no servidor por $cenario', async ({ acao, filtros }) => {
+    clientesService.listarClientesPaginado.mockResolvedValue(
+      paginaCom([mockClientes[1]])
+    );
     render(
       <ClientesClient
-        initialClientes={mockClientes}
+        initialPage={paginaCom(mockClientes)}
         initialFuncionarios={mockFuncionarios}
       />
     );
 
     acao();
 
-    expect(screen.getByText(visivel)).toBeInTheDocument();
-    expect(screen.queryByText(oculto)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(clientesService.listarClientesPaginado).toHaveBeenCalledWith({
+        ...filtros,
+        page: 1,
+        pageSize: 10,
+      });
+      expect(screen.getByText('Clarice Lispector')).toBeInTheDocument();
+      expect(screen.queryByText('Carlos Drummond')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('paginação', () => {
+    const paginaDoMeio = paginaCom(mockClientes, {
+      total: 25,
+      page: 1,
+      totalPages: 3,
+    });
+
+    it('mostra o resumo e os controles quando há clientes', () => {
+      render(
+        <ClientesClient
+          initialPage={paginaDoMeio}
+          initialFuncionarios={mockFuncionarios}
+        />
+      );
+
+      expect(screen.getByText(/25 clientes cadastrados/)).toBeInTheDocument();
+      expect(
+        screen.getByText('Mostrando 1–10 de 25 clientes')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Página 1 de 3')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Página anterior' })
+      ).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'Próxima página' })
+      ).toBeEnabled();
+    });
+
+    it('carrega a próxima página ao clicar em "Próxima página"', async () => {
+      const segunda = [
+        { ...mockClientes[0], cliente_id: 30, nome: 'Machado de Assis' },
+      ];
+      clientesService.listarClientesPaginado.mockResolvedValue(
+        paginaCom(segunda, { total: 25, page: 2, totalPages: 3 })
+      );
+      render(
+        <ClientesClient
+          initialPage={paginaDoMeio}
+          initialFuncionarios={mockFuncionarios}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
+
+      await waitFor(() => {
+        expect(clientesService.listarClientesPaginado).toHaveBeenCalledWith(
+          expect.objectContaining({ page: 2 })
+        );
+        expect(screen.getByText('Machado de Assis')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Carlos Drummond')).not.toBeInTheDocument();
+      expect(screen.getByText('Página 2 de 3')).toBeInTheDocument();
+      expect(
+        screen.getByText('Mostrando 11–20 de 25 clientes')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Página anterior' })
+      ).toBeEnabled();
+    });
+
+    it('oculta os controles quando não há clientes', () => {
+      render(
+        <ClientesClient
+          initialPage={paginaCom([])}
+          initialFuncionarios={mockFuncionarios}
+        />
+      );
+
+      expect(
+        screen.queryByRole('navigation', { name: 'Paginação' })
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('abre e fecha o modal de cadastro de novo cliente', () => {
     render(
       <ClientesClient
-        initialClientes={mockClientes}
+        initialPage={paginaCom(mockClientes)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -170,7 +263,7 @@ describe('ClientesClient', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientes}
+        initialPage={paginaCom(mockClientes)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -205,7 +298,7 @@ describe('ClientesClient', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientes}
+        initialPage={paginaCom(mockClientes)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -235,7 +328,7 @@ describe('ClientesClient', () => {
   it('abre o modal de detalhes e permite transitar para edição', () => {
     render(
       <ClientesClient
-        initialClientes={mockClientes}
+        initialPage={paginaCom(mockClientes)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -265,7 +358,7 @@ describe('ClientesClient', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientes}
+        initialPage={paginaCom(mockClientes)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -298,7 +391,7 @@ describe('ClientesClient', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientes}
+        initialPage={paginaCom(mockClientes)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -323,10 +416,13 @@ describe('ClientesClient', () => {
     });
   });
 
-  it('exibe o botão Limpar quando há filtros e limpa todos os filtros ao clicar', () => {
+  it('exibe o botão Limpar quando há filtros e limpa todos os filtros ao clicar', async () => {
+    clientesService.listarClientesPaginado.mockResolvedValue(
+      paginaCom([mockClientes[1]])
+    );
     render(
       <ClientesClient
-        initialClientes={mockClientes}
+        initialPage={paginaCom(mockClientes)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -338,17 +434,28 @@ describe('ClientesClient', () => {
     const searchInput = screen.getByLabelText('Buscar clientes');
     fireEvent.change(searchInput, { target: { value: 'Clarice' } });
 
-    expect(screen.queryByText('Carlos Drummond')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Carlos Drummond')).not.toBeInTheDocument();
+    });
     expect(screen.getByText('Clarice Lispector')).toBeInTheDocument();
 
-    const clearBtn = screen.getByRole('button', { name: /limpar filtros/i });
-    expect(clearBtn).toBeInTheDocument();
-
-    fireEvent.click(clearBtn);
+    clientesService.listarClientesPaginado.mockResolvedValue(
+      paginaCom(mockClientes)
+    );
+    fireEvent.click(screen.getByRole('button', { name: /limpar filtros/i }));
 
     expect(searchInput).toHaveValue('');
-    expect(screen.getByText('Carlos Drummond')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Carlos Drummond')).toBeInTheDocument();
+    });
     expect(screen.getByText('Clarice Lispector')).toBeInTheDocument();
+    expect(clientesService.listarClientesPaginado).toHaveBeenLastCalledWith({
+      busca: '',
+      responsavel_id: '',
+      etapa_id: '',
+      page: 1,
+      pageSize: 10,
+    });
     expect(
       screen.queryByRole('button', { name: /limpar filtros/i })
     ).not.toBeInTheDocument();
@@ -372,7 +479,7 @@ describe('ClientesClient', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientes}
+        initialPage={paginaCom(mockClientes)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -403,7 +510,7 @@ describe('ClientesClient', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientes}
+        initialPage={paginaCom(mockClientes)}
         initialFuncionarios={mockFuncionarios}
       />
     );
@@ -437,7 +544,7 @@ describe('ClientesClient', () => {
 
     render(
       <ClientesClient
-        initialClientes={mockClientes}
+        initialPage={paginaCom(mockClientes)}
         initialFuncionarios={mockFuncionarios}
       />
     );

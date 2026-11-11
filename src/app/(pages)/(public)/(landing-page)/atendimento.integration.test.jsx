@@ -30,11 +30,11 @@ function mockLandingGetEndpoints(
 ) {
   fetch.mockImplementation(async (url) => {
     const urlStr = String(url);
+    if (urlStr.includes('/institucional/equipe')) {
+      return { ok: true, status: 200, json: async () => funcionarios };
+    }
     if (urlStr.includes('/institucional')) {
       return { ok: true, status: 200, json: async () => institucional };
-    }
-    if (urlStr.includes('/funcionarios')) {
-      return { ok: true, status: 200, json: async () => funcionarios };
     }
     if (urlStr.includes('/atuacoes')) {
       return { ok: true, status: 200, json: async () => atuacoes };
@@ -105,12 +105,6 @@ describe('Integração: Landing Page Institucional e Solicitação Pública de A
           area: 'Direito Digital',
           exibicaoInstitucional: true,
         },
-        {
-          funcionario_id: 6,
-          nome: 'Membro Oculto',
-          cargo: 'Estagiário',
-          exibicaoInstitucional: false,
-        },
       ],
       [
         {
@@ -163,7 +157,9 @@ describe('Integração: Landing Page Institucional e Solicitação Pública de A
     expect(screen.getByText('Tributário')).toBeInTheDocument();
     expect(screen.getByText('Direito Trabalhista')).toBeInTheDocument();
     expect(screen.getByText('Direito Digital')).toBeInTheDocument();
-    expect(screen.queryByText('Membro Oculto')).not.toBeInTheDocument();
+    expect(
+      fetch.mock.calls.some(([url]) => String(url).endsWith('/funcionarios'))
+    ).toBe(false);
   });
 
   it('confirma o recebimento somente após a resposta da API e permite nova solicitação', async () => {
