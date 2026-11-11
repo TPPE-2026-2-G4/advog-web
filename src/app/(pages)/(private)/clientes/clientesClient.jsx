@@ -24,11 +24,13 @@ import {
   isAdministratorAccount,
   isAdministratorRole,
 } from '@/utils/funcionario';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './clientesClient.module.css';
 
 const emptySubscribe = () => () => {};
 
 export default function ClientesClient({
+  initialPage,
   initialClientes = [],
   initialFuncionarios = [],
 }) {
@@ -69,6 +71,11 @@ export default function ClientesClient({
     statusFilter,
     setStatusFilter,
     filteredClientes,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    totalItems,
+    pageSize,
     isAddOpen,
     handleOpenAdd,
     handleCloseAdd,
@@ -93,7 +100,8 @@ export default function ClientesClient({
     isDeleting,
     feedbackMessage,
     errorMessage,
-  } = useClientes({ initialClientes, initialFuncionarios });
+    setErrorMessage,
+  } = useClientes({ initialPage, initialClientes, initialFuncionarios });
 
   const searchParams = useSearchParams();
   const clienteIdParam =
@@ -151,10 +159,8 @@ export default function ClientesClient({
         <div className={styles.titleArea}>
           <h1 className={styles.title}>Clientes</h1>
           <p className={styles.subtitle}>
-            {filteredClientes.length}{' '}
-            {filteredClientes.length === 1
-              ? 'cliente cadastrado'
-              : 'clientes cadastrados'}
+            {totalItems}{' '}
+            {totalItems === 1 ? 'cliente cadastrado' : 'clientes cadastrados'}
           </p>
         </div>
 
@@ -177,12 +183,10 @@ export default function ClientesClient({
         </div>
       )}
 
-      {errorMessage && (
-        <div className={styles.alertError} role="alert">
-          <AlertCircle size={18} />
-          <span>{errorMessage}</span>
-        </div>
-      )}
+      <Toast
+        message={isAddOpen || isEditOpen || isDeleteOpen ? '' : errorMessage}
+        onClose={() => setErrorMessage('')}
+      />
 
       <div className={styles.filtersBar} role="search">
         <div className={styles.searchWrapper}>
@@ -247,6 +251,11 @@ export default function ClientesClient({
         onEdit={handleOpenEdit}
         onDelete={handleOpenDelete}
         canManage={canManage}
+        totalItems={totalItems}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
       />
 
       <AddClientModal

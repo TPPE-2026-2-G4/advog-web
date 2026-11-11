@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import Auth from '@/components/layout/auth/auth';
 import { useInstitucionalContext } from '@/contexts/InstitucionalContext';
 import { getContrastTextColor } from '@/utils/institucional';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './firstLogin.module.css';
 import { useFirstLogin } from '@/hooks/useFirstLogin';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
@@ -181,7 +182,7 @@ function FirstLoginContent() {
           )}
         </button>
 
-        {erro && <span className={styles.error}>{erro}</span>}
+        <Toast message={erro} />
       </form>
     </Auth>
   );

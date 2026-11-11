@@ -85,6 +85,21 @@ export async function buscarDadosInstitucionais() {
   }
 }
 
+export async function listarEquipeInstitucional() {
+  try {
+    const response = await fetch(`${apiUrl}/institucional/equipe`, {
+      cache: 'no-store',
+    });
+
+    if (!response.ok) return DEFAULT_EQUIPE_SITE;
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : DEFAULT_EQUIPE_SITE;
+  } catch {
+    return DEFAULT_EQUIPE_SITE;
+  }
+}
+
 export async function salvarDadosInstitucionais(dados) {
   try {
     const token = getAccessToken();

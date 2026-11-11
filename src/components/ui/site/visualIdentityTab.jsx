@@ -3,6 +3,7 @@
 
 import { useRef } from 'react';
 import { Scale, Upload, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './site.module.css';
 import { getImageUrl } from '@/utils/institucional';
 
@@ -32,12 +33,7 @@ export default function VisualIdentityTab({
 
   return (
     <div className={styles.container}>
-      {uploadError && (
-        <div className={styles.alertError} role="alert">
-          <AlertCircle size={18} />
-          <span>{uploadError}</span>
-        </div>
-      )}
+      <Toast message={uploadError} />
 
       {/* Card Logotipo */}
       <div className={styles.card}>

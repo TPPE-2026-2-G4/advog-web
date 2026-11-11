@@ -3,6 +3,7 @@
 import { ChevronDown, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { calculateDaysSince, formatProcessDate } from '@/utils/processo';
+import { mensagemAmigavel } from '@/utils/erros';
 import styles from './CriticalProcessesCard.module.css';
 
 export default function CriticalProcessesCard({
@@ -106,7 +107,7 @@ export default function CriticalProcessesCard({
             aria-hidden="true"
           />
           <div className={styles.errorContent}>
-            <p className={styles.errorMessage}>{error}</p>
+            <p className={styles.errorMessage}>{mensagemAmigavel(error)}</p>
             {onRetry && (
               <button
                 type="button"

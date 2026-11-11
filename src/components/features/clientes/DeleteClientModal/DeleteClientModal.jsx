@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './DeleteClientModal.module.css';
 
 export default function DeleteClientModal({
@@ -45,11 +46,7 @@ export default function DeleteClientModal({
           ação é permanente.
         </p>
 
-        {error && (
-          <div className={styles.errorAlert} role="alert">
-            {error}
-          </div>
-        )}
+        <Toast message={error} onClose={() => setError('')} />
       </div>
 
       <div className={styles.footer}>

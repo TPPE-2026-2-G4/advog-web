@@ -1,6 +1,7 @@
 'use client';
 
 import { Scale } from 'lucide-react';
+import { mensagemAmigavel } from '@/utils/erros';
 import styles from './ProcessSummary.module.css';
 
 const SUMMARY_ITEMS = [
@@ -32,7 +33,7 @@ export default function ProcessSummary({
 
       {error ? (
         <div className={styles.errorState} role="alert">
-          <p>{error}</p>
+          <p>{mensagemAmigavel(error)}</p>
           {onRetry && (
             <button type="button" className={styles.retry} onClick={onRetry}>
               Tentar novamente

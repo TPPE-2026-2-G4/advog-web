@@ -10,6 +10,7 @@ import DeleteLancamentoModal from '@/components/features/financas/DeleteLancamen
 import { useFinancas } from '@/hooks/useFinancas';
 import { getCurrentUser } from '@/utils/authSession';
 import { isAdministratorAccount } from '@/utils/funcionario';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './financas.module.css';
 
 const emptySubscribe = () => () => {};
@@ -157,11 +158,11 @@ export default function FinancasClient({
         </div>
       </div>
 
-      {(deleteError || statusError || exportError) && (
-        <div role="alert" className={styles.errorMessage}>
-          {deleteError || statusError || exportError}
-        </div>
-      )}
+      <Toast
+        message={
+          (lancamentoToDelete ? '' : deleteError) || statusError || exportError
+        }
+      />
 
       <FinancialDashboard
         lancamentos={lancamentos}

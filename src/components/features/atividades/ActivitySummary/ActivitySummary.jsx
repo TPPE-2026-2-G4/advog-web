@@ -2,6 +2,7 @@
 
 import { Layers } from 'lucide-react';
 import { getActivityScopeLabel } from '@/utils/atividade';
+import { mensagemAmigavel } from '@/utils/erros';
 import styles from './ActivitySummary.module.css';
 
 const SUMMARY_ITEMS = [
@@ -37,7 +38,7 @@ export default function ActivitySummary({
 
       {error ? (
         <div className={styles.errorState} role="alert">
-          <p>{error}</p>
+          <p>{mensagemAmigavel(error)}</p>
           {onRetry && (
             <button type="button" className={styles.retry} onClick={onRetry}>
               Tentar novamente

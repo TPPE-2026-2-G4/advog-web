@@ -1,5 +1,10 @@
 import { getAccessToken } from '@/utils/authSession';
 import { API_URL } from './api';
+import {
+  CLIENT_PAGE_SIZE,
+  DEFAULT_CLIENT_PAGE,
+  toClientPage,
+} from '@/utils/cliente';
 
 const getAuthHeaders = () => {
   const token = getAccessToken();
@@ -73,6 +78,44 @@ export async function listarClientes(filtros = {}) {
   } catch (error) {
     if (typeof window === 'undefined') {
       return [];
+    }
+    throw error;
+  }
+}
+
+export async function listarClientesPaginado(filtros = {}) {
+  try {
+    const params = new URLSearchParams();
+
+    if (filtros.busca) params.append('busca', filtros.busca);
+    if (filtros.responsavel_id)
+      params.append('responsavel_id', filtros.responsavel_id);
+    if (filtros.etapa_id) params.append('etapa_id', filtros.etapa_id);
+    params.append('page', String(filtros.page ?? 1));
+    params.append('page_size', String(filtros.pageSize ?? CLIENT_PAGE_SIZE));
+
+    const response = await fetch(`${API_URL}/clientes/paginado?${params}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      if (typeof window === 'undefined') {
+        return DEFAULT_CLIENT_PAGE;
+      }
+      throw new Error(
+        await extrairMensagemErro(
+          response,
+          'Não foi possível carregar a lista de clientes.'
+        )
+      );
+    }
+
+    return toClientPage(await response.json());
+  } catch (error) {
+    if (typeof window === 'undefined') {
+      return DEFAULT_CLIENT_PAGE;
     }
     throw error;
   }

@@ -7,6 +7,7 @@ import {
   formatProcessDate,
   getDeadlineTone,
 } from '@/utils/processo';
+import { mensagemAmigavel } from '@/utils/erros';
 import styles from './UpcomingDeadlines.module.css';
 
 const formatDeadlineHeading = (process) => {
@@ -53,7 +54,7 @@ export default function UpcomingDeadlines({
 
       {error ? (
         <div className={styles.errorState} role="alert">
-          <p>{error}</p>
+          <p>{mensagemAmigavel(error)}</p>
           {onRetry && (
             <button type="button" className={styles.retry} onClick={onRetry}>
               Tentar novamente

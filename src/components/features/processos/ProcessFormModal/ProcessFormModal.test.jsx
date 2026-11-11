@@ -80,9 +80,9 @@ describe('ProcessFormModal', () => {
     { label: 'Status Inicial', isRequired: true },
     { label: 'Descrição', isRequired: false },
     { label: 'Responsável', isRequired: false },
-    { label: 'Data de Início', isRequired: false },
+    { label: 'Data de Início', isRequired: true },
     { label: 'Data de Realização', isRequired: false },
-    { label: 'Próximo Prazo', isRequired: false },
+    { label: 'Próximo Prazo', isRequired: true },
   ])(
     'configura obrigatoriedade do campo "$label" como $isRequired',
     ({ label, isRequired }) => {
@@ -101,7 +101,7 @@ describe('ProcessFormModal', () => {
     const { container } = renderForm();
 
     expect(screen.getByText(/Campos obrigatórios/)).toBeInTheDocument();
-    expect(container.querySelectorAll('[required]')).toHaveLength(6);
+    expect(container.querySelectorAll('[required]')).toHaveLength(8);
 
     const cnjInput = screen.getByLabelText('Número do Processo');
     fireEvent.change(cnjInput, {
@@ -167,17 +167,14 @@ describe('ProcessFormModal', () => {
     expect(onSave).toHaveBeenCalledWith({ titulo: 'Caso atualizado' });
   });
 
-  it('aceita responsável e datas opcionais vazios', async () => {
+  it('aceita responsável e data de realização vazios', async () => {
     const onSave = vi.fn().mockResolvedValue(processData);
     renderForm({ onSave });
     fillCreationForm();
     fireEvent.change(screen.getByLabelText('Responsável'), {
       target: { value: '' },
     });
-    fireEvent.change(screen.getByLabelText('Data de Início'), {
-      target: { value: '' },
-    });
-    fireEvent.change(screen.getByLabelText('Próximo Prazo'), {
+    fireEvent.change(screen.getByLabelText('Data de Realização'), {
       target: { value: '' },
     });
 
@@ -185,21 +182,62 @@ describe('ProcessFormModal', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
     expect(onSave.mock.calls[0][0]).toMatchObject({
       funcionario_id: null,
-      data_inicio: null,
-      data_prazo: null,
+      data_realizado: null,
     });
+  });
+
+  it.each([
+    {
+      campo: 'Próximo Prazo',
+      esperado: 'Preencha os campos obrigatórios: Próximo Prazo.',
+    },
+    {
+      campo: 'Data de Início',
+      esperado: 'Preencha os campos obrigatórios: Data de Início.',
+    },
+  ])(
+    'exige o campo "$campo" e avisa qual está faltando',
+    ({ campo, esperado }) => {
+      const onSave = vi.fn();
+      renderForm({ onSave });
+      fillCreationForm();
+      fireEvent.change(screen.getByLabelText(campo), { target: { value: '' } });
+
+      fireEvent.submit(screen.getByRole('dialog'));
+
+      expect(screen.getByRole('alert')).toHaveTextContent(esperado);
+      expect(onSave).not.toHaveBeenCalled();
+    }
+  );
+
+  it('fecha o aviso de erro no X e mantém o formulário preenchido', () => {
+    renderForm();
+    fillCreationForm();
+    fireEvent.change(screen.getByLabelText('Próximo Prazo'), {
+      target: { value: '' },
+    });
+    fireEvent.submit(screen.getByRole('dialog'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar aviso' }));
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Título do Caso')).toHaveValue(
+      processData.titulo
+    );
   });
 
   it.each([
     {
       scenario: 'CNJ em formato inválido',
       cnj: '123',
-      expectedError: 'Informe o número do processo no formato CNJ.',
+      expectedError:
+        'O número do processo deve seguir o formato CNJ: 0000000-00.0000.0.00.0000.',
     },
     {
       scenario: 'campos obrigatórios em branco após CNJ válido',
       cnj: processData.cnj,
-      expectedError: 'Preencha todos os campos obrigatórios.',
+      expectedError:
+        'Preencha os campos obrigatórios: Título do Caso, Tribunal, Cliente, Área de Atuação, Próximo Prazo.',
     },
   ])('rejeita submissão quando há $scenario', ({ cnj, expectedError }) => {
     const onSave = vi.fn();

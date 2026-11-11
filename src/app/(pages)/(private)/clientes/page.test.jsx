@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ClientesPage from './page';
-import { listarClientes } from '@/services/clientes';
+import { listarClientesPaginado } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 
 vi.mock('@/services/clientes', () => ({
-  listarClientes: vi.fn(),
+  listarClientesPaginado: vi.fn(),
 }));
 
 vi.mock('@/services/funcionarios', () => ({
@@ -32,6 +32,14 @@ const mockClientes = [
   },
 ];
 
+const paginaCom = (itens) => ({
+  itens,
+  total: itens.length,
+  page: 1,
+  pageSize: 10,
+  totalPages: 1,
+});
+
 const mockFuncionarios = [
   {
     funcionario_id: 10,
@@ -53,35 +61,38 @@ describe('ClientesPage', () => {
   it.each([
     {
       cenario: 'listas preenchidas',
-      clientes: mockClientes,
+      clientes: paginaCom(mockClientes),
       funcionarios: mockFuncionarios,
     },
     {
       cenario: 'listas vazias',
-      clientes: [],
+      clientes: paginaCom([]),
       funcionarios: [],
     },
   ])(
     'busca clientes e funcionários ($cenario) e repassa para o ClientesClient',
     async ({ clientes, funcionarios }) => {
-      listarClientes.mockResolvedValue(clientes);
+      listarClientesPaginado.mockResolvedValue(clientes);
       listarFuncionarios.mockResolvedValue(funcionarios);
 
       const elemento = await ClientesPage();
       const clientProps = elemento.props.children?.props || elemento.props;
 
-      expect(listarClientes).toHaveBeenCalledOnce();
+      expect(listarClientesPaginado).toHaveBeenCalledOnce();
+      expect(listarClientesPaginado).toHaveBeenCalledWith({ page: 1 });
       expect(listarFuncionarios).toHaveBeenCalledOnce();
-      expect(clientProps.initialClientes).toEqual(clientes);
+      expect(clientProps.initialPage).toEqual(clientes);
       expect(clientProps.initialFuncionarios).toEqual(funcionarios);
     }
   );
 
   it.each([
     {
-      servico: 'listarClientes',
+      servico: 'listarClientesPaginado',
       setup: () => {
-        listarClientes.mockRejectedValue(new Error('Falha ao buscar clientes'));
+        listarClientesPaginado.mockRejectedValue(
+          new Error('Falha ao buscar clientes')
+        );
         listarFuncionarios.mockResolvedValue([]);
       },
       mensagemErro: 'Falha ao buscar clientes',
@@ -89,7 +100,7 @@ describe('ClientesPage', () => {
     {
       servico: 'listarFuncionarios',
       setup: () => {
-        listarClientes.mockResolvedValue([]);
+        listarClientesPaginado.mockResolvedValue(paginaCom([]));
         listarFuncionarios.mockRejectedValue(
           new Error('Falha ao buscar funcionários')
         );

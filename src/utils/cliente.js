@@ -6,6 +6,26 @@ export const ETAPAS = [
   { id: 5, label: 'Encerrado', variant: 'encerrado' },
 ];
 
+export const CLIENT_PAGE_SIZE = 10;
+
+export const DEFAULT_CLIENT_PAGE = Object.freeze({
+  itens: [],
+  total: 0,
+  page: 1,
+  pageSize: CLIENT_PAGE_SIZE,
+  totalPages: 1,
+});
+
+export function toClientPage(page) {
+  return {
+    itens: page?.itens ?? [],
+    total: page?.total ?? 0,
+    page: page?.page ?? 1,
+    pageSize: page?.page_size ?? CLIENT_PAGE_SIZE,
+    totalPages: page?.total_pages ?? 1,
+  };
+}
+
 export function obterEtapaPorId(id) {
   const etapaNum = Number(id);
   return (

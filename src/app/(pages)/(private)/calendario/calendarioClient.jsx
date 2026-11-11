@@ -20,6 +20,7 @@ import {
 } from '@/services/financas';
 import { getCurrentUser } from '@/utils/authSession';
 import { isAdministratorAccount } from '@/utils/funcionario';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './calendario.module.css';
 
 const emptySubscribe = () => () => {};
@@ -357,11 +358,7 @@ export default function CalendarioClient({
         </div>
       </div>
 
-      {exportError && (
-        <div role="alert" className={styles.errorMessage}>
-          {exportError}
-        </div>
-      )}
+      <Toast message={exportError} onClose={() => setExportError('')} />
 
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
