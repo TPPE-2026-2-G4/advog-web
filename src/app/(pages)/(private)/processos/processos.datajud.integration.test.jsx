@@ -126,7 +126,7 @@ describe('US19 — integração do frontend com o contrato HTTP de processos', (
 
   it('carrega com o token do navegador, sincroniza e atualiza lista e detalhe mesmo fora do filtro', async () => {
     render(<ProcessosClient />);
-    await screen.findByRole('button', { name: original.titulo });
+    await screen.findByText(original.titulo);
     fireEvent.change(
       screen.getByRole('combobox', { name: /filtrar por status/i }),
       { target: { value: 'Ativo' } }
@@ -171,7 +171,7 @@ describe('US19 — integração do frontend com o contrato HTTP de processos', (
     async (status) => {
       syncResponse = () => json({ detail: 'DataJud indisponível' }, status);
       render(<ProcessosClient />);
-      await screen.findByRole('button', { name: original.titulo });
+      await screen.findByText(original.titulo);
       fireEvent.click(
         screen.getByRole('button', { name: 'Sincronizar com DataJud' })
       );
@@ -182,9 +182,7 @@ describe('US19 — integração do frontend com o contrato HTTP de processos', (
             ? 'Você não possui permissão para realizar esta ação.'
             : 'DataJud indisponível';
       await screen.findByText(message);
-      expect(
-        screen.getByRole('button', { name: original.titulo })
-      ).toBeInTheDocument();
+      expect(screen.getAllByText(original.titulo).length).toBeGreaterThan(0);
       expect(
         screen.getByRole('button', { name: 'Sincronizar com DataJud' })
       ).toBeEnabled();
@@ -201,7 +199,7 @@ describe('US19 — integração do frontend com o contrato HTTP de processos', (
         finish = resolve;
       });
     render(<ProcessosClient />);
-    await screen.findByRole('button', { name: original.titulo });
+    await screen.findByText(original.titulo);
     const button = screen.getByRole('button', {
       name: 'Sincronizar com DataJud',
     });
@@ -224,7 +222,7 @@ describe('US19 — integração do frontend com o contrato HTTP de processos', (
   it('permite consultar sem editar e não faz chamadas sem permissão de visualização', async () => {
     allow(false);
     const { unmount } = render(<ProcessosClient />);
-    await screen.findByRole('button', { name: original.titulo });
+    await screen.findByText(original.titulo);
     expect(
       screen.queryByRole('button', { name: 'Sincronizar com DataJud' })
     ).not.toBeInTheDocument();
@@ -242,9 +240,7 @@ describe('US19 — integração do frontend com o contrato HTTP de processos', (
     await act(async () => {
       ({ unmount } = render(<ProcessosClient />));
     });
-    expect(
-      screen.getByRole('button', { name: original.titulo })
-    ).toBeInTheDocument();
+    expect(screen.getAllByText(original.titulo).length).toBeGreaterThan(0);
     await act(async () => {
       fireEvent.click(
         screen.getByRole('button', {
@@ -275,16 +271,14 @@ describe('US19 — integração do frontend com o contrato HTTP de processos', (
 
   it('preserva lista e detalhe na falha de atualização e recupera ao voltar para a janela', async () => {
     render(<ProcessosClient />);
-    await screen.findByRole('button', { name: original.titulo });
+    await screen.findByText(original.titulo);
     const dialog = await openDetails();
     failList = true;
     fireEvent(window, new Event('focus'));
     await screen.findByText('Os dados exibidos podem estar desatualizados.', {
       exact: false,
     });
-    expect(
-      screen.getByRole('button', { name: original.titulo })
-    ).toBeInTheDocument();
+    expect(screen.getAllByText(original.titulo).length).toBeGreaterThan(0);
     expect(within(dialog).getByText('TJSP')).toBeInTheDocument();
     failList = false;
     storedProcess = { ...updated };

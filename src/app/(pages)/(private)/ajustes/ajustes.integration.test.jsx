@@ -123,33 +123,22 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('datajud-status-badge')).toHaveTextContent(
-        'Online'
-      );
+      expect(screen.queryByTestId('datajud-status-badge')).toBeNull();
       expect(screen.getByTestId('infra-status-badge')).toHaveTextContent(
         'Online'
       );
     });
     expect(
-      screen.getByText('Integração conectada · Sincronização automática ativa')
-    ).toBeInTheDocument();
-    expect(
       screen.getByText('Serviço de anexos e banco de dados operacionais')
     ).toBeInTheDocument();
 
-    // Testa re-verificação manual do DataJud e do Armazenamento
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Testar conexão com o DataJud' })
-    );
+    // Testa re-verificação manual do Armazenamento
     fireEvent.click(
       screen.getByRole('button', {
         name: 'Testar conexão com o armazenamento',
       })
     );
     await waitFor(() => {
-      expect(screen.getByTestId('datajud-status-badge')).toHaveTextContent(
-        'Online'
-      );
       expect(screen.getByTestId('infra-status-badge')).toHaveTextContent(
         'Online'
       );
@@ -297,18 +286,11 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
     render(Page);
 
     await waitFor(() => {
-      expect(screen.getByTestId('datajud-status-badge')).toHaveTextContent(
-        'Offline'
-      );
+      expect(screen.queryByTestId('datajud-status-badge')).toBeNull();
       expect(screen.getByTestId('infra-status-badge')).toHaveTextContent(
         'Offline'
       );
     });
-    expect(
-      screen.getByText(
-        'Integração indisponível · Sincronização automática pausada'
-      )
-    ).toBeInTheDocument();
     expect(
       screen.getByText(
         'Falha na comunicação com o armazenamento ou banco de dados'
@@ -372,9 +354,7 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
     render(Page);
 
     await waitFor(() => {
-      expect(screen.getByTestId('datajud-status-badge')).toHaveTextContent(
-        'Offline'
-      );
+      expect(screen.queryByTestId('datajud-status-badge')).toBeNull();
       expect(screen.getByTestId('infra-status-badge')).toHaveTextContent(
         'Offline'
       );

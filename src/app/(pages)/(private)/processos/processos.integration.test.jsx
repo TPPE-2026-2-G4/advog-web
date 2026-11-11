@@ -354,9 +354,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     ).toBeInTheDocument();
 
     expect(
-      screen.getByRole('button', {
-        name: 'Execução de Título Extrajudicial',
-      })
+      screen.getByText('Execução de Título Extrajudicial')
     ).toBeInTheDocument();
 
     expect(screen.getByText('Empresa Horizonte Ltda')).toBeInTheDocument();
@@ -492,9 +490,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', {
-          name: 'Ação Indenizatória Revisada',
-        })
+        screen.getByText('Ação Indenizatória Revisada')
       ).toBeInTheDocument();
     });
 
@@ -1259,19 +1255,15 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
     await within(screen.getByRole('table')).findAllByText('Maria Silva');
 
-    for (const title of [
-      initialApiProcess.titulo_proc,
-      'Processo Arquivado Teste',
-      'Processo Em Análise Teste',
-    ]) {
+    for (const proc of page1Processes) {
       fireEvent.click(
         screen.getByRole('button', {
-          name: title,
+          name: `Visualizar processo ${proc.cnj}`,
         })
       );
 
       const modal = screen.getByRole('dialog', {
-        name: title,
+        name: proc.titulo_proc,
       });
 
       expect(modal).toBeInTheDocument();
@@ -1317,11 +1309,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       })
     );
 
-    expect(
-      await screen.findByRole('button', {
-        name: 'Processo Página Dois',
-      })
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Processo Página Dois')).toBeInTheDocument();
 
     expect(screen.getByText('Página 2 de 2')).toBeInTheDocument();
 
@@ -1332,9 +1320,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     );
 
     expect(
-      await screen.findByRole('button', {
-        name: 'Processo Arquivado Teste',
-      })
+      await screen.findByText('Processo Arquivado Teste')
     ).toBeInTheDocument();
 
     expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
