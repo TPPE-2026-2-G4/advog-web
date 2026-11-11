@@ -2,8 +2,11 @@
 
 import { AlertTriangle, Eye, File, FileText, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import { formatProcessDate } from '@/utils/processo';
+import { obterIniciais } from '@/utils/cliente';
+import { getImageUrl } from '@/utils/institucional';
 import {
   excluirDocumento,
   listarDocumentos,
@@ -41,6 +44,7 @@ export default function ProcessDetailsModal({
   onRetry,
   canEdit = true,
 }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('resumo');
   const [movements, setMovements] = useState([]);
   const [isLoadingMovements, setIsLoadingMovements] = useState(false);
@@ -362,7 +366,24 @@ export default function ProcessDetailsModal({
               <dl className={styles.detailsGrid}>
                 <div className={styles.detailItem}>
                   <dt>Cliente</dt>
-                  <dd>{process.cliente}</dd>
+                  <dd>
+                    {process.cliente_id ? (
+                      <button
+                        type="button"
+                        className={styles.clientLinkButton}
+                        onClick={() => {
+                          if (onClose) onClose();
+                          router.push(
+                            `/clientes?clienteId=${process.cliente_id}`
+                          );
+                        }}
+                      >
+                        {process.cliente}
+                      </button>
+                    ) : (
+                      process.cliente || 'Sem cliente'
+                    )}
+                  </dd>
                 </div>
                 <div className={styles.detailItem}>
                   <dt>Tribunal</dt>
@@ -370,7 +391,40 @@ export default function ProcessDetailsModal({
                 </div>
                 <div className={styles.detailItem}>
                   <dt>Responsável</dt>
-                  <dd>{process.responsavel || 'Sem responsável'}</dd>
+                  <dd>
+                    {process.responsavel &&
+                    process.responsavel !== 'Sem responsável' &&
+                    process.responsavel !== 'Não informado' ? (
+                      <div className={styles.responsibleCell}>
+                        <div className={styles.responsibleAvatar}>
+                          {process.responsavel_foto_url ? (
+                            <>
+                              <img
+                                src={getImageUrl(process.responsavel_foto_url)}
+                                alt={`Foto de ${process.responsavel}`}
+                                className={styles.avatarImage}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  if (e.currentTarget.nextElementSibling) {
+                                    e.currentTarget.nextElementSibling.style.display =
+                                      'inline';
+                                  }
+                                }}
+                              />
+                              <span style={{ display: 'none' }}>
+                                {obterIniciais(process.responsavel)}
+                              </span>
+                            </>
+                          ) : (
+                            obterIniciais(process.responsavel)
+                          )}
+                        </div>
+                        <span>{process.responsavel}</span>
+                      </div>
+                    ) : (
+                      process.responsavel || 'Sem responsável'
+                    )}
+                  </dd>
                 </div>
                 <div className={styles.detailItem}>
                   <dt>Data de Início</dt>

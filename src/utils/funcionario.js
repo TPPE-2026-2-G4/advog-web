@@ -68,6 +68,29 @@ export function formatOab(memberOrUf, maybeNumero) {
   return `OAB ${numero}`;
 }
 
+export function getValidFotoUrl(item) {
+  if (!item) return null;
+  const candidate =
+    item.foto_perfil_url ??
+    item.fotoPerfilUrl ??
+    (typeof item.foto_perfil === 'string' ? item.foto_perfil : null);
+  if (
+    typeof candidate === 'string' &&
+    candidate.trim() !== '' &&
+    candidate !== 'null' &&
+    candidate !== 'undefined'
+  ) {
+    return candidate.trim();
+  }
+  return null;
+}
+
+export function getCargoNome(cargo) {
+  if (!cargo) return '';
+  if (typeof cargo === 'string') return cargo;
+  return cargo.nome_cargo || cargo.nome || '';
+}
+
 export function toTeamMember(funcionario) {
   const cargo =
     (typeof funcionario.cargo === 'string' && funcionario.cargo) ||

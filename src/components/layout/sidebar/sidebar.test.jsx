@@ -133,6 +133,7 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: 'Atividades' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Finanças' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Calendário' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Clientes/CRM' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Equipe' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Site' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Ajustes' })).toBeInTheDocument();

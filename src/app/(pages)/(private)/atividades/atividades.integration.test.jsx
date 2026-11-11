@@ -537,6 +537,7 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
     fireEvent.click(
       screen.getByRole('button', { name: 'Excluir Revisar contrato' })
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar exclusão' }));
     await waitFor(() => {
       expect(screen.queryByText('Revisar contrato')).not.toBeInTheDocument();
       expect(screen.getByText('Atividade excluída.')).toBeInTheDocument();
@@ -600,6 +601,7 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
     fireEvent.click(
       screen.getByRole('button', { name: 'Excluir Elaborar contestação' })
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar exclusão' }));
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(
         'Não foi possível excluir a atividade.'
@@ -726,6 +728,14 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
     fireEvent.click(
       screen.getByRole('button', { name: 'Excluir etapa Validação Cliente' })
     );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Excluir etapa' })
+      ).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar exclusão' }));
 
     await waitFor(() => {
       expect(screen.getByText('Etapa excluída.')).toBeInTheDocument();

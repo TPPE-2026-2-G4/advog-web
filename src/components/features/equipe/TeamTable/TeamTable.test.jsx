@@ -41,7 +41,7 @@ describe('TeamTable', () => {
     expect(screen.getByText('Analista')).toBeInTheDocument();
     expect(screen.getByText('Ativo')).toBeInTheDocument();
     expect(screen.getByText('Permissões')).toBeInTheDocument();
-    expect(screen.getByText('0/10')).toBeInTheDocument();
+    expect(screen.getByText('0/12')).toBeInTheDocument();
   });
 
   it('renderiza a foto do membro quando disponível e mantém as iniciais como fallback', () => {
@@ -86,8 +86,8 @@ describe('TeamTable', () => {
 
     render(<TeamTable members={[member]} roles={roles} />);
 
-    expect(screen.getByText('3/10')).toBeInTheDocument();
-    expect(screen.getByLabelText('3 de 10 permissões')).toBeInTheDocument();
+    expect(screen.getByText('3/12')).toBeInTheDocument();
+    expect(screen.getByLabelText('3 de 12 permissões')).toBeInTheDocument();
   });
 
   it('usa as permissões aninhadas do funcionário se o cargo não foi listado', () => {
@@ -101,7 +101,7 @@ describe('TeamTable', () => {
 
     render(<TeamTable members={[member]} roles={[]} />);
 
-    expect(screen.getByText('2/10')).toBeInTheDocument();
+    expect(screen.getByText('2/12')).toBeInTheDocument();
   });
 
   it('renderiza cada membro fornecido em uma linha separada', () => {

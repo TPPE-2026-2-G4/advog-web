@@ -1,7 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useSearchParams } from 'next/navigation';
 import ClientesClient from './clientesClient';
 import * as clientesService from '@/services/clientes';
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 vi.mock('@/services/clientes', () => ({
   criarCliente: vi.fn(),
@@ -43,6 +48,7 @@ const mockClientes = [
 describe('ClientesClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useSearchParams.mockReturnValue(new URLSearchParams());
     clientesService.listarClientes.mockResolvedValue([]);
   });
 
@@ -346,5 +352,103 @@ describe('ClientesClient', () => {
     expect(
       screen.queryByRole('button', { name: /limpar filtros/i })
     ).not.toBeInTheDocument();
+  });
+
+  it('exibe tela de acesso negado quando usuário não possui permissão de visualizar clientes', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 10,
+        nome: 'Sem Permissao',
+        cargo: {
+          nome_cargo: 'Sem Permissao',
+          permissao: {
+            visualizar_clientes: false,
+            gerenciar_clientes: false,
+          },
+        },
+      })
+    );
+
+    render(
+      <ClientesClient
+        initialClientes={mockClientes}
+        initialFuncionarios={mockFuncionarios}
+      />
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Acesso negado' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Você não possui permissão para visualizar clientes.')
+    ).toBeInTheDocument();
+  });
+
+  it('permite visualizar mas oculta criação, edição e exclusão quando não tem permissão de gerenciar clientes', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 11,
+        nome: 'Apenas Leitura',
+        cargo: {
+          nome_cargo: 'Leitor',
+          permissao: {
+            visualizar_clientes: true,
+            gerenciar_clientes: false,
+          },
+        },
+      })
+    );
+
+    render(
+      <ClientesClient
+        initialClientes={mockClientes}
+        initialFuncionarios={mockFuncionarios}
+      />
+    );
+
+    // Pode visualizar a lista
+    expect(
+      screen.getByRole('heading', { name: 'Clientes' })
+    ).toBeInTheDocument();
+    expect(screen.getByText('Carlos Drummond')).toBeInTheDocument();
+
+    // Não pode criar novo cliente
+    expect(
+      screen.queryByRole('button', { name: /novo cliente/i })
+    ).not.toBeInTheDocument();
+
+    // Pode ver o olho (visualizar detalhes), mas não lápis (editar) nem lixeira (excluir)
+    expect(screen.getAllByLabelText(/visualizar detalhes/i)).toHaveLength(2);
+    expect(screen.queryByLabelText(/editar cliente/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/excluir cliente/i)).not.toBeInTheDocument();
+
+    // Ao abrir detalhes, não pode ver o botão de editar
+    fireEvent.click(screen.getAllByLabelText(/visualizar detalhes/i)[0]);
+    expect(screen.getByText('Detalhes do Cliente')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^editar$/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it('abre automaticamente o modal de detalhes quando clienteId está na URL', async () => {
+    useSearchParams.mockReturnValue(new URLSearchParams('clienteId=2'));
+
+    render(
+      <ClientesClient
+        initialClientes={mockClientes}
+        initialFuncionarios={mockFuncionarios}
+      />
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Detalhes do Cliente' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getAllByText('Clarice Lispector').length
+      ).toBeGreaterThanOrEqual(2);
+    });
   });
 });

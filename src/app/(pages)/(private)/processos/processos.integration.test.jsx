@@ -2646,10 +2646,12 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
           : undefined
       );
       const dialog = await openNewProcess();
+      const respInput = within(dialog).getByLabelText('Responsável');
+      fireEvent.focus(respInput);
 
       expect(
-        await within(dialog).findByRole('option', { name: 'Fulano por Id' })
-      ).toHaveValue('8');
+        await within(dialog).findByRole('option', { name: /Fulano por Id/i })
+      ).toBeInTheDocument();
     });
 
     it('bloqueia a página quando não há sessão nem usuário', () => {

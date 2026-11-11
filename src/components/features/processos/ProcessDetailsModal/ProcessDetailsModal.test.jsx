@@ -3,6 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ProcessDetailsModal from './ProcessDetailsModal';
 import styles from './ProcessDetailsModal.module.css';
 
+const mockPush = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
 vi.mock('@/services/processos', () => ({
   listarDocumentos: vi.fn().mockResolvedValue([]),
   listarMovimentacoes: vi.fn().mockResolvedValue([]),
@@ -518,5 +526,50 @@ describe('ProcessDetailsModal', () => {
         'Formato inválido. Envie arquivos PDF, DOCX, DOC, PNG ou JPG.'
       )
     ).toBeInTheDocument();
+  });
+
+  it('redireciona para os detalhes do cliente ao clicar no nome do cliente', () => {
+    mockPush.mockReset();
+    const onClose = vi.fn();
+    render(
+      <ProcessDetailsModal
+        process={{ ...processData, cliente_id: 15 }}
+        onClose={onClose}
+      />
+    );
+
+    const clientBtn = screen.getByRole('button', { name: 'Maria Silva' });
+    expect(clientBtn).toBeInTheDocument();
+    fireEvent.click(clientBtn);
+
+    expect(onClose).toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith('/clientes?clienteId=15');
+  });
+
+  it('renderiza avatar com iniciais e com foto do responsável', () => {
+    const { rerender } = render(
+      <ProcessDetailsModal
+        process={{ ...processData, responsavel: 'Carlos Eduardo' }}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('CE')).toBeInTheDocument();
+    expect(screen.getByText('Carlos Eduardo')).toBeInTheDocument();
+
+    rerender(
+      <ProcessDetailsModal
+        process={{
+          ...processData,
+          responsavel: 'Carlos Eduardo',
+          responsavel_foto_url: 'https://example.com/foto.jpg',
+        }}
+        onClose={vi.fn()}
+      />
+    );
+
+    const img = screen.getByAltText('Foto de Carlos Eduardo');
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute('src', 'https://example.com/foto.jpg');
   });
 });

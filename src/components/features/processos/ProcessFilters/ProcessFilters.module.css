@@ -2,16 +2,16 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   margin-top: 24px;
   margin-bottom: 24px;
 }
 
 .searchContainer {
   position: relative;
-  flex: 1 1 300px;
-  max-width: 400px;
+  flex: 1 1 240px;
+  min-width: 200px;
+  max-width: 320px;
 }
 
 .searchIcon {
@@ -50,6 +50,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+  flex: 1 1 auto;
 }
 
 .dateGroup {
@@ -70,7 +71,23 @@
   font-weight: 500;
 }
 
-.pillInput,
+.pillInput {
+  height: 38px;
+  padding: 8px 16px;
+  color: #172133;
+  font-family: inherit;
+  font-size: 14px;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  outline: none;
+  cursor: pointer;
+}
+
 .pillSelect {
   height: 38px;
   padding: 8px 16px;
@@ -86,6 +103,9 @@
     box-shadow 0.2s;
   outline: none;
   cursor: pointer;
+  max-width: 200px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pillInput:focus-visible,

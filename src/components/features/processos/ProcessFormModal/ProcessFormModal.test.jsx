@@ -155,8 +155,8 @@ describe('ProcessFormModal', () => {
     expect(screen.getByLabelText('Número do Processo')).toHaveAttribute(
       'readonly'
     );
-    expect(screen.getByLabelText('Cliente')).toHaveValue('10');
-    expect(screen.getByLabelText('Responsável')).toHaveValue('5');
+    expect(screen.getByLabelText('Cliente')).toHaveValue('Maria Silva');
+    expect(screen.getByLabelText('Responsável')).toHaveValue('Ana Paula');
     expect(screen.getByLabelText('Próximo Prazo')).toHaveValue('2026-10-05');
     fireEvent.change(screen.getByLabelText('Título do Caso'), {
       target: { value: 'Caso atualizado' },
@@ -260,12 +260,17 @@ describe('ProcessFormModal', () => {
     ];
     renderForm({ funcionarios: mixedFuncionarios });
 
-    const select = screen.getByLabelText('Responsável');
-    const options = Array.from(select.querySelectorAll('option')).map(
-      (o) => o.textContent
-    );
+    const input = screen.getByLabelText('Responsável');
+    fireEvent.focus(input);
+    const options = screen.getAllByRole('option').map((o) => o.textContent);
 
-    expect(options).toContain('Ana Paula');
-    expect(options).not.toContain('Administrador');
+    expect(options.some((o) => o.includes('Ana Paula'))).toBe(true);
+    expect(options.some((o) => o.includes('Administrador'))).toBe(false);
+  });
+
+  it('inicializa a data de início com a data atual no cadastro de novo processo', () => {
+    renderForm();
+    const hoje = new Date().toISOString().split('T')[0];
+    expect(screen.getByLabelText('Data de Início')).toHaveValue(hoje);
   });
 });

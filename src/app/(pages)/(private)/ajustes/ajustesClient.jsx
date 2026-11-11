@@ -12,7 +12,6 @@ import {
   Mail,
   RefreshCw,
   Save,
-  Wifi,
 } from 'lucide-react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
@@ -201,44 +200,6 @@ export default function AjustesClient({ initialTeam = [] }) {
 
         {canManageSystem && (
           <>
-            <div className={styles.settingItem}>
-              <div className={styles.settingLeft}>
-                <div className={styles.iconBox}>
-                  <Wifi size={20} aria-hidden="true" />
-                </div>
-                <div className={styles.settingInfo}>
-                  <h2 className={styles.settingTitle}>Integração DataJud</h2>
-                  <p className={styles.settingDescription}>
-                    {datajudStatus.mensagem}
-                  </p>
-                </div>
-              </div>
-
-              <div className={styles.settingRight}>
-                <span
-                  className={`${styles.badge} ${datajudBadgeClass}`}
-                  data-testid="datajud-status-badge"
-                >
-                  {datajudBadgeLabel}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={handleRefreshDatajud}
-                  disabled={datajudStatus.isLoading}
-                  aria-label="Testar conexão com o DataJud"
-                  title="Testar conexão com o DataJud"
-                  className={styles.refreshBtn}
-                >
-                  <RefreshCw
-                    size={16}
-                    aria-hidden="true"
-                    className={datajudStatus.isLoading ? styles.spinning : ''}
-                  />
-                </button>
-              </div>
-            </div>
-
             <div className={styles.settingItem}>
               <div className={styles.settingLeft}>
                 <div className={styles.iconBox}>

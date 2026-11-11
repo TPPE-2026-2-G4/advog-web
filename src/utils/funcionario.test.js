@@ -6,6 +6,8 @@ import {
   isAdministratorAccount,
   isAdministratorRole,
   filterNonAdministratorMembers,
+  getCargoNome,
+  getValidFotoUrl,
   normalizeRoleName,
   toTeamMember,
 } from './funcionario';
@@ -314,5 +316,44 @@ describe('filterNonAdministratorMembers', () => {
     expect(filterNonAdministratorMembers(null)).toEqual([]);
     expect(filterNonAdministratorMembers(undefined)).toEqual([]);
     expect(filterNonAdministratorMembers([])).toEqual([]);
+  });
+});
+
+describe('getValidFotoUrl', () => {
+  it('retorna a URL de foto válida quando presente em foto_perfil_url', () => {
+    expect(
+      getValidFotoUrl({ foto_perfil_url: 'https://exemplo.com/foto.png' })
+    ).toBe('https://exemplo.com/foto.png');
+  });
+
+  it('retorna null se foto_perfil for um número inteiro (ID de arquivo)', () => {
+    expect(getValidFotoUrl({ foto_perfil: 1 })).toBeNull();
+    expect(
+      getValidFotoUrl({ foto_perfil: 1, foto_perfil_url: null })
+    ).toBeNull();
+  });
+
+  it('retorna null se url for vazia, null, undefined ou strings falsas', () => {
+    expect(getValidFotoUrl(null)).toBeNull();
+    expect(getValidFotoUrl({})).toBeNull();
+    expect(getValidFotoUrl({ foto_perfil_url: '' })).toBeNull();
+    expect(getValidFotoUrl({ foto_perfil_url: '   ' })).toBeNull();
+    expect(getValidFotoUrl({ foto_perfil_url: 'null' })).toBeNull();
+  });
+});
+
+describe('getCargoNome', () => {
+  it('retorna a string do cargo se for string', () => {
+    expect(getCargoNome('Advogado')).toBe('Advogado');
+  });
+
+  it('retorna nome_cargo ou nome se for objeto', () => {
+    expect(getCargoNome({ nome_cargo: 'Sócia' })).toBe('Sócia');
+    expect(getCargoNome({ nome: 'Consultor' })).toBe('Consultor');
+  });
+
+  it('retorna string vazia se nulo ou indefinido', () => {
+    expect(getCargoNome(null)).toBe('');
+    expect(getCargoNome(undefined)).toBe('');
   });
 });

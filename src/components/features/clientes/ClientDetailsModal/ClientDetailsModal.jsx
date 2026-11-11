@@ -17,6 +17,8 @@ import {
   obterEtapaPorId,
   obterIniciais,
 } from '@/utils/cliente';
+import { getImageUrl } from '@/utils/institucional';
+import { getValidFotoUrl } from '@/utils/funcionario';
 import styles from './ClientDetailsModal.module.css';
 
 export default function ClientDetailsModal({
@@ -25,27 +27,50 @@ export default function ClientDetailsModal({
   onEdit,
   cliente = null,
   funcionarios = [],
+  canManage = true,
 }) {
   if (!cliente) return null;
 
   const etapa = obterEtapaPorId(cliente.etapa_id || cliente.status_id);
   const badgeClass = styles[etapa.variant] || styles.novoContato;
 
-  const getResponsavelNome = () => {
-    if (cliente.responsavel_nome) return cliente.responsavel_nome;
+  const getResponsavelInfo = () => {
+    let nome = 'Não atribuído';
+    let fotoUrl = null;
+
+    if (cliente.responsavel_nome) nome = cliente.responsavel_nome;
     if (cliente.responsavel) {
-      if (typeof cliente.responsavel === 'string') return cliente.responsavel;
-      if (cliente.responsavel.nome) return cliente.responsavel.nome;
+      if (typeof cliente.responsavel === 'string') {
+        nome = cliente.responsavel;
+      } else if (cliente.responsavel.nome) {
+        nome = cliente.responsavel.nome;
+        fotoUrl = getValidFotoUrl(cliente.responsavel);
+      }
     }
+
     if (cliente.responsavel_id) {
       const func = funcionarios.find(
         (f) =>
           Number(f.funcionario_id || f.id) === Number(cliente.responsavel_id)
       );
-      if (func) return func.nome;
+      if (func) {
+        nome = func.nome;
+        if (!fotoUrl) fotoUrl = getValidFotoUrl(func);
+      }
+    } else if (nome && nome !== 'Não atribuído') {
+      const func = funcionarios.find((f) => f.nome === nome);
+      if (func && !fotoUrl) fotoUrl = getValidFotoUrl(func);
     }
-    return 'Não atribuído';
+
+    if (!fotoUrl && cliente.responsavel_foto_url) {
+      fotoUrl = getValidFotoUrl(cliente.responsavel_foto_url);
+    }
+
+    return { nome, fotoUrl };
   };
+
+  const getResponsavelNome = () => getResponsavelInfo().nome;
+  const responsavelInfo = getResponsavelInfo();
 
   const documento =
     cliente.cpf || cliente.cnpj || cliente.cpf_cnpj || cliente.documento;
@@ -109,7 +134,39 @@ export default function ClientDetailsModal({
             <User size={18} className={styles.infoIcon} />
             <div className={styles.infoContent}>
               <span className={styles.infoLabel}>Responsável</span>
-              <span className={styles.infoValue}>{getResponsavelNome()}</span>
+              {responsavelInfo.nome &&
+              responsavelInfo.nome !== 'Não atribuído' ? (
+                <div className={styles.responsibleRow}>
+                  <div className={styles.responsibleAvatar}>
+                    {responsavelInfo.fotoUrl ? (
+                      <>
+                        <img
+                          src={getImageUrl(responsavelInfo.fotoUrl)}
+                          alt={`Foto de ${responsavelInfo.nome}`}
+                          className={styles.avatarImage}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            if (e.currentTarget.nextElementSibling) {
+                              e.currentTarget.nextElementSibling.style.display =
+                                'inline';
+                            }
+                          }}
+                        />
+                        <span style={{ display: 'none' }}>
+                          {obterIniciais(responsavelInfo.nome)}
+                        </span>
+                      </>
+                    ) : (
+                      obterIniciais(responsavelInfo.nome)
+                    )}
+                  </div>
+                  <span className={styles.infoValue}>
+                    {responsavelInfo.nome}
+                  </span>
+                </div>
+              ) : (
+                <span className={styles.infoValue}>Não atribuído</span>
+              )}
             </div>
           </div>
 
@@ -151,17 +208,19 @@ export default function ClientDetailsModal({
         <button type="button" className={styles.closeBtn} onClick={onClose}>
           Fechar
         </button>
-        <button
-          type="button"
-          className={styles.editBtn}
-          onClick={() => {
-            onClose?.();
-            onEdit?.(cliente);
-          }}
-        >
-          <Pencil size={16} />
-          Editar
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            className={styles.editBtn}
+            onClick={() => {
+              onClose?.();
+              onEdit?.(cliente);
+            }}
+          >
+            <Pencil size={16} />
+            Editar
+          </button>
+        )}
       </div>
     </Modal>
   );

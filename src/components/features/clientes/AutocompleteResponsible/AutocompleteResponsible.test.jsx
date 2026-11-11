@@ -242,4 +242,52 @@ describe('AutocompleteResponsible', () => {
     expect(screen.queryByText('Administrador')).not.toBeInTheDocument();
     expect(screen.getByText('Alexandre Carreiro')).toBeInTheDocument();
   });
+
+  it('renderiza a foto de perfil do funcionário quando disponível e iniciais caso contrário', () => {
+    const comFoto = [
+      {
+        funcionario_id: 10,
+        nome: 'Carlos Drummond',
+        foto_perfil_url: 'https://exemplo.com/carlos.png',
+        cargo: { nome_cargo: 'Poeta' },
+      },
+      {
+        funcionario_id: 11,
+        nome: 'Clarice Lispector',
+        cargo: { nome_cargo: 'Escritora' },
+      },
+    ];
+
+    render(<AutocompleteResponsible funcionarios={comFoto} />);
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+
+    const img = screen.getByAltText('Foto de Carlos Drummond');
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute('src', 'https://exemplo.com/carlos.png');
+
+    expect(screen.getByText('CL')).toBeInTheDocument();
+  });
+
+  it('exibe o cargo corretamente se for string ou se for objeto', () => {
+    const comCargos = [
+      {
+        funcionario_id: 30,
+        nome: 'Juliana Paes',
+        cargo: 'Sócia',
+      },
+      {
+        funcionario_id: 31,
+        nome: 'Marcos Frota',
+        cargo: { nome_cargo: 'Consultor' },
+      },
+    ];
+
+    render(<AutocompleteResponsible funcionarios={comCargos} />);
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+
+    expect(screen.getByText('Sócia')).toBeInTheDocument();
+    expect(screen.getByText('Consultor')).toBeInTheDocument();
+  });
 });

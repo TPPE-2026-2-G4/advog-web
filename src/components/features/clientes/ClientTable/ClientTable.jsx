@@ -8,6 +8,8 @@ import {
   obterEtapaPorId,
   obterIniciais,
 } from '@/utils/cliente';
+import { getImageUrl } from '@/utils/institucional';
+import { getValidFotoUrl } from '@/utils/funcionario';
 import styles from './ClientTable.module.css';
 
 export default function ClientTable({
@@ -16,22 +18,44 @@ export default function ClientTable({
   onView,
   onEdit,
   onDelete,
+  canManage = true,
 }) {
-  const getResponsavelNome = (cliente) => {
-    if (cliente.responsavel_nome) return cliente.responsavel_nome;
+  const getResponsavelInfo = (cliente) => {
+    let nome = 'Não atribuído';
+    let fotoUrl = null;
+
+    if (cliente.responsavel_nome) nome = cliente.responsavel_nome;
     if (cliente.responsavel) {
-      if (typeof cliente.responsavel === 'string') return cliente.responsavel;
-      if (cliente.responsavel.nome) return cliente.responsavel.nome;
+      if (typeof cliente.responsavel === 'string') {
+        nome = cliente.responsavel;
+      } else if (cliente.responsavel.nome) {
+        nome = cliente.responsavel.nome;
+        fotoUrl = getValidFotoUrl(cliente.responsavel);
+      }
     }
+
     if (cliente.responsavel_id) {
       const func = funcionarios.find(
         (f) =>
           Number(f.funcionario_id || f.id) === Number(cliente.responsavel_id)
       );
-      if (func) return func.nome;
+      if (func) {
+        nome = func.nome;
+        if (!fotoUrl) fotoUrl = getValidFotoUrl(func);
+      }
+    } else if (nome && nome !== 'Não atribuído') {
+      const func = funcionarios.find((f) => f.nome === nome);
+      if (func && !fotoUrl) fotoUrl = getValidFotoUrl(func);
     }
-    return 'Não atribuído';
+
+    if (!fotoUrl && cliente.responsavel_foto_url) {
+      fotoUrl = getValidFotoUrl(cliente.responsavel_foto_url);
+    }
+
+    return { nome, fotoUrl };
   };
+
+  const getResponsavelNome = (cliente) => getResponsavelInfo(cliente).nome;
 
   if (!clientes || clientes.length === 0) {
     return (
@@ -70,7 +94,8 @@ export default function ClientTable({
                 cliente.etapa_id || cliente.status_id
               );
               const badgeClass = styles[etapa.variant] || styles.novoContato;
-              const responsavelNome = getResponsavelNome(cliente);
+              const responsavelInfo = getResponsavelInfo(cliente);
+              const responsavelNome = responsavelInfo.nome;
               const documento =
                 cliente.cpf || cliente.cnpj || cliente.documento;
 
@@ -116,9 +141,40 @@ export default function ClientTable({
                   </td>
 
                   <td className={styles.td}>
-                    <span className={styles.responsavel}>
-                      {responsavelNome}
-                    </span>
+                    {responsavelNome && responsavelNome !== 'Não atribuído' ? (
+                      <div className={styles.responsibleCell}>
+                        <div className={styles.responsibleAvatar}>
+                          {responsavelInfo.fotoUrl ? (
+                            <>
+                              <img
+                                src={getImageUrl(responsavelInfo.fotoUrl)}
+                                alt={`Foto de ${responsavelNome}`}
+                                className={styles.avatarImage}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  if (e.currentTarget.nextElementSibling) {
+                                    e.currentTarget.nextElementSibling.style.display =
+                                      'inline';
+                                  }
+                                }}
+                              />
+                              <span style={{ display: 'none' }}>
+                                {obterIniciais(responsavelNome)}
+                              </span>
+                            </>
+                          ) : (
+                            obterIniciais(responsavelNome)
+                          )}
+                        </div>
+                        <span className={styles.responsavel}>
+                          {responsavelNome}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className={styles.responsavel}>
+                        {responsavelNome || 'Não atribuído'}
+                      </span>
+                    )}
                   </td>
 
                   <td className={styles.td}>
@@ -145,25 +201,29 @@ export default function ClientTable({
                         <Eye size={17} />
                       </button>
 
-                      <button
-                        type="button"
-                        className={styles.actionBtn}
-                        onClick={() => onEdit?.(cliente)}
-                        title="Editar cliente"
-                        aria-label={`Editar cliente ${cliente.nome}`}
-                      >
-                        <Pencil size={16} />
-                      </button>
+                      {canManage && (
+                        <>
+                          <button
+                            type="button"
+                            className={styles.actionBtn}
+                            onClick={() => onEdit?.(cliente)}
+                            title="Editar cliente"
+                            aria-label={`Editar cliente ${cliente.nome}`}
+                          >
+                            <Pencil size={16} />
+                          </button>
 
-                      <button
-                        type="button"
-                        className={`${styles.actionBtn} ${styles.deleteBtn}`}
-                        onClick={() => onDelete?.(cliente)}
-                        title="Excluir cliente"
-                        aria-label={`Excluir cliente ${cliente.nome}`}
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                          <button
+                            type="button"
+                            className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                            onClick={() => onDelete?.(cliente)}
+                            title="Excluir cliente"
+                            aria-label={`Excluir cliente ${cliente.nome}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
