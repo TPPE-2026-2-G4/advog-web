@@ -8,11 +8,11 @@ import {
 } from './permissions';
 
 describe('metadados visuais de permissões', () => {
-  it('cria o objeto inicial com os dez campos desabilitados e independentes', () => {
+  it('cria o objeto inicial com os doze campos desabilitados e independentes', () => {
     const permission = createEmptyPermission();
 
     expect(Object.keys(permission)).toEqual(Object.keys(PERMISSION_LABELS));
-    expect(Object.values(permission)).toHaveLength(10);
+    expect(Object.values(permission)).toHaveLength(12);
     expect(Object.values(permission).every((value) => value === false)).toBe(
       true
     );
@@ -30,6 +30,22 @@ describe('metadados visuais de permissões', () => {
       const updated = togglePermission(initial, gerenciar);
       expect(updated[gerenciar]).toBe(true);
       expect(updated[visualizar]).toBe(true);
+    }
+  });
+
+  it('desmarca automaticamente a permissão de gerenciar ao desmarcar visualização', () => {
+    for (const [gerenciar, visualizar] of Object.entries(
+      PERMISSOES_IMPLICADAS
+    )) {
+      const initial = {
+        ...createEmptyPermission(),
+        [gerenciar]: true,
+        [visualizar]: true,
+      };
+
+      const updated = togglePermission(initial, visualizar);
+      expect(updated[visualizar]).toBe(false);
+      expect(updated[gerenciar]).toBe(false);
     }
   });
 

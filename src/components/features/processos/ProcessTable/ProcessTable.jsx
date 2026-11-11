@@ -6,6 +6,8 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react';
+import { obterIniciais } from '@/utils/cliente';
+import { getImageUrl } from '@/utils/institucional';
 import { formatProcessDate, isOverdueDeadline } from '@/utils/processo';
 import styles from './ProcessTable.module.css';
 
@@ -75,13 +77,7 @@ export default function ProcessTable({
                     <span className={styles.processNumber}>{processo.cnj}</span>
                   </td>
                   <td className={styles.td} data-label="Caso / Cliente">
-                    <button
-                      type="button"
-                      className={styles.caseButton}
-                      onClick={() => onView(processo)}
-                    >
-                      {processo.titulo}
-                    </button>
+                    <span className={styles.caseTitle}>{processo.titulo}</span>
                     <span className={styles.secondaryText}>
                       {processo.cliente}
                     </span>
@@ -104,9 +100,42 @@ export default function ProcessTable({
                     </span>
                   </td>
                   <td className={styles.td} data-label="Responsável">
-                    <span className={styles.primaryText}>
-                      {processo.responsavel}
-                    </span>
+                    {processo.responsavel &&
+                    processo.responsavel !== 'Sem responsável' &&
+                    processo.responsavel !== 'Não informado' ? (
+                      <div className={styles.responsibleCell}>
+                        <div className={styles.responsibleAvatar}>
+                          {processo.responsavel_foto_url ? (
+                            <>
+                              <img
+                                src={getImageUrl(processo.responsavel_foto_url)}
+                                alt={`Foto de ${processo.responsavel}`}
+                                className={styles.avatarImage}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  if (e.currentTarget.nextElementSibling) {
+                                    e.currentTarget.nextElementSibling.style.display =
+                                      'inline';
+                                  }
+                                }}
+                              />
+                              <span style={{ display: 'none' }}>
+                                {obterIniciais(processo.responsavel)}
+                              </span>
+                            </>
+                          ) : (
+                            obterIniciais(processo.responsavel)
+                          )}
+                        </div>
+                        <span className={styles.primaryText}>
+                          {processo.responsavel}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className={styles.primaryText}>
+                        {processo.responsavel || 'Sem responsável'}
+                      </span>
+                    )}
                   </td>
                   <td className={styles.td} data-label="Próximo Prazo">
                     <span

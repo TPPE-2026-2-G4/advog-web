@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CalendarioPage from './page';
-import { listarFinancas } from '@/services/financas';
+import { listarFinancas, listarCategorias } from '@/services/financas';
 
 vi.mock('@/services/financas', () => ({
   listarFinancas: vi.fn(),
+  listarCategorias: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('./calendarioClient', () => ({

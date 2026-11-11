@@ -99,6 +99,7 @@ describe('RolePermissionsModal', () => {
     const expectedPermission = {
       ...initialPermission,
       [permissionEntries[0][0]]: false,
+      [permissionEntries[1][0]]: false,
       [permissionEntries[2][0]]: true,
     };
     await waitFor(() =>

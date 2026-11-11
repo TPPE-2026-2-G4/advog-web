@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import ClientesClient from './clientesClient';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
@@ -9,9 +10,11 @@ export default async function ClientesPage() {
   ]);
 
   return (
-    <ClientesClient
-      initialClientes={clientes}
-      initialFuncionarios={funcionarios}
-    />
+    <Suspense fallback={null}>
+      <ClientesClient
+        initialClientes={clientes}
+        initialFuncionarios={funcionarios}
+      />
+    </Suspense>
   );
 }

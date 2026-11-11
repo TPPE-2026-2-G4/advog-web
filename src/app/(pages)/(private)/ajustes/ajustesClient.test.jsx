@@ -151,13 +151,12 @@ describe('AjustesClient', () => {
       expect(screen.getByTestId('email-notification-status')).toHaveTextContent(
         esperadoEmailBadge
       );
-      expect(screen.getByTestId('datajud-status-badge')).toHaveTextContent(
-        esperadoDatajudBadge
-      );
+      expect(
+        screen.queryByTestId('datajud-status-badge')
+      ).not.toBeInTheDocument();
       expect(screen.getByTestId('infra-status-badge')).toHaveTextContent(
         esperadoInfraBadge
       );
-      expect(screen.getByText(esperadoDatajudMensagem)).toBeInTheDocument();
 
       const btn = screen.getByRole('button', { name: esperadoBtnLabel });
       expect(btn).toBeInTheDocument();
@@ -208,10 +207,9 @@ describe('AjustesClient', () => {
 
     render(<AjustesClient initialTeam={[]} />);
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Testar conexão com o DataJud' })
-    );
-    expect(mockRefreshDatajud).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole('button', { name: 'Testar conexão com o DataJud' })
+    ).not.toBeInTheDocument();
 
     fireEvent.click(
       screen.getByRole('button', {

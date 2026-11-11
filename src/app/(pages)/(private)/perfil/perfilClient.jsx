@@ -28,7 +28,11 @@ import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/utils/authSession';
 import { getImageUrl } from '@/utils/institucional';
-import { formatOab, getLawyerInitials } from '@/utils/funcionario';
+import {
+  formatOab,
+  getLawyerInitials,
+  isAdministratorAccount,
+} from '@/utils/funcionario';
 import styles from './perfil.module.css';
 
 const emptySubscribe = () => () => {};
@@ -197,14 +201,24 @@ export default function PerfilClient({ atuacoes = [] }) {
 
     setIsSubmitting(true);
     try {
-      const dados = {
-        nome: profileData.nome.trim(),
-        uf_oab: profileData.ufOab ? profileData.ufOab.toUpperCase() : null,
-        numero_oab: profileData.numeroOab || null,
-        atuacao_id: profileData.atuacaoId
-          ? Number(profileData.atuacaoId)
-          : null,
-      };
+      const isAdmin = isAdministratorAccount(currentUser);
+      const dados = isAdmin
+        ? {
+            nome: getName(currentUser),
+            uf_oab: currentUser?.uf_oab || null,
+            numero_oab: currentUser?.numero_oab || null,
+            atuacao_id: currentUser?.atuacao_id
+              ? Number(currentUser.atuacao_id)
+              : null,
+          }
+        : {
+            nome: profileData.nome.trim(),
+            uf_oab: profileData.ufOab ? profileData.ufOab.toUpperCase() : null,
+            numero_oab: profileData.numeroOab || null,
+            atuacao_id: profileData.atuacaoId
+              ? Number(profileData.atuacaoId)
+              : null,
+          };
       if (querAlterarSenha) {
         dados.senha_atual = senhaAtual;
         dados.nova_senha = novaSenha;
@@ -244,6 +258,8 @@ export default function PerfilClient({ atuacoes = [] }) {
   if (!currentUser) {
     return null;
   }
+
+  const isAdmin = isAdministratorAccount(currentUser);
 
   const selectedArea = atuacoes.find(
     (area) => String(area.atuacao_id) === profileData.atuacaoId
@@ -358,6 +374,12 @@ export default function PerfilClient({ atuacoes = [] }) {
             <h2 id="personal-title" className={styles.sectionTitle}>
               Informações Pessoais
             </h2>
+            {isAdmin && (
+              <p className={styles.fieldHint} style={{ marginBottom: '16px' }}>
+                A conta administradora não permite alteração de informações
+                pessoais.
+              </p>
+            )}
 
             <div className={styles.fieldsGrid}>
               <div className={`${styles.field} ${styles.fullWidth}`}>
@@ -370,6 +392,7 @@ export default function PerfilClient({ atuacoes = [] }) {
                   onChange={handleChange}
                   required
                   maxLength={150}
+                  disabled={isAdmin || isSubmitting}
                 />
               </div>
 
@@ -395,6 +418,7 @@ export default function PerfilClient({ atuacoes = [] }) {
                   value={profileData.atuacaoId}
                   onChange={handleChange}
                   aria-describedby="profile-area-hint"
+                  disabled={isAdmin || isSubmitting}
                 >
                   <option value="">Selecione uma área</option>
                   {atuacoes.map((area) => (
@@ -415,6 +439,7 @@ export default function PerfilClient({ atuacoes = [] }) {
                   name="ufOab"
                   value={profileData.ufOab}
                   onChange={handleChange}
+                  disabled={isAdmin || isSubmitting}
                 >
                   <option value="">Não informada</option>
                   {[
@@ -464,6 +489,7 @@ export default function PerfilClient({ atuacoes = [] }) {
                   value={profileData.numeroOab}
                   onChange={handleChange}
                   aria-describedby="profile-oab-hint"
+                  disabled={isAdmin || isSubmitting}
                 />
               </div>
             </div>

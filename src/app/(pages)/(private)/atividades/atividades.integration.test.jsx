@@ -5,6 +5,7 @@ import {
   renderHook,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AtividadesClient from './atividadesClient';
@@ -411,8 +412,17 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
       }
       if (method === 'GET' && url.includes('/funcionarios')) {
         return createJsonResponse([
-          { funcionario_id: 1, nome: 'Dr. Alexandre' },
-          { funcionario_id: 2, nome: 'Dra. Ana' },
+          {
+            funcionario_id: 1,
+            nome: 'Dr. Alexandre',
+            cargo: { nome: 'Advogado Associado' },
+          },
+          {
+            funcionario_id: 2,
+            nome: 'Dra. Ana',
+            foto_perfil_url: 'https://exemplo.com/ana.png',
+            cargo: { nome: 'Sócia' },
+          },
         ]);
       }
       if (method === 'GET' && url.includes('/processos')) {
@@ -537,6 +547,7 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
     fireEvent.click(
       screen.getByRole('button', { name: 'Excluir Revisar contrato' })
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar exclusão' }));
     await waitFor(() => {
       expect(screen.queryByText('Revisar contrato')).not.toBeInTheDocument();
       expect(screen.getByText('Atividade excluída.')).toBeInTheDocument();
@@ -600,6 +611,7 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
     fireEvent.click(
       screen.getByRole('button', { name: 'Excluir Elaborar contestação' })
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar exclusão' }));
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(
         'Não foi possível excluir a atividade.'
@@ -728,8 +740,423 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
     );
 
     await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Excluir etapa' })
+      ).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar exclusão' }));
+
+    await waitFor(() => {
       expect(screen.getByText('Etapa excluída.')).toBeInTheDocument();
       expect(screen.queryByTestId('coluna-50')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('US - Exclusão de etapa/atividade, AutocompleteMultiResponsible e Detalhes', () => {
+    it('bloqueia exclusão de etapa com atividades vinculadas e descarta mensagem após timeout', async () => {
+      dbAtividades.push({
+        atividade_id: 12,
+        titulo: 'Audiência de conciliação',
+        descricao: 'Audiência de conciliação cível',
+        data_inicio: '2026-10-01T09:00:00',
+        data_prazo: '2026-10-28T18:00:00',
+        etapa_id: 2,
+        processo_id: 50,
+        responsaveis: [
+          {
+            funcionario_id: 2,
+            nome: 'Dra. Ana',
+            foto_perfil_url: 'https://exemplo.com/ana.png',
+          },
+        ],
+      });
+
+      let dismissActionError;
+      const realSetTimeout = global.setTimeout;
+      vi.spyOn(global, 'setTimeout').mockImplementation(
+        (fn, delay, ...args) => {
+          if (delay === 5000) dismissActionError = fn;
+          return realSetTimeout(fn, delay, ...args);
+        }
+      );
+
+      render(<AtividadesPage />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Audiência de conciliação')
+        ).toBeInTheDocument();
+      });
+
+      // Tenta excluir etapa 'Em Execução' que possui atividades vinculadas
+      const btnExcluirEtapa = screen.getByRole('button', {
+        name: 'Excluir etapa Em Execução',
+      });
+      fireEvent.click(btnExcluirEtapa);
+
+      const msgAlerta =
+        'Não é possível excluir uma etapa que possui atividades vinculadas. Mova ou exclua as atividades antes.';
+      expect(await screen.findByText(msgAlerta)).toBeInTheDocument();
+
+      // Não abre o modal de confirmação de exclusão
+      expect(
+        screen.queryByRole('heading', { name: 'Excluir etapa' })
+      ).not.toBeInTheDocument();
+
+      // Executa o timeout de 5 segundos que limpa a mensagem automaticamente
+      act(() => {
+        dismissActionError?.();
+      });
+      expect(screen.queryByText(msgAlerta)).not.toBeInTheDocument();
+    });
+
+    it('abre modal para confirmação de exclusão de atividade com opções de cancelar e confirmar', async () => {
+      render(<AtividadesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Elaborar contestação')).toBeInTheDocument();
+      });
+
+      // Clica em excluir atividade
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Excluir Elaborar contestação' })
+      );
+
+      // Modal de confirmação é exibido
+      expect(
+        await screen.findByRole('dialog', { name: 'Excluir atividade' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Tem certeza que deseja excluir a atividade/i)
+      ).toBeInTheDocument();
+
+      // Fecha pressionando Escape (cobrindo onClose do Modal de exclusão de atividade)
+      fireEvent.keyDown(
+        screen.getByRole('dialog', { name: 'Excluir atividade' }),
+        { key: 'Escape' }
+      );
+      expect(
+        screen.queryByRole('dialog', { name: 'Excluir atividade' })
+      ).not.toBeInTheDocument();
+
+      // Clica em excluir novamente e fecha clicando no botão Fechar (X)
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Excluir Elaborar contestação' })
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+      expect(
+        screen.queryByRole('dialog', { name: 'Excluir atividade' })
+      ).not.toBeInTheDocument();
+
+      // Clica em excluir novamente
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Excluir Elaborar contestação' })
+      );
+      expect(
+        await screen.findByRole('dialog', { name: 'Excluir atividade' })
+      ).toBeInTheDocument();
+
+      // Clica em Cancelar
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+      expect(
+        screen.queryByRole('dialog', { name: 'Excluir atividade' })
+      ).not.toBeInTheDocument();
+      expect(screen.getByText('Elaborar contestação')).toBeInTheDocument();
+
+      // Clica novamente e confirma exclusão
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Excluir Elaborar contestação' })
+      );
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Confirmar exclusão' })
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('Elaborar contestação')
+        ).not.toBeInTheDocument();
+        expect(screen.getByText('Atividade excluída.')).toBeInTheDocument();
+      });
+    });
+
+    it('exercita AutocompleteMultiResponsible com busca, teclado, chips, remoção e erro de imagem', async () => {
+      render(<AtividadesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Revisar contrato')).toBeInTheDocument();
+      });
+
+      // Abre modal Nova Atividade
+      fireEvent.click(screen.getByRole('button', { name: /Nova Atividade/i }));
+      expect(
+        await screen.findByRole('heading', { name: 'Nova Atividade' })
+      ).toBeInTheDocument();
+
+      // Data de início deve vir com a data atual
+      const dataInicioInput = screen.getByLabelText('Data de início');
+      expect(dataInicioInput.value).toBe(
+        new Date().toISOString().split('T')[0]
+      );
+
+      // AutocompleteMultiResponsible
+      const combobox = screen.getByRole('combobox', {
+        name: /selecione os responsáveis/i,
+      });
+
+      // Foca no input
+      fireEvent.focus(combobox);
+
+      // Digita 'Ana' para filtrar
+      fireEvent.change(combobox, { target: { value: 'Ana' } });
+
+      // Teclado: ArrowDown, ArrowUp, Enter para selecionar Dra. Ana
+      fireEvent.keyDown(combobox, { key: 'ArrowDown' });
+      fireEvent.keyDown(combobox, { key: 'ArrowDown' });
+      fireEvent.keyDown(combobox, { key: 'ArrowUp' });
+      fireEvent.keyDown(combobox, { key: 'Enter' });
+
+      // Chip de Dra. Ana é renderizado
+      expect(
+        await screen.findByRole('button', { name: 'Remover Dra. Ana' })
+      ).toBeInTheDocument();
+
+      // Testa erro de imagem no avatar do chip
+      const chipAvatars = screen.getAllByRole('img', {
+        name: 'Foto de Dra. Ana',
+      });
+      chipAvatars.forEach((img) => fireEvent.error(img));
+
+      // Remove Dra. Ana pelo botão do chip
+      const removeBtn = screen.getByRole('button', {
+        name: 'Remover Dra. Ana',
+      });
+      fireEvent.click(removeBtn);
+
+      // Limpa busca e clica diretamente na opção Dr. Alexandre do dropdown
+      fireEvent.change(combobox, { target: { value: '' } });
+      const listbox = screen.getByRole('listbox');
+
+      // Testa erro na imagem do avatar na lista de opções
+      const optionImg = within(listbox).queryByRole('img', {
+        name: 'Foto de Dra. Ana',
+      });
+      if (optionImg) {
+        fireEvent.error(optionImg);
+      }
+
+      const optAlexandre = within(listbox).getByRole('option', {
+        name: /Dr. Alexandre/i,
+      });
+      fireEvent.click(optAlexandre);
+      expect(
+        await screen.findByRole('button', { name: 'Remover Dr. Alexandre' })
+      ).toBeInTheDocument();
+
+      // Clica na opção Dr. Alexandre novamente para desmarcar (toggle off)
+      fireEvent.click(optAlexandre);
+      expect(
+        screen.queryByRole('button', { name: 'Remover Dr. Alexandre' })
+      ).not.toBeInTheDocument();
+
+      // Testa busca sem resultados
+      fireEvent.change(combobox, { target: { value: 'NenhumExisteAqui' } });
+      expect(
+        screen.getByText('Nenhum responsável encontrado')
+      ).toBeInTheDocument();
+
+      // Testa clique fora para fechar o dropdown (linhas 30-32 do AutocompleteMultiResponsible)
+      fireEvent.mouseDown(screen.getByLabelText('Título'));
+      expect(
+        screen.queryByText('Nenhum responsável encontrado')
+      ).not.toBeInTheDocument();
+
+      // Reabre o combobox e navega com teclado envolvendo extremos (wrapping)
+      fireEvent.focus(combobox);
+      fireEvent.change(combobox, { target: { value: '' } });
+      fireEvent.keyDown(combobox, { key: 'ArrowDown' });
+      fireEvent.keyDown(combobox, { key: 'ArrowDown' });
+      fireEvent.keyDown(combobox, { key: 'ArrowDown' });
+      fireEvent.keyDown(combobox, { key: 'ArrowUp' });
+      fireEvent.keyDown(combobox, { key: 'ArrowUp' });
+      fireEvent.keyDown(combobox, { key: 'ArrowUp' });
+
+      // Fecha com Escape
+      fireEvent.keyDown(combobox, { key: 'Escape' });
+    });
+
+    it('abre modal para confirmação de exclusão de etapa vazia com opções de fechar e cancelar', async () => {
+      dbEtapas.push({ etapa_id: 88, nome: 'Etapa Teste Cancelar', ordem: 4 });
+
+      render(<AtividadesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Etapa Teste Cancelar')).toBeInTheDocument();
+      });
+
+      // Clica em excluir etapa
+      const btnExcluir = screen.getByRole('button', {
+        name: 'Excluir etapa Etapa Teste Cancelar',
+      });
+      fireEvent.click(btnExcluir);
+
+      // Modal de exclusão de etapa é exibido
+      expect(
+        await screen.findByRole('dialog', { name: 'Excluir etapa' })
+      ).toBeInTheDocument();
+
+      // Clica no botão Fechar (X) do modal de exclusão de etapa
+      const fecharXBtn = screen.getByRole('button', { name: 'Fechar' });
+      fireEvent.click(fecharXBtn);
+      expect(
+        screen.queryByRole('dialog', { name: 'Excluir etapa' })
+      ).not.toBeInTheDocument();
+
+      // Fecha pressionando Escape (cobrindo onClose do Modal de exclusão de etapa)
+      fireEvent.click(btnExcluir);
+      expect(
+        await screen.findByRole('dialog', { name: 'Excluir etapa' })
+      ).toBeInTheDocument();
+      fireEvent.keyDown(screen.getByRole('dialog', { name: 'Excluir etapa' }), {
+        key: 'Escape',
+      });
+      expect(
+        screen.queryByRole('dialog', { name: 'Excluir etapa' })
+      ).not.toBeInTheDocument();
+
+      // Clica novamente em excluir etapa e clica em Cancelar
+      fireEvent.click(btnExcluir);
+      expect(
+        await screen.findByRole('dialog', { name: 'Excluir etapa' })
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+      expect(
+        screen.queryByRole('dialog', { name: 'Excluir etapa' })
+      ).not.toBeInTheDocument();
+    });
+
+    it('abre modal de nova etapa e cancela fechando o modal', async () => {
+      render(<AtividadesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Backlog')).toBeInTheDocument();
+      });
+
+      // Abre modal Nova Etapa
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /Nova Etapa/i })[0]
+      );
+      expect(
+        await screen.findByRole('heading', { name: 'Nova Etapa' })
+      ).toBeInTheDocument();
+
+      // Clica no botão Fechar (X)
+      fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+      expect(
+        screen.queryByRole('heading', { name: 'Nova Etapa' })
+      ).not.toBeInTheDocument();
+
+      // Abre novamente e fecha com Escape (cobrindo onClose do Modal de Etapa)
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /Nova Etapa/i })[0]
+      );
+      expect(
+        await screen.findByRole('heading', { name: 'Nova Etapa' })
+      ).toBeInTheDocument();
+      fireEvent.keyDown(screen.getByRole('dialog', { name: 'Nova Etapa' }), {
+        key: 'Escape',
+      });
+      expect(
+        screen.queryByRole('heading', { name: 'Nova Etapa' })
+      ).not.toBeInTheDocument();
+
+      // Abre novamente e clica em Cancelar
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /Nova Etapa/i })[0]
+      );
+      expect(
+        await screen.findByRole('heading', { name: 'Nova Etapa' })
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+      expect(
+        screen.queryByRole('heading', { name: 'Nova Etapa' })
+      ).not.toBeInTheDocument();
+
+      // Testa criação de etapa inline com Enter
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Adicionar nova etapa ao final' })
+      );
+      const inlineInput = screen.getByPlaceholderText('Nome da etapa...');
+      fireEvent.change(inlineInput, {
+        target: { value: 'Etapa Sucesso Inline' },
+      });
+      fireEvent.keyDown(inlineInput, { key: 'Enter' });
+      await waitFor(() => {
+        expect(screen.getByText('Etapa Sucesso Inline')).toBeInTheDocument();
+      });
+    });
+
+    it('exibe detalhes da atividade com responsáveis e trata erro no avatar', async () => {
+      dbAtividades.push({
+        atividade_id: 13,
+        titulo: 'Audiência com Foto',
+        descricao: 'Audiência detalhada',
+        data_inicio: '2026-10-01T09:00:00',
+        data_prazo: '2026-10-28T18:00:00',
+        etapa_id: 1,
+        processo_id: 50,
+        responsaveis: [
+          {
+            funcionario_id: 2,
+            nome: 'Dra. Ana',
+            foto_perfil_url: 'https://exemplo.com/ana.png',
+          },
+        ],
+      });
+
+      render(<AtividadesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Audiência com Foto')).toBeInTheDocument();
+      });
+
+      // Clica na atividade para abrir detalhes
+      fireEvent.click(screen.getByText('Audiência com Foto'));
+
+      expect(
+        await screen.findByRole('dialog', { name: 'Detalhes da Atividade' })
+      ).toBeInTheDocument();
+
+      // Trata erro de imagem no avatar de responsáveis em detalhes
+      const avatarImg = screen.queryByRole('img', { name: 'Foto de Dra. Ana' });
+      if (avatarImg) {
+        fireEvent.error(avatarImg);
+      }
+
+      // Fecha o modal de detalhes pelo botão Fechar do footer
+      const fecharBtn = screen.getAllByRole('button', { name: 'Fechar' })[0];
+      fireEvent.click(fecharBtn);
+
+      // Reabre detalhes e fecha pelo botão Fechar (X)
+      fireEvent.click(screen.getByText('Audiência com Foto'));
+      expect(
+        await screen.findByRole('dialog', { name: 'Detalhes da Atividade' })
+      ).toBeInTheDocument();
+      const fecharXBtn = screen.getAllByRole('button', { name: 'Fechar' })[0];
+      fireEvent.click(fecharXBtn);
+
+      // Reabre detalhes e fecha pressionando Escape (cobrindo onClose do Modal de detalhes)
+      fireEvent.click(screen.getByText('Audiência com Foto'));
+      expect(
+        await screen.findByRole('dialog', { name: 'Detalhes da Atividade' })
+      ).toBeInTheDocument();
+      fireEvent.keyDown(
+        screen.getByRole('dialog', { name: 'Detalhes da Atividade' }),
+        { key: 'Escape' }
+      );
+      expect(
+        screen.queryByRole('dialog', { name: 'Detalhes da Atividade' })
+      ).not.toBeInTheDocument();
     });
   });
 });

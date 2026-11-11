@@ -3,6 +3,8 @@
 import { useId, useMemo, useState } from 'react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
+import AutocompleteClient from '@/components/features/clientes/AutocompleteClient/AutocompleteClient';
+import AutocompleteResponsible from '@/components/features/clientes/AutocompleteResponsible/AutocompleteResponsible';
 import { isAdministratorAccount } from '@/utils/funcionario';
 import {
   CNJ_PATTERN,
@@ -59,7 +61,13 @@ function ProcessFormDialog({
   onSave,
 }) {
   const isEditing = Boolean(process);
-  const [formData, setFormData] = useState(() => toProcessFormData(process));
+  const [formData, setFormData] = useState(() => {
+    const initial = toProcessFormData(process);
+    if (!process && !initial.data_inicio) {
+      initial.data_inicio = new Date().toISOString().split('T')[0];
+    }
+    return initial;
+  });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const titleId = useId();
@@ -247,22 +255,21 @@ function ProcessFormDialog({
             <label className={styles.label} htmlFor={fieldId('cliente_id')}>
               Cliente
             </label>
-            <select
+            <AutocompleteClient
               id={fieldId('cliente_id')}
               name="cliente_id"
-              className={styles.select}
-              value={formData.cliente_id}
-              onChange={handleChange}
+              clienteId={formData.cliente_id}
+              onChange={(id) =>
+                setFormData((current) => ({
+                  ...current,
+                  cliente_id: id ? String(id) : '',
+                }))
+              }
+              clientes={clientes}
               disabled={isSubmitting}
               required
-            >
-              <option value="">Selecione um cliente</option>
-              {clientes.map((cliente) => (
-                <option key={cliente.cliente_id} value={cliente.cliente_id}>
-                  {cliente.nome}
-                </option>
-              ))}
-            </select>
+              placeholder="Selecione um cliente"
+            />
           </div>
 
           <div className={styles.inputGroup}>
@@ -291,24 +298,20 @@ function ProcessFormDialog({
             >
               Responsável
             </label>
-            <select
+            <AutocompleteResponsible
               id={fieldId('funcionario_id')}
               name="funcionario_id"
-              className={styles.select}
-              value={formData.funcionario_id}
-              onChange={handleChange}
+              responsavelId={formData.funcionario_id}
+              onChange={(id) =>
+                setFormData((current) => ({
+                  ...current,
+                  funcionario_id: id ? String(id) : '',
+                }))
+              }
+              funcionarios={availableFuncionarios}
               disabled={isSubmitting}
-            >
-              <option value="">Sem responsável</option>
-              {availableFuncionarios.map((funcionario) => (
-                <option
-                  key={funcionario.funcionario_id || funcionario.id}
-                  value={funcionario.funcionario_id || funcionario.id}
-                >
-                  {funcionario.nome}
-                </option>
-              ))}
-            </select>
+              placeholder="Sem responsável"
+            />
           </div>
 
           <div className={styles.inputGroup}>

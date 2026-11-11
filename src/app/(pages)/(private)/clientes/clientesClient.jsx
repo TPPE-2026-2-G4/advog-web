@@ -8,7 +8,10 @@ import {
   RotateCcw,
   Search,
 } from 'lucide-react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useClientes } from '@/hooks/useClientes';
+import { obterCliente } from '@/services/clientes';
 import ClientTable from '@/components/features/clientes/ClientTable/ClientTable';
 import AddClientModal from '@/components/features/clientes/AddClientModal/AddClientModal';
 import EditClientModal from '@/components/features/clientes/EditClientModal/EditClientModal';
@@ -16,12 +19,47 @@ import ClientDetailsModal from '@/components/features/clientes/ClientDetailsModa
 import DeleteClientModal from '@/components/features/clientes/DeleteClientModal/DeleteClientModal';
 import AutocompleteResponsible from '@/components/features/clientes/AutocompleteResponsible/AutocompleteResponsible';
 import { ETAPAS } from '@/utils/cliente';
+import { getCurrentUser } from '@/utils/authSession';
+import {
+  isAdministratorAccount,
+  isAdministratorRole,
+} from '@/utils/funcionario';
 import styles from './clientesClient.module.css';
+
+const emptySubscribe = () => () => {};
 
 export default function ClientesClient({
   initialClientes = [],
   initialFuncionarios = [],
 }) {
+  const userJson = useSyncExternalStore(
+    emptySubscribe,
+    () => JSON.stringify(getCurrentUser() ?? null),
+    () => 'null'
+  );
+  const currentUser = JSON.parse(userJson);
+  const isUserAdmin =
+    isAdministratorAccount(currentUser) ||
+    isAdministratorRole(currentUser?.cargo);
+  const cargoPerms = currentUser?.cargo?.permissao ?? {};
+  const arrayPerms = Array.isArray(currentUser?.permissoes)
+    ? Object.fromEntries(currentUser.permissoes.map((p) => [p, true]))
+    : {};
+  const perms = { ...arrayPerms, ...cargoPerms };
+
+  const hasPermissionsDefined =
+    currentUser &&
+    (currentUser?.cargo?.permissao != null ||
+      Array.isArray(currentUser?.permissoes));
+
+  const canView =
+    !hasPermissionsDefined ||
+    isUserAdmin ||
+    perms.visualizar_clientes === true ||
+    perms.gerenciar_clientes === true;
+
+  const canManage =
+    !hasPermissionsDefined || isUserAdmin || perms.gerenciar_clientes === true;
   const {
     funcionarios,
     searchTerm,
@@ -57,6 +95,56 @@ export default function ClientesClient({
     errorMessage,
   } = useClientes({ initialClientes, initialFuncionarios });
 
+  const searchParams = useSearchParams();
+  const clienteIdParam =
+    searchParams?.get('clienteId') || searchParams?.get('cliente_id');
+  const handledParamRef = useRef(null);
+
+  useEffect(() => {
+    if (!clienteIdParam || !canView) return;
+    if (handledParamRef.current === clienteIdParam) return;
+
+    const targetId = Number(clienteIdParam);
+    const foundInList = filteredClientes.find(
+      (c) => Number(c.cliente_id || c.id) === targetId
+    );
+
+    if (foundInList) {
+      handledParamRef.current = clienteIdParam;
+      handleOpenDetails(foundInList);
+      return;
+    }
+
+    let isSubscribed = true;
+    obterCliente(targetId)
+      .then((cliente) => {
+        if (isSubscribed && cliente) {
+          handledParamRef.current = clienteIdParam;
+          handleOpenDetails(cliente);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [clienteIdParam, canView, filteredClientes, handleOpenDetails]);
+
+  if (!canView) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.headerRow}>
+          <div className={styles.titleArea} role="alert">
+            <h1 className={styles.title}>Acesso negado</h1>
+            <p className={styles.subtitle}>
+              Você não possui permissão para visualizar clientes.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.headerRow}>
@@ -70,14 +158,16 @@ export default function ClientesClient({
           </p>
         </div>
 
-        <button
-          type="button"
-          className={styles.newClientBtn}
-          onClick={handleOpenAdd}
-        >
-          <Plus size={18} />
-          Novo Cliente
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            className={styles.newClientBtn}
+            onClick={handleOpenAdd}
+          >
+            <Plus size={18} />
+            Novo Cliente
+          </button>
+        )}
       </div>
 
       {feedbackMessage && (
@@ -156,6 +246,7 @@ export default function ClientesClient({
         onView={handleOpenDetails}
         onEdit={handleOpenEdit}
         onDelete={handleOpenDelete}
+        canManage={canManage}
       />
 
       <AddClientModal
@@ -181,6 +272,7 @@ export default function ClientesClient({
         onEdit={handleOpenEdit}
         cliente={viewingClient}
         funcionarios={funcionarios}
+        canManage={canManage}
       />
 
       <DeleteClientModal

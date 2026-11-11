@@ -68,11 +68,12 @@ describe('ClientesPage', () => {
       listarFuncionarios.mockResolvedValue(funcionarios);
 
       const elemento = await ClientesPage();
+      const clientProps = elemento.props.children?.props || elemento.props;
 
       expect(listarClientes).toHaveBeenCalledOnce();
       expect(listarFuncionarios).toHaveBeenCalledOnce();
-      expect(elemento.props.initialClientes).toEqual(clientes);
-      expect(elemento.props.initialFuncionarios).toEqual(funcionarios);
+      expect(clientProps.initialClientes).toEqual(clientes);
+      expect(clientProps.initialFuncionarios).toEqual(funcionarios);
     }
   );
 

@@ -6,6 +6,7 @@ import { exportarCalendarioIcs, obterCalendario } from '@/services/financas';
 vi.mock('@/services/financas', () => ({
   obterCalendario: vi.fn(),
   exportarCalendarioIcs: vi.fn(),
+  listarCategorias: vi.fn().mockResolvedValue([]),
 }));
 
 const mockEventosAgosto = [

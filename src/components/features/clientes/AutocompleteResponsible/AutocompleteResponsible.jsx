@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import { obterIniciais } from '@/utils/cliente';
-import { isAdministratorAccount } from '@/utils/funcionario';
+import {
+  getCargoNome,
+  getValidFotoUrl,
+  isAdministratorAccount,
+} from '@/utils/funcionario';
+import { getImageUrl } from '@/utils/institucional';
 import styles from './AutocompleteResponsible.module.css';
 
 const encontrarFuncionario = (id, list = []) => {
@@ -22,6 +27,8 @@ export default function AutocompleteResponsible({
   placeholder = 'Selecione o responsável',
   disabled = false,
   id = 'responsavel-autocomplete',
+  name = '',
+  required = false,
   ariaLabel = '',
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -112,18 +119,33 @@ export default function AutocompleteResponsible({
       <div className={styles.inputWrapper}>
         <input
           id={id}
+          name={name || undefined}
           type="text"
           className={styles.input}
           placeholder={placeholder}
           value={searchTerm}
           onChange={(e) => {
-            setSearchTerm(e.target.value);
+            const val = e.target.value;
+            setSearchTerm(val);
             setIsOpen(true);
             setHighlightedIndex(-1);
+            if (!val.trim()) {
+              onChange?.(null, null);
+              return;
+            }
+            const matchById = funcionarios.find(
+              (f) =>
+                !isAdministratorAccount(f) &&
+                String(f.funcionario_id || f.id) === val.trim()
+            );
+            if (matchById) {
+              onChange?.(matchById.funcionario_id || matchById.id, matchById);
+            }
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           disabled={disabled}
+          required={required}
           autoComplete="off"
           role="combobox"
           aria-label={ariaLabel || placeholder}
@@ -177,13 +199,33 @@ export default function AutocompleteResponsible({
                   aria-selected={isSelected}
                 >
                   <div className={styles.avatar}>
-                    {obterIniciais(func.nome)}
+                    {getValidFotoUrl(func) ? (
+                      <>
+                        <img
+                          src={getImageUrl(getValidFotoUrl(func))}
+                          alt={`Foto de ${func.nome}`}
+                          className={styles.avatarImage}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            if (e.currentTarget.nextElementSibling) {
+                              e.currentTarget.nextElementSibling.style.display =
+                                'inline';
+                            }
+                          }}
+                        />
+                        <span style={{ display: 'none' }}>
+                          {obterIniciais(func.nome)}
+                        </span>
+                      </>
+                    ) : (
+                      obterIniciais(func.nome)
+                    )}
                   </div>
                   <div className={styles.optionInfo}>
                     <span className={styles.optionName}>{func.nome}</span>
-                    {func.cargo?.nome_cargo && (
+                    {getCargoNome(func.cargo) && (
                       <span className={styles.optionRole}>
-                        {func.cargo.nome_cargo}
+                        {getCargoNome(func.cargo)}
                       </span>
                     )}
                   </div>

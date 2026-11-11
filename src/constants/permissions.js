@@ -3,6 +3,7 @@ export const PERMISSOES_IMPLICADAS = Object.freeze({
   gerenciar_atividades: 'visualizar_atividades',
   gerenciar_financeiro: 'visualizar_financeiro',
   gerenciar_equipe: 'visualizar_equipe',
+  gerenciar_clientes: 'visualizar_clientes',
 });
 
 export const PERMISSION_LABELS = Object.freeze({
@@ -14,6 +15,8 @@ export const PERMISSION_LABELS = Object.freeze({
   gerenciar_financeiro: 'Gerenciar financeiro',
   visualizar_equipe: 'Visualizar equipe',
   gerenciar_equipe: 'Gerenciar equipe',
+  visualizar_clientes: 'Visualizar clientes',
+  gerenciar_clientes: 'Gerenciar clientes',
   gerenciar_site: 'Gerenciar site',
   configuracoes_sistema: 'Configurações do sistema',
 });
@@ -34,6 +37,15 @@ export const togglePermission = (currentPermissions, permissionName) => {
   };
   if (nextValue && PERMISSOES_IMPLICADAS[permissionName]) {
     updated[PERMISSOES_IMPLICADAS[permissionName]] = true;
+  }
+  if (!nextValue) {
+    for (const [gerenciar, visualizar] of Object.entries(
+      PERMISSOES_IMPLICADAS
+    )) {
+      if (visualizar === permissionName) {
+        updated[gerenciar] = false;
+      }
+    }
   }
   return updated;
 };

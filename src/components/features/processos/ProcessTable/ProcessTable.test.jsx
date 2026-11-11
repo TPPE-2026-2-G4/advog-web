@@ -47,7 +47,10 @@ describe('ProcessTable', () => {
 
     expect(screen.getByRole('table', { name: '' })).toBeInTheDocument();
     expect(screen.getByText(processes[0].cnj)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Caso 1' })).toBeInTheDocument();
+    expect(screen.getByText('Caso 1')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Caso 1' })
+    ).not.toBeInTheDocument();
 
     const futureDeadlines = screen.getAllByText('05/10/2099');
     expect(futureDeadlines).toHaveLength(3);
@@ -125,12 +128,14 @@ describe('ProcessTable', () => {
     }
   );
 
-  it('também abre o detalhe pelo título do caso', () => {
+  it('não permite abrir o detalhe pelo título do caso', () => {
     const props = renderTable({ processes: [processes[0]], totalItems: 1 });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Caso 1' }));
-
-    expect(props.onView).toHaveBeenCalledWith(processes[0]);
+    expect(
+      screen.queryByRole('button', { name: 'Caso 1' })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Caso 1')).toBeInTheDocument();
+    expect(props.onView).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -177,5 +182,34 @@ describe('ProcessTable', () => {
       within(navigation).getByRole('button', { name: 'Página anterior' })
     );
     expect(props.onPageChange).toHaveBeenCalledWith(1);
+  });
+
+  it('exibe foto do responsável quando disponível e iniciais quando não há foto', () => {
+    const customProcesses = [
+      {
+        ...createProcess(10, 'Ativo'),
+        responsavel: 'Alexandre Carreiro',
+        responsavel_foto_url: 'https://exemplo.com/alexandre.png',
+      },
+      {
+        ...createProcess(11, 'Ativo'),
+        responsavel: 'Beatriz Santos',
+        responsavel_foto_url: null,
+      },
+      {
+        ...createProcess(12, 'Ativo'),
+        responsavel: 'Sem responsável',
+      },
+    ];
+
+    renderTable({ processes: customProcesses, totalItems: 3 });
+
+    const img = screen.getByAltText('Foto de Alexandre Carreiro');
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute('src', 'https://exemplo.com/alexandre.png');
+
+    expect(screen.getByText('BS')).toBeInTheDocument();
+    expect(screen.getByText('Beatriz Santos')).toBeInTheDocument();
+    expect(screen.getByText('Sem responsável')).toBeInTheDocument();
   });
 });

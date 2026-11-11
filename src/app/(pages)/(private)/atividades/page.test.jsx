@@ -186,6 +186,7 @@ describe('AtividadesPage e AtividadesClient', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Excluir Protocolar petição' })
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar exclusão' }));
     await waitFor(() => {
       expect(excluirAtividade).toHaveBeenCalledWith(10);
       expect(screen.getByText('Atividade excluída.')).toBeInTheDocument();
@@ -288,6 +289,7 @@ describe('AtividadesPage e AtividadesClient', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Excluir Protocolar petição' })
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar exclusão' }));
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('Erro ao excluir');
     });
@@ -362,7 +364,122 @@ describe('AtividadesPage e AtividadesClient', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Nova Atividade/i }));
+    const respInput = screen.getByPlaceholderText(/responsáveis/i);
+    fireEvent.focus(respInput);
     expect(screen.getAllByText('Dra. Ana Paula')).toHaveLength(2);
     expect(screen.queryByText('Administrador')).not.toBeInTheDocument();
+  });
+
+  it('inicializa a data de início com a data atual ao abrir criação de nova atividade', async () => {
+    obterKanbanAtividades.mockResolvedValueOnce({
+      escopo: 'escritorio',
+      etapas: [
+        {
+          etapa_id: 1,
+          nome: 'Backlog',
+          atividades: [],
+        },
+      ],
+    });
+
+    render(<AtividadesPage />);
+    await screen.findByText('Backlog');
+
+    fireEvent.click(screen.getByRole('button', { name: /Nova Atividade/i }));
+    const dataInicioInput = screen.getByLabelText(/Data de início/i);
+    const hoje = new Date().toISOString().slice(0, 10);
+    expect(dataInicioInput).toHaveValue(hoje);
+  });
+
+  it('exibe modal de confirmação ao clicar em excluir atividade e permite cancelar', async () => {
+    render(<AtividadesPage />);
+    await screen.findByText('Protocolar petição');
+
+    const deleteBtn = screen.getByRole('button', {
+      name: 'Excluir Protocolar petição',
+    });
+    fireEvent.click(deleteBtn);
+
+    expect(
+      screen.getByRole('heading', { name: 'Excluir atividade' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Tem certeza que deseja excluir a atividade/)
+    ).toBeInTheDocument();
+
+    const cancelarBtn = screen.getByRole('button', { name: 'Cancelar' });
+    fireEvent.click(cancelarBtn);
+    expect(
+      screen.queryByRole('heading', { name: 'Excluir atividade' })
+    ).not.toBeInTheDocument();
+    expect(excluirAtividade).not.toHaveBeenCalled();
+  });
+
+  it('não abre modal ao tentar excluir etapa com atividades, mas abre modal para etapa vazia', async () => {
+    obterKanbanAtividades.mockResolvedValueOnce({
+      escopo: 'escritorio',
+      etapas: [
+        {
+          etapa_id: 1,
+          nome: 'Backlog',
+          atividades: [],
+        },
+        {
+          etapa_id: 2,
+          nome: 'Em Execução',
+          atividades: [
+            {
+              atividade_id: 10,
+              titulo: 'Tarefa 1',
+              etapa_id: 2,
+              data_prazo: '2026-12-31T23:59:59',
+              responsaveis: [],
+            },
+          ],
+        },
+        {
+          etapa_id: 3,
+          nome: 'Etapa Vazia',
+          atividades: [],
+        },
+      ],
+    });
+
+    render(<AtividadesPage />);
+    await screen.findByText('Em Execução');
+
+    // Clica para excluir etapa com atividades -> não abre modal, exibe alerta
+    const btnComTarefas = screen.getByRole('button', {
+      name: 'Excluir etapa Em Execução',
+    });
+    fireEvent.click(btnComTarefas);
+
+    expect(
+      screen.queryByRole('heading', { name: 'Excluir etapa' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Não é possível excluir uma etapa que possui atividades vinculadas. Mova ou exclua as atividades antes.'
+      )
+    ).toBeInTheDocument();
+
+    // Clica para excluir etapa vazia -> abre modal de confirmação
+    const btnVazia = screen.getByRole('button', {
+      name: 'Excluir etapa Etapa Vazia',
+    });
+    fireEvent.click(btnVazia);
+
+    expect(
+      screen.getByRole('heading', { name: 'Excluir etapa' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Tem certeza que deseja excluir a etapa/)
+    ).toBeInTheDocument();
+
+    // Cancela no modal
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(
+      screen.queryByRole('heading', { name: 'Excluir etapa' })
+    ).not.toBeInTheDocument();
   });
 });

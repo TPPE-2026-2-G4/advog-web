@@ -4,7 +4,7 @@ import { Plus, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
-import { isAdministratorAccount } from '@/utils/funcionario';
+import { getValidFotoUrl, isAdministratorAccount } from '@/utils/funcionario';
 import { getCurrentUser } from '@/utils/authSession';
 const emptySubscribe = () => () => {};
 const EMPTY_RESPONSAVEIS = [];
@@ -142,6 +142,17 @@ export default function ProcessosClient({
     const clienteId = process.cliente_id;
     const title = process.titulo_proc || process.titulo;
     const desc = process.descricao_proc || process.descricao;
+    const respFunc = respId
+      ? funcionarios.find(
+          (f) =>
+            !isAdministratorAccount(f) &&
+            Number(f.funcionario_id || f.id) === Number(respId)
+        )
+      : null;
+    const respFotoUrl =
+      (respFunc ? getValidFotoUrl(respFunc) : null) ??
+      getValidFotoUrl(process) ??
+      null;
 
     return {
       ...process,
@@ -151,6 +162,7 @@ export default function ProcessosClient({
       descricao: desc,
       funcionario_id: respId,
       responsavel_id: respId,
+      responsavel_foto_url: respFotoUrl,
       cliente:
         clientNames.get(clienteId) ??
         (clienteId ? `Cliente #${clienteId}` : 'Sem cliente'),

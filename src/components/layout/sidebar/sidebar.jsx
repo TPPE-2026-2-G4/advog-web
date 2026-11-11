@@ -57,7 +57,7 @@ export function canViewMenuItem(user, path) {
     case '/calendario':
       return Boolean(perms.visualizar_financeiro || perms.gerenciar_financeiro);
     case '/clientes':
-      return true;
+      return Boolean(perms.visualizar_clientes || perms.gerenciar_clientes);
     case '/equipe':
       return Boolean(perms.visualizar_equipe || perms.gerenciar_equipe);
     case '/site':

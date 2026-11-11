@@ -201,7 +201,11 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
       nome: 'Dra. Camila Nogueira',
       email: 'camila@carreiro.adv.br',
       cargo: { nome_cargo: 'Sócia Diretora' },
-      permissoes: ['gerenciar_equipe', 'permissao_customizada'],
+      permissoes: [
+        'gerenciar_equipe',
+        'permissao_customizada',
+        'visualizar_clientes',
+      ],
       exp: nowInSeconds() + 3600,
     });
     sessionStorage.setItem('access_token', fakeJwt);
@@ -212,7 +216,11 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
         nome: 'Dra. Camila Nogueira',
         email: 'camila@carreiro.adv.br',
         cargo: { nome_cargo: 'Sócia Diretora' },
-        permissoes: ['gerenciar_equipe', 'permissao_customizada'],
+        permissoes: [
+          'gerenciar_equipe',
+          'permissao_customizada',
+          'visualizar_clientes',
+        ],
       })
     );
 
@@ -246,7 +254,7 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
       'Usuário logado: Dra. Camila Nogueira'
     );
     expect(screen.getByTestId('protected-content')).toHaveTextContent(
-      'Gerenciar equipe, Permissao customizada'
+      'Gerenciar equipe, Permissao customizada, Visualizar clientes'
     );
 
     // Verifica Navbar e UserMenu (nome abreviado e cargo)

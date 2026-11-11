@@ -6,6 +6,7 @@ import {
   getSavedInitialPage,
 } from '@/hooks/useAjustes';
 import { clearAuthSession } from '@/utils/authSession';
+import AjustesClient from './ajustesClient';
 import AjustesPage from './page';
 
 describe('Integração: Página de Ajustes (/ajustes)', () => {
@@ -123,33 +124,22 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('datajud-status-badge')).toHaveTextContent(
-        'Online'
-      );
+      expect(screen.queryByTestId('datajud-status-badge')).toBeNull();
       expect(screen.getByTestId('infra-status-badge')).toHaveTextContent(
         'Online'
       );
     });
     expect(
-      screen.getByText('Integração conectada · Sincronização automática ativa')
-    ).toBeInTheDocument();
-    expect(
       screen.getByText('Serviço de anexos e banco de dados operacionais')
     ).toBeInTheDocument();
 
-    // Testa re-verificação manual do DataJud e do Armazenamento
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Testar conexão com o DataJud' })
-    );
+    // Testa re-verificação manual do Armazenamento
     fireEvent.click(
       screen.getByRole('button', {
         name: 'Testar conexão com o armazenamento',
       })
     );
     await waitFor(() => {
-      expect(screen.getByTestId('datajud-status-badge')).toHaveTextContent(
-        'Online'
-      );
       expect(screen.getByTestId('infra-status-badge')).toHaveTextContent(
         'Online'
       );
@@ -297,18 +287,11 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
     render(Page);
 
     await waitFor(() => {
-      expect(screen.getByTestId('datajud-status-badge')).toHaveTextContent(
-        'Offline'
-      );
+      expect(screen.queryByTestId('datajud-status-badge')).toBeNull();
       expect(screen.getByTestId('infra-status-badge')).toHaveTextContent(
         'Offline'
       );
     });
-    expect(
-      screen.getByText(
-        'Integração indisponível · Sincronização automática pausada'
-      )
-    ).toBeInTheDocument();
     expect(
       screen.getByText(
         'Falha na comunicação com o armazenamento ou banco de dados'
@@ -372,9 +355,7 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
     render(Page);
 
     await waitFor(() => {
-      expect(screen.getByTestId('datajud-status-badge')).toHaveTextContent(
-        'Offline'
-      );
+      expect(screen.queryByTestId('datajud-status-badge')).toBeNull();
       expect(screen.getByTestId('infra-status-badge')).toHaveTextContent(
         'Offline'
       );
@@ -475,5 +456,21 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
 
     document.body.removeChild(container);
     errorSpy.mockRestore();
+  });
+
+  it('suporta usuário com permissoes em array para gerenciar configurações', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 2,
+        nome: 'Advogado Com Array Perms',
+        email: 'array@carreiro.adv.br',
+        permissoes: ['configuracoes_sistema'],
+      })
+    );
+    render(<AjustesClient initialTeam={[]} />);
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Ajustes' })
+    ).toBeInTheDocument();
   });
 });

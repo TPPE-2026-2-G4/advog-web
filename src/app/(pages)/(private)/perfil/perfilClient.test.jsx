@@ -367,4 +367,32 @@ describe('PerfilClient', () => {
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
+
+  it('bloqueia os inputs de informações pessoais para conta administradora mantendo foto e senha livres', async () => {
+    const adminUser = {
+      funcionario_id: 1,
+      nome: 'Administrador',
+      email: 'admin@admin.com',
+      cargo: { nome_cargo: 'Administrador' },
+      status: 'Ativo',
+      atuacao_id: null,
+      uf_oab: null,
+      numero_oab: null,
+    };
+
+    renderPerfil(adminUser);
+
+    expect(await screen.findByDisplayValue('Administrador')).toBeDisabled();
+    expect(screen.getByLabelText('E-mail')).toBeDisabled();
+    expect(screen.getByLabelText('Área de atuação')).toBeDisabled();
+    expect(screen.getByLabelText('UF da OAB')).toBeDisabled();
+    expect(screen.getByLabelText('Número OAB')).toBeDisabled();
+
+    expect(screen.getByLabelText('Senha atual')).not.toBeDisabled();
+    expect(screen.getByLabelText('Nova senha')).not.toBeDisabled();
+    expect(screen.getByLabelText('Confirmar nova senha')).not.toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Alterar foto de perfil' })
+    ).not.toBeDisabled();
+  });
 });

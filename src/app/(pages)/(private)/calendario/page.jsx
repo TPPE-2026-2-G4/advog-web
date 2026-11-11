@@ -1,8 +1,13 @@
 import CalendarioClient from './calendarioClient';
-import { listarFinancas } from '@/services/financas';
+import { listarFinancas, listarCategorias } from '@/services/financas';
 
 export default async function CalendarioPage() {
-  const financas = await listarFinancas();
+  const [financas, categorias] = await Promise.all([
+    listarFinancas().catch(() => []),
+    listarCategorias().catch(() => []),
+  ]);
 
-  return <CalendarioClient initialData={financas} />;
+  return (
+    <CalendarioClient initialData={financas} initialCategorias={categorias} />
+  );
 }

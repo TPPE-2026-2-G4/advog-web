@@ -63,6 +63,13 @@ export default async function Home() {
     institucional?.sobreEquipe ||
     'Profissionais qualificados e comprometidos com a excelência jurídica.';
 
+  const atuacoesMap = new Map(
+    (atuacoes || []).map((area) => [
+      String(area.atuacao_id || area.id),
+      area.nome,
+    ])
+  );
+
   return (
     <div
       className={styles.pageWrapper}
@@ -190,7 +197,11 @@ export default async function Home() {
         </section>
 
         {visibleTeam.length > 0 && (
-          <section id="equipe" className={styles.equipeSection}>
+          <section
+            id="equipe"
+            className={styles.equipeSection}
+            data-testid="team-section"
+          >
             <div className={styles.container}>
               <h2 className={styles.sectionTitle}>Nossa Equipe</h2>
               {teamSubtitle && (
@@ -237,6 +248,17 @@ export default async function Home() {
                     cargoSecondary = member.area.trim();
                   }
 
+                  const areaAtuacao =
+                    (member.atuacao_id &&
+                      atuacoesMap.get(String(member.atuacao_id))) ||
+                    member.atuacao?.nome ||
+                    (typeof member.atuacao === 'string'
+                      ? member.atuacao
+                      : '') ||
+                    member.area_atuacao ||
+                    member.area ||
+                    cargoSecondary;
+
                   const oab = formatOab(member);
 
                   return (
@@ -268,9 +290,9 @@ export default async function Home() {
                         </p>
                       )}
 
-                      {cargoSecondary && (
+                      {areaAtuacao && (
                         <p className={styles.teamRoleSecondary}>
-                          {cargoSecondary}
+                          {areaAtuacao}
                         </p>
                       )}
 

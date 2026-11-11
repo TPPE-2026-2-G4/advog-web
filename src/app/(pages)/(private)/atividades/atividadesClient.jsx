@@ -30,8 +30,11 @@ import {
 import { listarFuncionarios } from '@/services/funcionarios';
 import { listarProcessos } from '@/services/processos';
 import { countActivitiesByStage } from '@/utils/atividade';
-import { isAdministratorAccount } from '@/utils/funcionario';
+import { obterIniciais } from '@/utils/cliente';
+import { getValidFotoUrl, isAdministratorAccount } from '@/utils/funcionario';
 import { getCurrentUser } from '@/utils/authSession';
+import { getImageUrl } from '@/utils/institucional';
+import AutocompleteMultiResponsible from '@/components/features/atividades/AutocompleteMultiResponsible/AutocompleteMultiResponsible';
 import styles from './atividades.module.css';
 
 const EMPTY_FORM = {
@@ -43,6 +46,8 @@ const EMPTY_FORM = {
   processo_id: '',
   responsaveis_ids: [],
 };
+
+const getTodayDate = () => new Date().toISOString().slice(0, 10);
 
 const toDateInput = (iso) => String(iso).slice(0, 10);
 const formatDate = (iso) => toDateInput(iso).split('-').reverse().join('/');
@@ -101,7 +106,12 @@ export default function AtividadesClient() {
   const [viewing, setViewing] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(() => ({
+    ...EMPTY_FORM,
+    data_inicio: getTodayDate(),
+  }));
+  const [activityToDelete, setActivityToDelete] = useState(null);
+  const [stageToDelete, setStageToDelete] = useState(null);
   const [formError, setFormError] = useState('');
   const [draggedId, setDraggedId] = useState(null);
   const [draggedStageId, setDraggedStageId] = useState(null);
@@ -127,6 +137,12 @@ export default function AtividadesClient() {
   }, []);
 
   useEffect(() => {
+    if (!actionError) return undefined;
+    const timer = setTimeout(() => setActionError(''), 5000);
+    return () => clearTimeout(timer);
+  }, [actionError]);
+
+  useEffect(() => {
     if (!feedback) return undefined;
     const timer = setTimeout(() => setFeedback(''), 15000);
     return () => clearTimeout(timer);
@@ -143,7 +159,11 @@ export default function AtividadesClient() {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ ...EMPTY_FORM, etapa_id: etapas[0]?.etapa_id ?? '' });
+    setForm({
+      ...EMPTY_FORM,
+      data_inicio: getTodayDate(),
+      etapa_id: etapas[0]?.etapa_id ?? '',
+    });
     setFormError('');
     setModalOpen(true);
   };
@@ -490,7 +510,15 @@ export default function AtividadesClient() {
                       type="button"
                       aria-label={`Excluir etapa ${col.nome}`}
                       className={styles.iconBtn}
-                      onClick={() => handleDeleteStage(col)}
+                      onClick={() => {
+                        if (col.atividades && col.atividades.length > 0) {
+                          setActionError(
+                            'Não é possível excluir uma etapa que possui atividades vinculadas. Mova ou exclua as atividades antes.'
+                          );
+                        } else {
+                          setStageToDelete(col);
+                        }
+                      }}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -543,7 +571,7 @@ export default function AtividadesClient() {
                               className={styles.iconBtn}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDelete(a.atividade_id);
+                                setActivityToDelete(a);
                               }}
                             >
                               <Trash2 size={14} />
@@ -690,6 +718,94 @@ export default function AtividadesClient() {
       </Modal>
 
       <Modal
+        isOpen={Boolean(activityToDelete)}
+        onClose={() => setActivityToDelete(null)}
+        ariaLabel="Excluir atividade"
+      >
+        <div className={styles.modalContent}>
+          <div className={styles.modalHeader}>
+            <div>
+              <h2 className={styles.modalTitle}>Excluir atividade</h2>
+              <p className={styles.modalSubtitle}>
+                Esta ação não poderá ser desfeita.
+              </p>
+            </div>
+            <ModalCloseButton onClose={() => setActivityToDelete(null)} />
+          </div>
+          <div className={styles.modalBody}>
+            <p>
+              Tem certeza que deseja excluir a atividade{' '}
+              <strong>&quot;{activityToDelete?.titulo}&quot;</strong>?
+            </p>
+          </div>
+          <div className={styles.modalFooter}>
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              onClick={() => setActivityToDelete(null)}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className={styles.dangerBtn}
+              onClick={async () => {
+                const id = activityToDelete?.atividade_id;
+                setActivityToDelete(null);
+                if (id) await handleDelete(id);
+              }}
+            >
+              Confirmar exclusão
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(stageToDelete)}
+        onClose={() => setStageToDelete(null)}
+        ariaLabel="Excluir etapa"
+      >
+        <div className={styles.modalContent}>
+          <div className={styles.modalHeader}>
+            <div>
+              <h2 className={styles.modalTitle}>Excluir etapa</h2>
+              <p className={styles.modalSubtitle}>
+                Esta ação não poderá ser desfeita.
+              </p>
+            </div>
+            <ModalCloseButton onClose={() => setStageToDelete(null)} />
+          </div>
+          <div className={styles.modalBody}>
+            <p>
+              Tem certeza que deseja excluir a etapa{' '}
+              <strong>&quot;{stageToDelete?.nome}&quot;</strong>?
+            </p>
+          </div>
+          <div className={styles.modalFooter}>
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              onClick={() => setStageToDelete(null)}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className={styles.dangerBtn}
+              onClick={async () => {
+                const col = stageToDelete;
+                setStageToDelete(null);
+                if (col) await handleDeleteStage(col);
+              }}
+            >
+              Confirmar exclusão
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
         isOpen={Boolean(viewing)}
         onClose={() => setViewing(null)}
         ariaLabel="Detalhes da Atividade"
@@ -716,17 +832,70 @@ export default function AtividadesClient() {
                 <div className={styles.detailItem}>
                   <User size={16} />
                   <div>
-                    <span className={styles.detailLabel}>Responsável</span>
-                    <p className={styles.detailValue}>
-                      {viewing.responsaveis.filter(
-                        (r) => !isAdministratorAccount(r)
-                      ).length
-                        ? viewing.responsaveis
-                            .filter((r) => !isAdministratorAccount(r))
-                            .map((r) => r.nome)
-                            .join(', ')
-                        : 'Não atribuído'}
-                    </p>
+                    <span className={styles.detailLabel}>Responsáveis</span>
+                    {(() => {
+                      const validResponsaveis = (
+                        viewing.responsaveis || []
+                      ).filter((r) => !isAdministratorAccount(r));
+                      if (validResponsaveis.length === 0) {
+                        return (
+                          <p className={styles.detailValue}>Não atribuído</p>
+                        );
+                      }
+                      return (
+                        <div className={styles.responsibleList}>
+                          {validResponsaveis.map((r) => {
+                            const rId = r.funcionario_id || r.id;
+                            const fullFunc =
+                              funcionarios.find(
+                                (f) =>
+                                  Number(f.funcionario_id || f.id) ===
+                                    Number(rId) || f.nome === r.nome
+                              ) || r;
+                            const nome = fullFunc.nome || r.nome;
+                            const fotoUrl =
+                              getValidFotoUrl(fullFunc) || getValidFotoUrl(r);
+
+                            return (
+                              <div
+                                key={rId || nome}
+                                className={styles.responsibleRow}
+                              >
+                                <div className={styles.detailAvatar}>
+                                  {fotoUrl ? (
+                                    <>
+                                      <img
+                                        src={getImageUrl(fotoUrl)}
+                                        alt={`Foto de ${nome}`}
+                                        className={styles.avatarImage}
+                                        onError={(e) => {
+                                          e.currentTarget.style.display =
+                                            'none';
+                                          if (
+                                            e.currentTarget.nextElementSibling
+                                          ) {
+                                            e.currentTarget.nextElementSibling.style.display =
+                                              'inline';
+                                          }
+                                        }}
+                                      />
+                                      <span style={{ display: 'none' }}>
+                                        {obterIniciais(nome)}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    obterIniciais(nome)
+                                  )}
+                                </div>
+                                <span className={styles.responsibleName}>
+                                  {nome}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
                 <div className={styles.detailItem}>
@@ -886,23 +1055,16 @@ export default function AtividadesClient() {
               </label>
             </div>
             <div className={styles.field}>
-              <span>Responsáveis</span>
-              <div className={styles.checkList}>
-                {funcionarios
-                  .filter((f) => !isAdministratorAccount(f))
-                  .map((f) => (
-                    <label key={f.funcionario_id} className={styles.checkItem}>
-                      <input
-                        type="checkbox"
-                        checked={form.responsaveis_ids.includes(
-                          f.funcionario_id
-                        )}
-                        onChange={() => toggleResponsavel(f.funcionario_id)}
-                      />
-                      <span>{f.nome}</span>
-                    </label>
-                  ))}
-              </div>
+              <label htmlFor="atividade-responsaveis">Responsáveis</label>
+              <AutocompleteMultiResponsible
+                id="atividade-responsaveis"
+                selectedIds={form.responsaveis_ids}
+                onChange={(ids) =>
+                  setForm((prev) => ({ ...prev, responsaveis_ids: ids }))
+                }
+                funcionarios={funcionarios}
+                placeholder="Selecione os responsáveis..."
+              />
             </div>
           </div>
           <div className={styles.modalFooter}>

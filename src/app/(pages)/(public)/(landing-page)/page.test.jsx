@@ -401,6 +401,45 @@ describe('Landing Page', () => {
       expect(screen.getAllByText(/OAB\//i)).toHaveLength(1);
     });
 
+    it('renderiza a área de atuação do funcionário acima da OAB', async () => {
+      buscarDadosInstitucionais.mockResolvedValue({});
+      listarAtuacoes.mockResolvedValue([
+        {
+          atuacao_id: 10,
+          nome: 'Direito Tributário',
+          exibicaoInstitucional: true,
+        },
+      ]);
+      listarFuncionarios.mockResolvedValue([
+        {
+          funcionario_id: 3,
+          nome: 'Dra. Beatriz Santos',
+          cargo: { nome_cargo: 'Advogada Associada' },
+          atuacao_id: 10,
+          uf_oab: 'SP',
+          numero_oab: '54321',
+          exibicaoInstitucional: true,
+        },
+      ]);
+
+      const jsx = await Home();
+      render(jsx);
+
+      const teamSection = screen.getByTestId('team-section');
+      expect(
+        within(teamSection).getByText('Dra. Beatriz Santos')
+      ).toBeInTheDocument();
+      expect(
+        within(teamSection).getByText('Advogada Associada')
+      ).toBeInTheDocument();
+      expect(
+        within(teamSection).getByText('Direito Tributário')
+      ).toBeInTheDocument();
+      expect(
+        within(teamSection).getByText('OAB/SP 54.321')
+      ).toBeInTheDocument();
+    });
+
     it('não renderiza a seção Nossa Equipe se não houver membros visíveis', async () => {
       buscarDadosInstitucionais.mockResolvedValue({});
       listarFuncionarios.mockResolvedValue([]);

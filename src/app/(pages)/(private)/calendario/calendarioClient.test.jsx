@@ -6,6 +6,7 @@ import { exportarCalendarioIcs, obterCalendario } from '@/services/financas';
 vi.mock('@/services/financas', () => ({
   obterCalendario: vi.fn(),
   exportarCalendarioIcs: vi.fn(),
+  listarCategorias: vi.fn().mockResolvedValue([]),
 }));
 
 const mockLancamentos = [
@@ -566,5 +567,42 @@ describe('CalendarioClient', () => {
 
     expect(screen.getByText('Sem título')).toBeInTheDocument();
     expect(screen.getByText('− R$ 500,00')).toBeInTheDocument();
+  });
+
+  it('exibe o nome da categoria resolvido pelo categoria_id e não exibe "Outros"', () => {
+    render(
+      <CalendarioClient
+        initialData={[
+          {
+            id: 57,
+            titulo: 'Processo Trabalhista',
+            categoria_id: 10,
+            tipo: 'entrada',
+            valor: 1500,
+            status: 'pendente',
+            dataVencimentoIso: '2026-08-16',
+          },
+          {
+            id: 58,
+            titulo: 'Aluguel Escritório',
+            categoria: 'Outros',
+            tipo: 'saida',
+            valor: 2000,
+            status: 'pendente',
+            dataVencimentoIso: '2026-08-16',
+          },
+        ]}
+        initialCategorias={[
+          { categoria_id: 10, nome_categoria: 'Trabalhista' },
+        ]}
+        initialDate={new Date(2026, 7, 1)}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('day-16'));
+
+    expect(screen.getByText(/Entrada · Trabalhista/)).toBeInTheDocument();
+    expect(screen.getByText(/^Saída$/)).toBeInTheDocument();
+    expect(screen.queryByText(/Outros/)).not.toBeInTheDocument();
   });
 });

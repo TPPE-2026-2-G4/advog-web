@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { usePathname } from 'next/navigation';
 import { InstitucionalContext } from '@/contexts/InstitucionalContext';
-import Sidebar from './sidebar';
+import Sidebar, { canViewMenuItem } from './sidebar';
 import styles from './sidebar.module.css';
 
 vi.mock('next/navigation', () => ({
@@ -133,8 +134,30 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: 'Atividades' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Finanças' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Calendário' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Clientes/CRM' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Equipe' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Site' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Ajustes' })).toBeInTheDocument();
+  });
+
+  it('cobre permissões de visualização para admin, cargo admin e rotas padrão', () => {
+    expect(
+      canViewMenuItem({ cargo: { nome_cargo: 'Administrador' } }, '/qualquer')
+    ).toBe(true);
+    expect(canViewMenuItem({ email: 'admin@advog.com' }, '/qualquer')).toBe(
+      true
+    );
+    expect(canViewMenuItem({ funcionario_id: 1 }, '/rota-desconhecida')).toBe(
+      true
+    );
+    expect(
+      canViewMenuItem({ permissoes: ['visualizar_processos'] }, '/processos')
+    ).toBe(true);
+  });
+
+  it('renderiza no servidor chamando a função de snapshot do SSR', () => {
+    usePathname.mockReturnValue('/dashboard');
+    const html = renderToString(<Sidebar />);
+    expect(html).toContain('Início');
   });
 });

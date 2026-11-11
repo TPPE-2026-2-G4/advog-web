@@ -254,9 +254,7 @@ describe('ProcessosClient', () => {
       await screen.findByText('2 processos encontrados')
     ).toBeInTheDocument();
     expect(criarProcesso).toHaveBeenCalledOnce();
-    expect(
-      screen.getByRole('button', { name: createdApiProcess.titulo_proc })
-    ).toBeInTheDocument();
+    expect(screen.getByText(createdApiProcess.titulo_proc)).toBeInTheDocument();
 
     fireEvent.click(
       screen.getByRole('button', { name: `Editar processo ${apiProcess.cnj}` })
@@ -287,9 +285,7 @@ describe('ProcessosClient', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('API indisponível');
     fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
-    expect(
-      await screen.findByRole('button', { name: apiProcess.titulo_proc })
-    ).toBeInTheDocument();
+    expect(await screen.findByText(apiProcess.titulo_proc)).toBeInTheDocument();
     expect(listarProcessos).toHaveBeenCalledOnce();
   });
 

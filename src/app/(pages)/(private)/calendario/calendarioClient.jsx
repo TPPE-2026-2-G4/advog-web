@@ -13,7 +13,11 @@ import {
   X,
 } from 'lucide-react';
 import { formatCurrency, toLancamento } from '@/utils/financas';
-import { exportarCalendarioIcs, obterCalendario } from '@/services/financas';
+import {
+  exportarCalendarioIcs,
+  listarCategorias,
+  obterCalendario,
+} from '@/services/financas';
 import { getCurrentUser } from '@/utils/authSession';
 import { isAdministratorAccount } from '@/utils/funcionario';
 import styles from './calendario.module.css';
@@ -113,6 +117,7 @@ function normalizarStatus(item) {
 
 export default function CalendarioClient({
   initialData = [],
+  initialCategorias = [],
   initialDate,
   onExportIcs,
   onSelectDay,
@@ -136,11 +141,46 @@ export default function CalendarioClient({
     resolveInitialDate(initialData, initialDate)
   );
   const [selectedDay, setSelectedDay] = useState(null);
+  const [categorias, setCategorias] = useState(initialCategorias);
   const [lancamentos, setLancamentos] = useState(() =>
     Array.isArray(initialData)
       ? initialData.map((d) => toLancamento(d) || d)
       : []
   );
+
+  useEffect(() => {
+    let ativo = true;
+    if (typeof listarCategorias === 'function') {
+      listarCategorias()
+        .then((cats) => {
+          if (ativo && Array.isArray(cats)) {
+            setCategorias(cats);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const getCategoriaNome = (item) => {
+    if (!item) return '';
+    if (item.categoria_id && categorias.length > 0) {
+      const cat = categorias.find(
+        (c) => Number(c.categoria_id || c.id) === Number(item.categoria_id)
+      );
+      if (cat) return cat.nome_categoria || cat.nome || '';
+    }
+    if (item.categoria_nome) return item.categoria_nome;
+    if (
+      item.categoria &&
+      String(item.categoria).trim().toLowerCase() !== 'outros'
+    ) {
+      return item.categoria;
+    }
+    return '';
+  };
   const [exportError, setExportError] = useState('');
   const [isExporting, setIsExporting] = useState(false);
 
@@ -571,7 +611,9 @@ export default function CalendarioClient({
                         <div className={styles.itemFooter}>
                           <span className={styles.itemTipo}>
                             {entrada ? 'Entrada' : 'Saída'}
-                            {item.categoria ? ` · ${item.categoria}` : ''}
+                            {getCategoriaNome(item)
+                              ? ` · ${getCategoriaNome(item)}`
+                              : ''}
                           </span>
                         </div>
                       </div>
