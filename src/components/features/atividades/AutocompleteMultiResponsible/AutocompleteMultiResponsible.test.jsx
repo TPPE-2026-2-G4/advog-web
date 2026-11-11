@@ -114,4 +114,53 @@ describe('AutocompleteMultiResponsible', () => {
     expect(screen.getByText('Gerente Jurídica')).toBeInTheDocument();
     expect(screen.getByText('Advogado Trabalhista')).toBeInTheDocument();
   });
+
+  it('cobre branches de id alternativo, fallback de chave, busca com nome ausente e estado disabled', () => {
+    const onChange = vi.fn();
+    const funcionariosEspeciais = [
+      {
+        id: 'string-id-99',
+        nome: undefined,
+      },
+      {
+        nome: 'Apenas Nome Sem Id',
+        foto_perfil_url: 'https://exemplo.com/foto.png',
+      },
+    ];
+
+    const { rerender } = render(
+      <AutocompleteMultiResponsible
+        funcionarios={funcionariosEspeciais}
+        selectedIds={['string-id-99']}
+        onChange={onChange}
+        disabled={true}
+      />
+    );
+
+    const input = screen.getByRole('combobox');
+    expect(input).toBeDisabled();
+
+    // Tenta navegar e digitar quando disabled (handleKeyDown / handleRemove ignorados)
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.focus(input);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    // Rerender sem disabled para testar busca com funcionário sem nome e erro de imagem
+    rerender(
+      <AutocompleteMultiResponsible
+        funcionarios={funcionariosEspeciais}
+        selectedIds={['string-id-99']}
+        onChange={onChange}
+        disabled={false}
+      />
+    );
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'Apenas' } });
+    expect(screen.getByText('Apenas Nome Sem Id')).toBeInTheDocument();
+
+    // Testa erro na imagem
+    const img = screen.getByAltText('Foto de Apenas Nome Sem Id');
+    fireEvent.error(img);
+  });
 });

@@ -10,6 +10,8 @@ import * as clientesService from '@/services/clientes';
 import * as processosService from '@/services/processos';
 import { listarProcessos } from '@/services/processos';
 import { toProcessPage } from '@/utils/processo';
+import * as navigation from 'next/navigation';
+import { renderToString } from 'react-dom/server';
 import ProcessosPage from './page';
 import ProcessosClient from './processosClient';
 
@@ -2871,6 +2873,285 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
       await Promise.resolve();
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Integração de AutocompleteClient, ProcessDetailsModal, ProcessFormModal e Avatares', () => {
+    const processoComFoto = {
+      ...initialApiProcess,
+      processo_id: 88,
+      responsavel_id: 5,
+      cliente_id: 4,
+      cliente: 'Maria Silva',
+      responsavel: 'Carlos Eduardo Lima',
+      responsavel_foto_url: 'https://exemplo.com/carlos.png',
+    };
+
+    const processoComAdmin = {
+      ...initialApiProcess,
+      processo_id: 99,
+      cnj: '0099999-99.2026.8.26.0100',
+      titulo_proc: 'Processo com Admin',
+      responsavel_id: 999,
+      cliente_id: 4,
+    };
+
+    beforeEach(() => {
+      fetchMock.mockImplementation((url) => {
+        const urlString = String(url);
+        if (urlString.startsWith(`${API_BASE}/clientes/`)) {
+          return Promise.resolve(
+            jsonResponse([
+              {
+                cliente_id: 4,
+                nome: 'Maria Silva',
+                cpf: '123.456.789-00',
+                foto_perfil_url: 'https://exemplo.com/maria.png',
+              },
+              {
+                cliente_id: 7,
+                nome: 'Empresa Horizonte Ltda',
+                cnpj: '12.345.678/0001-90',
+              },
+            ])
+          );
+        }
+        if (urlString.startsWith(`${API_BASE}/funcionarios`)) {
+          return Promise.resolve(
+            jsonResponse([
+              { funcionario_id: 3, nome: 'Ana Paula Ribeiro' },
+              {
+                funcionario_id: 5,
+                nome: 'Carlos Eduardo Lima',
+                foto_perfil_url: 'https://exemplo.com/carlos.png',
+              },
+              {
+                funcionario_id: 999,
+                nome: 'Administrador Chefe',
+                cargo: { nome_cargo: 'Administrador' },
+              },
+            ])
+          );
+        }
+        if (urlString.startsWith(`${API_BASE}/processos/`)) {
+          return Promise.resolve(
+            jsonResponse(makePageResponse([processoComFoto, processoComAdmin]))
+          );
+        }
+        return Promise.resolve(jsonResponse({}, 404));
+      });
+    });
+
+    it('executa snapshot SSR de permissões em ProcessosClient', () => {
+      const html = renderToString(
+        <ProcessosClient
+          initialPage={toProcessPage(makePageResponse([initialApiProcess]))}
+        />
+      );
+      expect(html).toContain('Acesso negado');
+      expect(html).toContain(
+        'Você não possui permissão para visualizar processos.'
+      );
+    });
+
+    it('trata erro de imagem no avatar do responsável na tabela de processos', async () => {
+      renderIntegration({
+        initialPage: toProcessPage(makePageResponse([processoComFoto])),
+      });
+      await waitFor(() => {
+        expect(
+          screen.getByRole('img', { name: 'Foto de Carlos Eduardo Lima' })
+        ).toBeInTheDocument();
+      });
+      const img = screen.getByRole('img', {
+        name: 'Foto de Carlos Eduardo Lima',
+      });
+      fireEvent.error(img);
+    });
+
+    it('redireciona para /clientes ao clicar no cliente em ProcessDetailsModal e trata erro de avatar', async () => {
+      const pushMock = vi.fn();
+      vi.spyOn(navigation, 'useRouter').mockReturnValue({
+        push: pushMock,
+        replace: vi.fn(),
+        prefetch: vi.fn(),
+      });
+
+      renderIntegration({
+        initialPage: toProcessPage(makePageResponse([processoComFoto])),
+      });
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', {
+            name: `Visualizar processo ${processoComFoto.cnj}`,
+          })
+        ).toBeInTheDocument();
+      });
+      const viewBtn = screen.getByRole('button', {
+        name: `Visualizar processo ${processoComFoto.cnj}`,
+      });
+      fireEvent.click(viewBtn);
+
+      await screen.findByRole('dialog');
+
+      // Espera e trata erro de imagem no avatar de detalhes
+      await waitFor(() => {
+        expect(
+          screen.getAllByRole('img', { name: 'Foto de Carlos Eduardo Lima' })
+            .length
+        ).toBeGreaterThan(0);
+      });
+      const modalAvatars = screen.getAllByRole('img', {
+        name: 'Foto de Carlos Eduardo Lima',
+      });
+      modalAvatars.forEach((avatar) => fireEvent.error(avatar));
+
+      // Clica no cliente para redirecionar
+      const clientBtn = screen.getByRole('button', {
+        name: 'Maria Silva',
+      });
+      fireEvent.click(clientBtn);
+      expect(pushMock).toHaveBeenCalledWith('/clientes?clienteId=4');
+    });
+
+    it('valida data de hoje inicial, rejeita datas inválidas e bloqueia administrador em ProcessFormModal', async () => {
+      renderIntegration({
+        initialPage: toProcessPage(
+          makePageResponse([processoComFoto, processoComAdmin])
+        ),
+      });
+      await screen.findByRole('table');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Novo Processo' }));
+      const formDialog = await screen.findByRole('dialog', {
+        name: 'Novo Processo',
+      });
+
+      // Data de início deve vir preenchida com a data de hoje
+      const dataInicioInput =
+        within(formDialog).getByLabelText('Data de Início');
+      const hoje = new Date().toISOString().split('T')[0];
+      expect(dataInicioInput.value).toBe(hoje);
+
+      // Preenche os obrigatórios
+      fireEvent.change(
+        within(formDialog).getByLabelText('Número do Processo'),
+        {
+          target: { value: '0012345-67.2026.8.26.0100' },
+        }
+      );
+      fireEvent.change(within(formDialog).getByLabelText('Título do Caso'), {
+        target: { value: 'Ação Cível Nova' },
+      });
+      fireEvent.change(within(formDialog).getByLabelText('Tribunal'), {
+        target: { value: 'TJSP' },
+      });
+      fireEvent.change(within(formDialog).getByLabelText('Área de Atuação'), {
+        target: { value: 'Cível' },
+      });
+      fireEvent.change(within(formDialog).getByLabelText('Status Inicial'), {
+        target: { value: 'Ativo' },
+      });
+      fireEvent.change(within(formDialog).getByLabelText('Cliente'), {
+        target: { value: '4' },
+      });
+
+      // Data inválida em Data de Realização usando fallback de input
+      const dataRealizadoInput =
+        within(formDialog).getByLabelText('Data de Realização');
+      dataRealizadoInput.type = 'text';
+      fireEvent.change(dataRealizadoInput, {
+        target: { value: 'data-invalida' },
+      });
+      dataRealizadoInput.type = 'date';
+      fireEvent.click(
+        within(formDialog).getByRole('button', { name: 'Salvar Processo' })
+      );
+      expect(
+        await within(formDialog).findByText('Informe datas válidas.')
+      ).toBeInTheDocument();
+
+      // Limpa data inválida
+      dataRealizadoInput.type = 'text';
+      fireEvent.change(dataRealizadoInput, { target: { value: '' } });
+      dataRealizadoInput.type = 'date';
+      fireEvent.click(
+        within(formDialog).getByRole('button', { name: 'Cancelar' })
+      );
+
+      // Abre edição de processo que possui administrador como responsável
+      const editBtn = await screen.findByRole('button', {
+        name: `Editar processo ${processoComAdmin.cnj}`,
+      });
+      fireEvent.click(editBtn);
+      const editDialog = await screen.findByRole('dialog', {
+        name: 'Editar Processo',
+      });
+      fireEvent.click(
+        within(editDialog).getByRole('button', { name: 'Salvar alterações' })
+      );
+      expect(
+        await within(editDialog).findByText(
+          'A conta de administrador não pode ser atribuída a processos.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('exercita o AutocompleteClient no formulário de processo', async () => {
+      renderIntegration();
+      await screen.findByRole('table');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Novo Processo' }));
+      const formDialog = await screen.findByRole('dialog', {
+        name: 'Novo Processo',
+      });
+
+      const clientCombobox = within(formDialog).getByRole('combobox', {
+        name: /selecione um cliente/i,
+      });
+
+      // 1. Foca no input para abrir dropdown
+      fireEvent.focus(clientCombobox);
+
+      // 2. Opção com foto (Maria Silva) e teste de onError no avatar
+      const mariaOption = within(formDialog).getByRole('option', {
+        name: /Maria Silva/i,
+      });
+      const avatarImgs = within(mariaOption).queryAllByRole('img');
+      avatarImgs.forEach((img) => fireEvent.error(img));
+
+      // 3. Seleciona clicando na opção Maria Silva
+      fireEvent.click(within(mariaOption).getByText('Maria Silva'));
+      await waitFor(() => expect(clientCombobox).toHaveValue('Maria Silva'));
+
+      // 4. Botão Limpar cliente selecionado
+      const clearBtn = within(formDialog).getByRole('button', {
+        name: 'Limpar cliente selecionado',
+      });
+      fireEvent.click(clearBtn);
+      expect(clientCombobox.value).toBe('');
+
+      // 5. Digita 'Empresa' para filtrar e seleciona com teclado
+      fireEvent.change(clientCombobox, { target: { value: 'Empresa' } });
+      expect(clientCombobox.value).toBe('Empresa');
+      fireEvent.keyDown(clientCombobox, { key: 'ArrowDown' });
+      fireEvent.keyDown(clientCombobox, { key: 'ArrowDown' });
+      fireEvent.keyDown(clientCombobox, { key: 'ArrowUp' });
+      fireEvent.keyDown(clientCombobox, { key: 'Enter' });
+      expect(clientCombobox.value).toBe('Empresa Horizonte Ltda');
+
+      // Limpa novamente
+      fireEvent.click(clearBtn);
+
+      // 6. Busca por dígitos do documento (CNPJ / CPF)
+      fireEvent.change(clientCombobox, { target: { value: '123' } });
+
+      // 7. Fecha com Escape
+      fireEvent.keyDown(clientCombobox, { key: 'Escape' });
+
+      // 8. Foca novamente e clica fora (em outro elemento dentro do modal) para fechar o dropdown
+      fireEvent.focus(clientCombobox);
+      fireEvent.mouseDown(within(formDialog).getByLabelText('Título do Caso'));
     });
   });
 });

@@ -9,6 +9,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ClientesPage from './page';
 import ClientesClient from './clientesClient';
+import ClientDetailsModal from '@/components/features/clientes/ClientDetailsModal/ClientDetailsModal';
 import { listarClientes, obterCliente } from '@/services/clientes';
 import {
   formatarCpfCnpj,
@@ -19,6 +20,14 @@ import {
   obterIniciais,
   validarDadosCliente,
 } from '@/utils/cliente';
+
+const { mockSearchParams } = vi.hoisted(() => ({
+  mockSearchParams: vi.fn(() => new URLSearchParams()),
+}));
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => mockSearchParams(),
+}));
 
 const mockFuncionarios = [
   {
@@ -65,7 +74,21 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal('fetch', vi.fn());
+    mockSearchParams.mockReturnValue(new URLSearchParams());
     window.localStorage.setItem('access_token', 'token-integracao-123');
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 1,
+        nome: 'Admin',
+        cargo: {
+          permissao: {
+            visualizar_clientes: true,
+            gerenciar_clientes: true,
+          },
+        },
+      })
+    );
   });
 
   it('renderiza o fluxo completo: visualização, filtros, cadastro, edição e exclusão via HTTP fetch', async () => {
@@ -1168,5 +1191,231 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
     expect(obterIniciais('')).toBe('--');
     expect(obterIniciais('   ')).toBe('--');
     expect(validarDadosCliente()).toBe('O nome ou razão social é obrigatório.');
+  });
+
+  it('exibe acesso negado quando o usuário não possui permissão para visualizar clientes', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 99,
+        cargo: {
+          permissao: {
+            visualizar_clientes: false,
+            gerenciar_clientes: false,
+          },
+        },
+      })
+    );
+
+    render(
+      <ClientesClient
+        initialClientes={mockClientesIniciais}
+        initialFuncionarios={mockFuncionarios}
+      />
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Acesso negado');
+    expect(
+      screen.getByText('Você não possui permissão para visualizar clientes.')
+    ).toBeInTheDocument();
+  });
+
+  it('oculta botões de gerenciamento quando possui permissão apenas de visualização', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 99,
+        cargo: {
+          permissao: {
+            visualizar_clientes: true,
+            gerenciar_clientes: false,
+          },
+        },
+      })
+    );
+
+    render(
+      <ClientesClient
+        initialClientes={mockClientesIniciais}
+        initialFuncionarios={mockFuncionarios}
+      />
+    );
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Clientes' })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Novo Cliente/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Editar$/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Excluir$/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it('abre automaticamente modal de detalhes quando clienteId está na URL e busca via API se necessário', async () => {
+    mockSearchParams.mockReturnValue(new URLSearchParams('clienteId=101'));
+
+    render(
+      <ClientesClient
+        initialClientes={mockClientesIniciais}
+        initialFuncionarios={mockFuncionarios}
+      />
+    );
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Detalhes do Cliente',
+    });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText('Empresa Alpha Ltda')).toBeInTheDocument();
+
+    fireEvent.click(
+      within(dialog).getAllByRole('button', { name: 'Fechar' })[0]
+    );
+
+    // Agora com clienteId que não está na lista inicial
+    mockSearchParams.mockReturnValue(new URLSearchParams('cliente_id=200'));
+    const clienteExterno = {
+      cliente_id: 200,
+      nome: 'Cliente Externo Buscado',
+      email: 'externo@teste.com',
+      telefone: '11999990000',
+      responsavel_nome: 'Dr. Lucas Mendes',
+    };
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => clienteExterno,
+    });
+
+    const { unmount } = render(
+      <ClientesClient
+        initialClientes={mockClientesIniciais}
+        initialFuncionarios={mockFuncionarios}
+      />
+    );
+
+    const dialog2 = await screen.findByRole('dialog', {
+      name: 'Detalhes do Cliente',
+    });
+    expect(dialog2).toBeInTheDocument();
+    expect(
+      within(dialog2).getByText('Cliente Externo Buscado')
+    ).toBeInTheDocument();
+    unmount();
+  });
+
+  it('renderiza avatar com foto do responsável na tabela e no modal de detalhes tratando erro de imagem', async () => {
+    const funcionarioComFoto = {
+      funcionario_id: 1,
+      id: 1,
+      nome: 'Dr. Lucas Mendes',
+      foto_perfil_url: 'https://storage.exemplo.com/lucas.png',
+      cargo: { nome_cargo: 'Advogado' },
+    };
+    const clienteComFoto = {
+      ...mockClientesIniciais[0],
+      responsavel_id: 1,
+      responsavel_foto_url: 'https://storage.exemplo.com/lucas.png',
+    };
+
+    render(
+      <ClientesClient
+        initialClientes={[clienteComFoto]}
+        initialFuncionarios={[funcionarioComFoto]}
+      />
+    );
+
+    const avatarImages = screen.getAllByRole('img', {
+      name: /Foto de Dr. Lucas Mendes/i,
+    });
+    expect(avatarImages.length).toBeGreaterThan(0);
+
+    // Dispara onError para cobrir o fallback para iniciais
+    fireEvent.error(avatarImages[0]);
+
+    // Abre detalhes do cliente
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Visualizar detalhes de Empresa Alpha Ltda/i,
+      })
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Detalhes do Cliente',
+    });
+    expect(dialog).toBeInTheDocument();
+
+    const dialogAvatar = within(dialog).getByRole('img', {
+      name: /Foto de Dr. Lucas Mendes/i,
+    });
+    fireEvent.error(dialogAvatar);
+
+    // Fecha o modal anterior
+    const closeBtn = within(dialog).getAllByRole('button', {
+      name: 'Fechar',
+    })[0];
+    fireEvent.click(closeBtn);
+
+    // Cliente com foto direta mas sem responsavel_id
+    const clienteFotoDireta = {
+      cliente_id: 301,
+      nome: 'Cliente Sem Responsavel Id',
+      responsavel_id: null,
+      responsavel_nome: 'Não atribuído',
+      responsavel_foto_url: 'https://storage.exemplo.com/direta.png',
+    };
+    const { unmount } = render(
+      <ClientDetailsModal
+        isOpen={true}
+        cliente={clienteFotoDireta}
+        onClose={vi.fn()}
+      />
+    );
+    expect(
+      screen.getByRole('dialog', { name: 'Detalhes do Cliente' })
+    ).toBeInTheDocument();
+    unmount();
+  });
+
+  it('permite acesso total e gerenciamento para conta de administrador e aciona erro no avatar do autocomplete', () => {
+    const funcionarioFoto = {
+      funcionario_id: 1,
+      id: 1,
+      nome: 'Dr. Lucas Mendes',
+      foto_perfil_url: 'https://storage.exemplo.com/lucas.png',
+      cargo: { nome_cargo: 'Advogado' },
+    };
+
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 1,
+        cargo: { nome_cargo: 'Administrador' },
+      })
+    );
+
+    render(
+      <ClientesClient
+        initialClientes={mockClientesIniciais}
+        initialFuncionarios={[funcionarioFoto]}
+      />
+    );
+
+    const btnNovo = screen.getByRole('button', { name: /Novo Cliente/i });
+    expect(btnNovo).toBeInTheDocument();
+    fireEvent.click(btnNovo);
+
+    const respInput = screen.getByRole('combobox', {
+      name: /selecione o responsável/i,
+    });
+    fireEvent.focus(respInput);
+    fireEvent.change(respInput, { target: { value: '1' } });
+    const optionImgs = screen.getAllByRole('img', {
+      name: /Foto de Dr. Lucas Mendes/i,
+    });
+    optionImgs.forEach((img) => fireEvent.error(img));
   });
 });

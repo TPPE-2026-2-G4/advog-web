@@ -76,7 +76,7 @@ export default function ClientDetailsModal({
     cliente.cpf || cliente.cnpj || cliente.cpf_cnpj || cliente.documento;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Detalhes do Cliente">
       <div className={styles.header}>
         <h2 className={styles.title}>Detalhes do Cliente</h2>
         <ModalCloseButton onClose={onClose} />

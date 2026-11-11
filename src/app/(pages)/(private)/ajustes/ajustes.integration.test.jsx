@@ -6,6 +6,7 @@ import {
   getSavedInitialPage,
 } from '@/hooks/useAjustes';
 import { clearAuthSession } from '@/utils/authSession';
+import AjustesClient from './ajustesClient';
 import AjustesPage from './page';
 
 describe('Integração: Página de Ajustes (/ajustes)', () => {
@@ -455,5 +456,21 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
 
     document.body.removeChild(container);
     errorSpy.mockRestore();
+  });
+
+  it('suporta usuário com permissoes em array para gerenciar configurações', () => {
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 2,
+        nome: 'Advogado Com Array Perms',
+        email: 'array@carreiro.adv.br',
+        permissoes: ['configuracoes_sistema'],
+      })
+    );
+    render(<AjustesClient initialTeam={[]} />);
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Ajustes' })
+    ).toBeInTheDocument();
   });
 });
