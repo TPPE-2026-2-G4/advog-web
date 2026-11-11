@@ -4,6 +4,7 @@ import {
   criarCliente,
   excluirCliente,
   listarClientes,
+  listarClientesPaginado,
   obterCliente,
 } from './clientes';
 import { getAccessToken } from '@/utils/authSession';
@@ -23,6 +24,92 @@ describe('serviço de clientes', () => {
     vi.restoreAllMocks();
     vi.stubGlobal('fetch', vi.fn());
     getAccessToken.mockReturnValue('test-token-123');
+  });
+
+  describe('listarClientesPaginado', () => {
+    const respostaApi = {
+      itens: [{ cliente_id: 1, nome: 'João Santos' }],
+      total: 11,
+      page: 2,
+      page_size: 10,
+      total_pages: 2,
+    };
+
+    it('envia filtros e paginação e normaliza a resposta', async () => {
+      fetch.mockResolvedValue(mockFetchResponse(respostaApi));
+
+      const res = await listarClientesPaginado({
+        busca: 'João',
+        responsavel_id: 2,
+        etapa_id: 4,
+        page: 2,
+        pageSize: 5,
+      });
+
+      expect(res).toEqual({
+        itens: respostaApi.itens,
+        total: 11,
+        page: 2,
+        pageSize: 10,
+        totalPages: 2,
+      });
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/clientes/paginado?busca=Jo%C3%A3o&responsavel_id=2&etapa_id=4&page=2&page_size=5',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-token-123',
+          }),
+        })
+      );
+    });
+
+    it('usa página 1 e tamanho padrão quando não informados', async () => {
+      fetch.mockResolvedValue(mockFetchResponse(respostaApi));
+
+      await listarClientesPaginado();
+
+      expect(fetch.mock.calls[0][0]).toBe(
+        'http://localhost:8000/clientes/paginado?page=1&page_size=10'
+      );
+    });
+
+    it('lança o erro da API no navegador quando a resposta falha', async () => {
+      fetch.mockResolvedValue(
+        mockFetchResponse({ detail: 'Sem permissão' }, 403)
+      );
+
+      await expect(listarClientesPaginado()).rejects.toThrow('Sem permissão');
+    });
+
+    it('lança erro de rede no navegador', async () => {
+      fetch.mockRejectedValue(new Error('offline'));
+
+      await expect(listarClientesPaginado()).rejects.toThrow('offline');
+    });
+
+    it('retorna uma página vazia no servidor (SSR) em vez de lançar erro', async () => {
+      const windowOriginal = globalThis.window;
+      vi.stubGlobal('window', undefined);
+      try {
+        fetch.mockResolvedValueOnce(mockFetchResponse({}, 500));
+        const falhaHttp = await listarClientesPaginado();
+        fetch.mockRejectedValueOnce(new Error('offline'));
+        const falhaRede = await listarClientesPaginado();
+
+        for (const pagina of [falhaHttp, falhaRede]) {
+          expect(pagina).toEqual({
+            itens: [],
+            total: 0,
+            page: 1,
+            pageSize: 10,
+            totalPages: 1,
+          });
+        }
+      } finally {
+        vi.stubGlobal('window', windowOriginal);
+      }
+    });
   });
 
   describe('listarClientes', () => {

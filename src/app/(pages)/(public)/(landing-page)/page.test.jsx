@@ -1,16 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import Home from './page';
-import { buscarDadosInstitucionais } from '@/services/institucional';
-import { listarFuncionarios } from '@/services/funcionarios';
+import {
+  buscarDadosInstitucionais,
+  listarEquipeInstitucional,
+} from '@/services/institucional';
 import { listarAtuacoes } from '@/services/atuacoes';
 
 vi.mock('@/services/institucional', () => ({
   buscarDadosInstitucionais: vi.fn(),
-}));
-
-vi.mock('@/services/funcionarios', () => ({
-  listarFuncionarios: vi.fn(),
+  listarEquipeInstitucional: vi.fn(),
 }));
 
 vi.mock('@/services/atuacoes', () => ({
@@ -41,7 +40,7 @@ describe('Landing Page', () => {
   });
 
   it('não renderiza o link de Equipe na navbar quando não houver membros de equipe visíveis', async () => {
-    listarFuncionarios.mockResolvedValue([]);
+    listarEquipeInstitucional.mockResolvedValue([]);
     render(await Home());
     expect(
       screen.queryByRole('link', { name: 'Equipe' })
@@ -49,7 +48,7 @@ describe('Landing Page', () => {
   });
 
   it('renderiza o link de Equipe na navbar quando houver membros de equipe visíveis', async () => {
-    listarFuncionarios.mockResolvedValue([
+    listarEquipeInstitucional.mockResolvedValue([
       {
         funcionario_id: 1,
         nome: 'Dr. Pedro Lima',
@@ -134,7 +133,7 @@ describe('Landing Page', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    listarFuncionarios.mockResolvedValue([]);
+    listarEquipeInstitucional.mockResolvedValue([]);
     listarAtuacoes.mockResolvedValue([]);
     buscarDadosInstitucionais.mockResolvedValue({});
   });
@@ -309,7 +308,7 @@ describe('Landing Page', () => {
         textoEquipe: 'Conheça nossos especialistas.',
       });
 
-      listarFuncionarios.mockResolvedValue([
+      listarEquipeInstitucional.mockResolvedValue([
         {
           funcionario_id: 1,
           nome: 'Dr. Pedro Lima',
@@ -337,7 +336,7 @@ describe('Landing Page', () => {
     });
 
     it('renderiza a foto do advogado e mantém as iniciais dos membros sem foto', async () => {
-      listarFuncionarios.mockResolvedValue([
+      listarEquipeInstitucional.mockResolvedValue([
         {
           funcionario_id: 1,
           nome: 'Dr. Pedro Lima',
@@ -362,7 +361,7 @@ describe('Landing Page', () => {
 
     it('renderiza membro com cargo, especialidade/descrição e OAB formatada conforme o layout', async () => {
       buscarDadosInstitucionais.mockResolvedValue({});
-      listarFuncionarios.mockResolvedValue([
+      listarEquipeInstitucional.mockResolvedValue([
         {
           funcionario_id: 1,
           nome: 'Dr. Alexandre Carreiro',
@@ -410,7 +409,7 @@ describe('Landing Page', () => {
           exibicaoInstitucional: true,
         },
       ]);
-      listarFuncionarios.mockResolvedValue([
+      listarEquipeInstitucional.mockResolvedValue([
         {
           funcionario_id: 3,
           nome: 'Dra. Beatriz Santos',
@@ -442,7 +441,7 @@ describe('Landing Page', () => {
 
     it('não renderiza a seção Nossa Equipe se não houver membros visíveis', async () => {
       buscarDadosInstitucionais.mockResolvedValue({});
-      listarFuncionarios.mockResolvedValue([]);
+      listarEquipeInstitucional.mockResolvedValue([]);
 
       const jsx = await Home();
       render(jsx);
@@ -477,7 +476,7 @@ describe('Landing Page', () => {
       'renderiza subtítulo a partir de %s',
       async (_caso, mockInstitucional, subtituloEsperado) => {
         buscarDadosInstitucionais.mockResolvedValue(mockInstitucional);
-        listarFuncionarios.mockResolvedValue([
+        listarEquipeInstitucional.mockResolvedValue([
           { funcionario_id: 1, nome: 'Ana', exibicaoInstitucional: true },
         ]);
 
@@ -518,7 +517,7 @@ describe('Landing Page', () => {
       'extrai papéis primário e secundário para %s',
       async (_caso, dadosCargo, expectedPrimary, expectedSecondary) => {
         buscarDadosInstitucionais.mockResolvedValue({});
-        listarFuncionarios.mockResolvedValue([
+        listarEquipeInstitucional.mockResolvedValue([
           {
             funcionario_id: 10,
             nome: 'Carlos Santos',
@@ -551,7 +550,7 @@ describe('Landing Page', () => {
           exibicaoInstitucional: true,
         },
       ]);
-      listarFuncionarios.mockResolvedValue([
+      listarEquipeInstitucional.mockResolvedValue([
         {
           funcionario_id: 1,
           nome: 'Dra. Maria',

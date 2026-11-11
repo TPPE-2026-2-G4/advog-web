@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import ClientTable from './ClientTable';
 
@@ -136,4 +136,79 @@ describe('ClientTable', () => {
       expect(screen.getByText(responsavelEsperado)).toBeInTheDocument();
     }
   );
+
+  describe('paginação', () => {
+    const renderPaginada = (props = {}) => {
+      const onPageChange = vi.fn();
+      render(
+        <ClientTable
+          clientes={mockClientes}
+          funcionarios={mockFuncionarios}
+          totalItems={25}
+          currentPage={2}
+          totalPages={3}
+          pageSize={10}
+          onPageChange={onPageChange}
+          {...props}
+        />
+      );
+      return onPageChange;
+    };
+
+    it('exibe o resumo do intervalo e a página atual', () => {
+      renderPaginada();
+
+      expect(
+        screen.getByText('Mostrando 11–20 de 25 clientes')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Página 2 de 3')).toBeInTheDocument();
+    });
+
+    it('limita o fim do intervalo ao total na última página', () => {
+      renderPaginada({ currentPage: 3 });
+
+      expect(
+        screen.getByText('Mostrando 21–25 de 25 clientes')
+      ).toBeInTheDocument();
+    });
+
+    it('usa o singular quando há um único cliente', () => {
+      renderPaginada({ totalItems: 1, currentPage: 1, totalPages: 1 });
+
+      expect(
+        screen.getByText('Mostrando 1–1 de 1 cliente')
+      ).toBeInTheDocument();
+    });
+
+    it('navega para a página anterior e a próxima', () => {
+      const onPageChange = renderPaginada();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Página anterior' }));
+      expect(onPageChange).toHaveBeenLastCalledWith(1);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
+      expect(onPageChange).toHaveBeenLastCalledWith(3);
+    });
+
+    it('desabilita os botões nos limites', () => {
+      renderPaginada({ currentPage: 1 });
+      expect(
+        screen.getByRole('button', { name: 'Página anterior' })
+      ).toBeDisabled();
+
+      cleanup();
+      renderPaginada({ currentPage: 3 });
+      expect(
+        screen.getByRole('button', { name: 'Próxima página' })
+      ).toBeDisabled();
+    });
+
+    it('não renderiza a paginação sem onPageChange', () => {
+      render(<ClientTable clientes={mockClientes} />);
+
+      expect(
+        screen.queryByRole('navigation', { name: 'Paginação' })
+      ).not.toBeInTheDocument();
+    });
+  });
 });

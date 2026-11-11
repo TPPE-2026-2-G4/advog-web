@@ -11,6 +11,7 @@ import {
   verificarStatusPorVencimento,
 } from '@/utils/financas';
 import { listarCategorias, criarCategoria } from '@/services/financas';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './LancamentoModal.module.css';
 
 import CategoriaAutocomplete from './CategoriaAutocomplete';
@@ -442,11 +443,7 @@ export default function LancamentoModal({
           />
         )}
 
-        {error && (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        )}
+        <Toast message={error} onClose={() => setError('')} />
       </div>
 
       <div className={styles.footer}>

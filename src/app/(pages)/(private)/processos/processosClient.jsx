@@ -16,6 +16,8 @@ import ProcessFormModal from '@/components/features/processos/ProcessFormModal/P
 import ProcessTable from '@/components/features/processos/ProcessTable/ProcessTable';
 import { useProcessos } from '@/hooks/useProcessos';
 import { toResponsavelOptions } from '@/utils/processo';
+import Toast from '@/components/ui/Toast/Toast';
+import { mensagemAmigavel } from '@/utils/erros';
 import styles from './processos.module.css';
 
 export default function ProcessosClient({
@@ -248,21 +250,9 @@ export default function ProcessosClient({
           {syncMessage}
         </p>
       )}
-      {syncError && (
-        <p role="alert" className={styles.syncError}>
-          {syncError}
-        </p>
-      )}
-      {exportError && (
-        <p role="alert" className={styles.syncError}>
-          {exportError}
-        </p>
-      )}
-      {referenceError && (
-        <p role="alert" className={styles.syncError}>
-          {referenceError}
-        </p>
-      )}
+      <Toast message={syncError} />
+      <Toast message={exportError} />
+      <Toast message={referenceError} onClose={() => setReferenceError('')} />
 
       <ProcessFilters
         filters={filters}
@@ -275,7 +265,7 @@ export default function ProcessosClient({
         <div className={styles.errorState} role="alert">
           <div>
             <h2>Não foi possível exibir os processos</h2>
-            <p>{loadError}</p>
+            <p>{mensagemAmigavel(loadError)}</p>
           </div>
           <button
             type="button"

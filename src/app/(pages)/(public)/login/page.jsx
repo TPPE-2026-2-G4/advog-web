@@ -3,6 +3,7 @@
 import Auth from '@/components/layout/auth/auth';
 import { useInstitucionalContext } from '@/contexts/InstitucionalContext';
 import { getContrastTextColor } from '@/utils/institucional';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './login.module.css';
 import { useLogin } from '@/hooks/useLogin';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -129,7 +130,7 @@ function LoginContent() {
           Entrar
         </button>
 
-        {erro && <span className={styles.error}>{erro}</span>}
+        <Toast message={erro} />
       </form>
     </Auth>
   );

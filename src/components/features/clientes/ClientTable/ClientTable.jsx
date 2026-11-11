@@ -1,6 +1,15 @@
 'use client';
 
-import { Eye, Mail, Pencil, Phone, Trash2, Users } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Mail,
+  Pencil,
+  Phone,
+  Trash2,
+  Users,
+} from 'lucide-react';
 import {
   formatarCpfCnpj,
   formatarDataInteracao,
@@ -19,7 +28,15 @@ export default function ClientTable({
   onEdit,
   onDelete,
   canManage = true,
+  totalItems = clientes.length,
+  currentPage = 1,
+  totalPages = 1,
+  pageSize = clientes.length || 1,
+  onPageChange,
 }) {
+  const firstItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastItem = Math.min(currentPage * pageSize, totalItems);
+
   const getResponsavelInfo = (cliente) => {
     let nome = 'Não atribuído';
     let fotoUrl = null;
@@ -232,6 +249,38 @@ export default function ClientTable({
           </tbody>
         </table>
       </div>
+
+      {onPageChange && totalItems > 0 && (
+        <div className={styles.pagination}>
+          <p className={styles.paginationSummary} aria-live="polite">
+            Mostrando {firstItem}–{lastItem} de {totalItems}{' '}
+            {totalItems === 1 ? 'cliente' : 'clientes'}
+          </p>
+          <nav className={styles.paginationControls} aria-label="Paginação">
+            <button
+              type="button"
+              className={styles.pageButton}
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+              aria-label="Página anterior"
+            >
+              <ChevronLeft size={18} aria-hidden="true" />
+            </button>
+            <span className={styles.pageIndicator}>
+              Página {currentPage} de {totalPages}
+            </span>
+            <button
+              type="button"
+              className={styles.pageButton}
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              aria-label="Próxima página"
+            >
+              <ChevronRight size={18} aria-hidden="true" />
+            </button>
+          </nav>
+        </div>
+      )}
     </div>
   );
 }

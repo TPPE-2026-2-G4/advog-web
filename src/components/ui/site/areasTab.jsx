@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   X,
 } from 'lucide-react';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './site.module.css';
 
 export default function AreasTab({
@@ -127,16 +128,7 @@ export default function AreasTab({
               : 'Nova área de atuação'}
           </h4>
 
-          {formError && (
-            <div
-              className={styles.alertError}
-              role="alert"
-              style={{ marginBottom: '12px' }}
-            >
-              <AlertCircle size={16} />
-              <span>{formError}</span>
-            </div>
-          )}
+          <Toast message={formError} onClose={() => setFormError('')} />
 
           <div className={styles.formGroup}>
             <label htmlFor="area-titulo" className={styles.formLabel}>

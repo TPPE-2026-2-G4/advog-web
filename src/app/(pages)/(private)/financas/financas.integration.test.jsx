@@ -702,9 +702,7 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
         );
 
         await waitFor(() => {
-          expect(within(dialog).getByRole('alert')).toHaveTextContent(
-            mensagemEsperada
-          );
+          expect(screen.getByRole('alert')).toHaveTextContent(mensagemEsperada);
         });
       } else if (operacao === 'delete') {
         const deleteButtons = screen.getAllByRole('button', {
@@ -1017,7 +1015,7 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       target: { value: '   ' },
     });
     fireEvent.submit(dialog);
-    expect(within(dialog).getByRole('alert')).toHaveTextContent(
+    expect(screen.getByRole('alert')).toHaveTextContent(
       'Por favor, informe o título do lançamento.'
     );
 
@@ -1029,7 +1027,7 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       target: { value: '0' },
     });
     fireEvent.submit(dialog);
-    expect(within(dialog).getByRole('alert')).toHaveTextContent(
+    expect(screen.getByRole('alert')).toHaveTextContent(
       'Por favor, informe um valor válido maior que zero.'
     );
 
@@ -1038,7 +1036,7 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       target: { value: '2500' },
     });
     fireEvent.submit(dialog);
-    expect(within(dialog).getByRole('alert')).toHaveTextContent(
+    expect(screen.getByRole('alert')).toHaveTextContent(
       'Por favor, informe a descrição do lançamento.'
     );
 
@@ -1047,7 +1045,7 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
       target: { value: 'Assessoria tributária completa' },
     });
     fireEvent.submit(dialog);
-    expect(within(dialog).getByRole('alert')).toHaveTextContent(
+    expect(screen.getByRole('alert')).toHaveTextContent(
       'Por favor, selecione ou informe uma categoria.'
     );
 
@@ -1173,7 +1171,7 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     );
 
     await waitFor(() => {
-      expect(within(editDialog).getByRole('alert')).toHaveTextContent(
+      expect(screen.getByRole('alert')).toHaveTextContent(
         'Erro ao atualizar registro.'
       );
     });
@@ -1262,7 +1260,7 @@ describe('Financas Integration Tests (Full Frontend Stack)', () => {
     fireEvent.submit(modalDialog);
 
     await waitFor(() => {
-      expect(within(modalDialog).getByRole('alert')).toHaveTextContent(
+      expect(screen.getByRole('alert')).toHaveTextContent(
         'Erro ao salvar o lançamento financeiro.'
       );
     });

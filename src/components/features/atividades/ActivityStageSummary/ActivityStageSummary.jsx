@@ -1,6 +1,7 @@
 'use client';
 
 import { getStageTone } from '@/utils/atividade';
+import { mensagemAmigavel } from '@/utils/erros';
 import styles from './ActivityStageSummary.module.css';
 
 export default function ActivityStageSummary({
@@ -13,7 +14,7 @@ export default function ActivityStageSummary({
   if (error) {
     return (
       <div className={styles.errorState} role="alert">
-        <p>{error}</p>
+        <p>{mensagemAmigavel(error)}</p>
         {onRetry && (
           <button type="button" className={styles.retry} onClick={onRetry}>
             Tentar novamente

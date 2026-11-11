@@ -3,6 +3,7 @@ import {
   DEFAULT_INSTITUCIONAL,
   DEFAULT_EQUIPE_SITE,
   buscarDadosInstitucionais,
+  listarEquipeInstitucional,
   salvarDadosInstitucionais,
   uploadImagemInstitucional,
 } from './institucional';
@@ -35,6 +36,35 @@ describe('serviço institucional', () => {
 
   it('exporta DEFAULT_EQUIPE_SITE como array vazio (seed via backend)', () => {
     expect(DEFAULT_EQUIPE_SITE).toHaveLength(0);
+  });
+
+  describe('listarEquipeInstitucional', () => {
+    it('busca a equipe pública sem enviar credenciais', async () => {
+      const equipe = [{ funcionario_id: 1, nome: 'Dr. Pedro', cargo: 'Sócio' }];
+      fetch.mockResolvedValueOnce(respostaJson(equipe));
+
+      const resultado = await listarEquipeInstitucional();
+
+      expect(resultado).toEqual(equipe);
+      const [url, opcoes] = fetch.mock.calls[0];
+      expect(url).toMatch(/\/institucional\/equipe$/);
+      expect(opcoes.headers).toBeUndefined();
+    });
+
+    it.each([
+      ['resposta com erro', () => ({ ok: false })],
+      ['corpo que não é lista', () => respostaJson({ detail: 'x' })],
+    ])('retorna lista vazia em %s', async (_caso, resposta) => {
+      fetch.mockResolvedValueOnce(resposta());
+
+      expect(await listarEquipeInstitucional()).toEqual(DEFAULT_EQUIPE_SITE);
+    });
+
+    it('retorna lista vazia em falha de rede', async () => {
+      fetch.mockRejectedValueOnce(new Error('offline'));
+
+      expect(await listarEquipeInstitucional()).toEqual(DEFAULT_EQUIPE_SITE);
+    });
   });
 
   describe('buscarDadosInstitucionais', () => {

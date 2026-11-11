@@ -18,6 +18,7 @@ import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import { useAjustes } from '@/hooks/useAjustes';
 import { getCurrentUser } from '@/utils/authSession';
 import { isAdministratorAccount } from '@/utils/funcionario';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './ajustes.module.css';
 
 const emptySubscribe = () => () => {};
@@ -140,11 +141,7 @@ export default function AjustesClient({ initialTeam = [] }) {
         </p>
       )}
 
-      {emailError && !isConfirmModalOpen && (
-        <p role="alert" className={styles.alertError}>
-          {emailError}
-        </p>
-      )}
+      <Toast message={!isConfirmModalOpen ? emailError : ''} />
 
       <div className={styles.card}>
         <div className={styles.settingItem}>
