@@ -3,6 +3,7 @@ import {
   listarNotificacoes,
   marcarTodasNotificacoesComoLidas,
   marcarNotificacaoComoLida,
+  obterContagemNaoLidas,
   obterContagemNotificacoes,
   NotificacoesApiError,
 } from './notificacoes';
@@ -66,6 +67,7 @@ describe('serviço de notificações', () => {
   it.each([
     [401, 'Sessão expirada. Faça login novamente.'],
     [403, 'Você não possui permissão para realizar esta ação.'],
+    [404, 'Notificação não encontrada.'],
     [429, 'Muitas tentativas em pouco tempo. Aguarde e tente novamente.'],
   ])('usa mensagem específica para HTTP %s', async (status, message) => {
     vi.stubGlobal(
@@ -94,9 +96,23 @@ describe('serviço de notificações', () => {
       })
     );
 
-    await expect(obterContagemNotificacoes()).resolves.toEqual({
-      total_nao_lidas: 4,
-    });
+    await expect(obterContagemNaoLidas()).resolves.toBe(4);
+    await expect(obterContagemNotificacoes()).resolves.toBe(4);
+  });
+
+  it('rejeita resposta inválida da listagem', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [] }),
+      })
+    );
+
+    await expect(listarNotificacoes()).rejects.toThrow(
+      'Resposta inválida ao carregar as notificações.'
+    );
   });
 
   it('marca uma notificação como lida com PATCH e normaliza a resposta', async () => {

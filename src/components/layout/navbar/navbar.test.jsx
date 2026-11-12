@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import Navbar from './navbar';
 
+vi.mock('@/hooks/useNotificacoes', () => ({
+  useNotificacoes: vi.fn(() => ({ naoLidasCount: 2 })),
+}));
+
 vi.mock('@/utils/authSession', () => ({
   getCurrentUser: vi.fn(() => ({
     nome: 'Alexandre Carreiro',

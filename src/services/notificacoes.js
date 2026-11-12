@@ -18,6 +18,7 @@ const getErrorMessage = (status, detail, fallbackMessage) => {
   if (status === 403) {
     return 'Você não possui permissão para realizar esta ação.';
   }
+  if (status === 404) return 'Notificação não encontrada.';
   if (status === 429) {
     return 'Muitas tentativas em pouco tempo. Aguarde e tente novamente.';
   }
@@ -80,16 +81,27 @@ export async function listarNotificacoes({
     {},
     'Não foi possível carregar as notificações.'
   );
-  return Array.isArray(data) ? data.map(normalizarNotificacao) : [];
+  if (!Array.isArray(data)) {
+    throw new NotificacoesApiError(
+      200,
+      undefined,
+      'Resposta inválida ao carregar as notificações.'
+    );
+  }
+
+  return data.map(normalizarNotificacao);
 }
 
-export function obterContagemNotificacoes() {
-  return request(
+export async function obterContagemNaoLidas() {
+  const data = await request(
     '/nao-lidas/contagem',
     {},
     'Não foi possível carregar a contagem de notificações.'
   );
+  return Number(data?.total_nao_lidas ?? 0);
 }
+
+export const obterContagemNotificacoes = obterContagemNaoLidas;
 
 export async function marcarNotificacaoComoLida(id) {
   const data = await request(

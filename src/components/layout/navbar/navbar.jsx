@@ -1,11 +1,15 @@
 import UserMenu from './userMenu';
-import { Bell, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
+import NotificationBell from './NotificationBell/NotificationBell';
+import { useNotificacoes } from '@/hooks/useNotificacoes';
 import styles from './navbar.module.css';
 
 export default function Navbar({
   isMobileMenuOpen = false,
   onToggleMobileMenu,
 }) {
+  const { naoLidasCount } = useNotificacoes();
+
   return (
     <header className={styles.header}>
       <button
@@ -24,14 +28,7 @@ export default function Navbar({
       </button>
 
       <div className={styles.actions}>
-        <button
-          className={styles.notificationBtn}
-          aria-label="Notificações"
-          type="button"
-        >
-          <Bell size={20} />
-          <span className={styles.badge}>2</span>
-        </button>
+        <NotificationBell count={naoLidasCount} />
 
         <div className={styles.divider}></div>
 

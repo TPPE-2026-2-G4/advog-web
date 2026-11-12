@@ -21,6 +21,12 @@ export const resolverLinkDestino = (linkDestino) =>
     ? linkDestino
     : null;
 
+export const formatarBadgeContagem = (total) => {
+  const contagem = Number(total);
+  if (!Number.isFinite(contagem) || contagem <= 0) return '';
+  return contagem > 99 ? '99+' : String(Math.floor(contagem));
+};
+
 const formatadorRelativo = new Intl.RelativeTimeFormat('pt-BR', {
   numeric: 'always',
 });

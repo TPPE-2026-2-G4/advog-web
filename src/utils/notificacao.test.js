@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatarDataCompleta,
   formatarDataRelativa,
+  formatarBadgeContagem,
   isTipoNotificacao,
   normalizarNotificacao,
   resolverLinkDestino,
@@ -24,7 +25,21 @@ describe('normalização de notificações', () => {
   it('aceita somente destinos internos', () => {
     expect(resolverLinkDestino('/processos/123')).toBe('/processos/123');
     expect(resolverLinkDestino('//exemplo.com')).toBeNull();
+    expect(resolverLinkDestino('/\\exemplo.com')).toBeNull();
     expect(resolverLinkDestino('https://exemplo.com')).toBeNull();
+    expect(resolverLinkDestino('javascript:alert(1)')).toBeNull();
+    expect(resolverLinkDestino('')).toBeNull();
+    expect(resolverLinkDestino(null)).toBeNull();
+  });
+
+  it.each([
+    [0, ''],
+    [1, '1'],
+    [99, '99'],
+    [100, '99+'],
+    ['invalido', ''],
+  ])('formata o badge %s como %s', (total, esperado) => {
+    expect(formatarBadgeContagem(total)).toBe(esperado);
   });
 
   it('formata datas relativas e completas', () => {
