@@ -180,12 +180,34 @@
 }
 
 @media (max-width: 768px) {
+  .container {
+    margin-top: 24px;
+    gap: 16px;
+  }
+
   .header {
+    flex-direction: column;
     align-items: stretch;
   }
 
   .addRoleBtn {
     justify-content: center;
     width: 100%;
+    min-height: 42px;
+  }
+
+  .cardsGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .cardHeader {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
   }
 }

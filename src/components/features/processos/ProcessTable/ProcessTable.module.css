@@ -80,6 +80,12 @@
   text-decoration: underline;
 }
 
+.cellStack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .primaryText,
 .secondaryText {
   display: block;
@@ -281,11 +287,28 @@
 }
 
 @media (max-width: 768px) {
+  .container {
+    margin-top: 20px;
+    overflow: visible;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  .emptyState {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  }
+
   .tableScroll {
     overflow-x: visible;
   }
 
   .table {
+    display: block;
+    width: 100%;
     min-width: 0;
   }
 
@@ -293,26 +316,39 @@
     display: none;
   }
 
-  .tr {
-    display: block;
-    padding: 8px 16px 16px;
+  .table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
-  .tr + .tr {
-    border-top: 1px solid #e5e7eb;
+  .tr {
+    display: block;
+    padding: 12px 16px;
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+  }
+
+  .tr:hover {
+    background-color: #ffffff;
   }
 
   .td {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
+    min-width: 0;
     padding: 10px 0;
     text-align: right;
-    border-bottom: 1px solid #f9fafb;
+    border-bottom: 1px solid #f3f4f6;
   }
 
   .td:last-child {
+    padding-top: 12px;
+    padding-bottom: 2px;
     border-bottom: none;
   }
 
@@ -327,21 +363,53 @@
     content: attr(data-label);
   }
 
+  .cellStack {
+    align-items: flex-end;
+    gap: 2px;
+    max-width: 100%;
+  }
+
+  .processNumber {
+    white-space: normal;
+    word-break: break-all;
+  }
+
   .caseTitle,
   .caseButton,
   .primaryText,
   .secondaryText {
-    max-width: 58vw;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
     text-align: right;
+  }
+
+  .responsibleCell {
+    justify-content: flex-end;
+    min-width: 0;
   }
 
   .actions {
     flex: 1;
     justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .actionButton {
+    width: 38px;
+    height: 38px;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
   }
 
   .pagination {
     flex-direction: column;
+    margin-top: 12px;
+    padding: 14px 16px;
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
   }
 }
 

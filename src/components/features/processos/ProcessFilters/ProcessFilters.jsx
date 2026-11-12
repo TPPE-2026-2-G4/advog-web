@@ -1,13 +1,22 @@
+import { useMemo } from 'react';
 import { Search, RotateCcw } from 'lucide-react';
+import AutocompleteResponsible from '@/components/features/clientes/AutocompleteResponsible/AutocompleteResponsible';
+import { normalizeResponsavelItems } from '@/utils/funcionario';
 import { PROCESS_STATUS } from '@/utils/processo';
 import styles from './ProcessFilters.module.css';
 
 export default function ProcessFilters({
   filters,
   responsaveis = [],
+  funcionarios = [],
   dateRangeError = '',
   onFilterChange,
 }) {
+  const funcionariosList = useMemo(
+    () => normalizeResponsavelItems(funcionarios, responsaveis),
+    [funcionarios, responsaveis]
+  );
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     onFilterChange(name, value);
@@ -63,20 +72,19 @@ export default function ProcessFilters({
           </label>
         </div>
 
-        <select
-          name="responsavelId"
-          aria-label="Filtrar por responsável"
-          className={styles.pillSelect}
-          value={filters.responsavelId}
-          onChange={handleChange}
-        >
-          <option value="">Todos os responsáveis</option>
-          {responsaveis.map((responsavel) => (
-            <option key={responsavel.value} value={responsavel.value}>
-              {responsavel.label}
-            </option>
-          ))}
-        </select>
+        <div className={styles.autocompleteFilterWrapper}>
+          <AutocompleteResponsible
+            id="processos-filtro-responsavel"
+            name="responsavelId"
+            responsavelId={filters.responsavelId ?? ''}
+            onChange={(id) =>
+              onFilterChange('responsavelId', id ? String(id) : '')
+            }
+            funcionarios={funcionariosList}
+            placeholder="Todos os responsáveis"
+            ariaLabel="Filtrar por responsável"
+          />
+        </div>
 
         <select
           name="status"

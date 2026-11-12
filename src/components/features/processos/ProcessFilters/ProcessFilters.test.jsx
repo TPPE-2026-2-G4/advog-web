@@ -74,8 +74,22 @@ describe('ProcessFilters', () => {
     }
   );
 
-  it('lista todas as opções padrão de status e responsáveis', () => {
-    renderFilters();
+  it('lista todas as opções padrão de status e responsáveis com foto/iniciais, nome e cargo', () => {
+    renderFilters({
+      funcionarios: [
+        {
+          funcionario_id: 3,
+          nome: 'Ana Paula Ribeiro',
+          cargo: { nome_cargo: 'Advogada Sênior' },
+          foto_perfil_url: 'https://exemplo.com/ana.png',
+        },
+        {
+          funcionario_id: 5,
+          nome: 'Pedro Lima',
+          cargo: 'Estagiário',
+        },
+      ],
+    });
 
     [
       'Todos os status',
@@ -83,14 +97,27 @@ describe('ProcessFilters', () => {
       'Ativo',
       'Concluído',
       'Arquivado',
-      'Todos os responsáveis',
-      'Ana Paula Ribeiro',
-      'Pedro Lima',
     ].forEach((optionLabel) => {
       expect(
         screen.getByRole('option', { name: optionLabel })
       ).toBeInTheDocument();
     });
+
+    const respInput = screen.getByRole('combobox', {
+      name: /filtrar por responsável/i,
+    });
+    expect(respInput).toHaveAttribute('placeholder', 'Todos os responsáveis');
+
+    fireEvent.focus(respInput);
+    expect(screen.getByText('Ana Paula Ribeiro')).toBeInTheDocument();
+    expect(screen.getByText('Advogada Sênior')).toBeInTheDocument();
+    expect(screen.getByAltText('Foto de Ana Paula Ribeiro')).toHaveAttribute(
+      'src',
+      'https://exemplo.com/ana.png'
+    );
+    expect(screen.getByText('Pedro Lima')).toBeInTheDocument();
+    expect(screen.getByText('Estagiário')).toBeInTheDocument();
+    expect(screen.getByText('PL')).toBeInTheDocument();
   });
 
   it('exibe o erro do intervalo de datas e marca os campos como inválidos', () => {
@@ -133,7 +160,7 @@ describe('ProcessFilters', () => {
     ).toHaveValue('Concluído');
     expect(
       screen.getByRole('combobox', { name: /filtrar por responsável/i })
-    ).toHaveValue('3');
+    ).toHaveValue('Ana Paula Ribeiro');
     expect(screen.getByLabelText('De:')).toHaveValue('2026-01-01');
     expect(screen.getByLabelText('Até:')).toHaveValue('2026-02-01');
   });

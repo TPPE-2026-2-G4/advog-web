@@ -77,10 +77,14 @@ export default function ProcessTable({
                     <span className={styles.processNumber}>{processo.cnj}</span>
                   </td>
                   <td className={styles.td} data-label="Caso / Cliente">
-                    <span className={styles.caseTitle}>{processo.titulo}</span>
-                    <span className={styles.secondaryText}>
-                      {processo.cliente}
-                    </span>
+                    <div className={styles.cellStack}>
+                      <span className={styles.caseTitle}>
+                        {processo.titulo}
+                      </span>
+                      <span className={styles.secondaryText}>
+                        {processo.cliente}
+                      </span>
+                    </div>
                   </td>
                   <td className={styles.td} data-label="Status">
                     <span
@@ -92,12 +96,14 @@ export default function ProcessTable({
                     </span>
                   </td>
                   <td className={styles.td} data-label="Tribunal / Área">
-                    <span className={styles.primaryText}>
-                      {processo.tribunal}
-                    </span>
-                    <span className={styles.secondaryText}>
-                      {processo.area}
-                    </span>
+                    <div className={styles.cellStack}>
+                      <span className={styles.primaryText}>
+                        {processo.tribunal}
+                      </span>
+                      <span className={styles.secondaryText}>
+                        {processo.area}
+                      </span>
+                    </div>
                   </td>
                   <td className={styles.td} data-label="Responsável">
                     {processo.responsavel &&

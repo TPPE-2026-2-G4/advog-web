@@ -500,31 +500,38 @@
 
 .modalViewport {
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   background-color: #f9fafb;
 }
 
 /* Landing Page Preview Simulation */
 .previewNav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+}
+
+.previewNavInner {
   padding: 14px 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .previewNavBrand {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .previewLogoImg {
   height: 28px;
   width: auto;
+  max-width: 140px;
   object-fit: contain;
 }
 
@@ -544,6 +551,8 @@
   font-weight: 600;
   color: #ffffff;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .previewNavLinks {
@@ -569,6 +578,59 @@
   color: var(--cor-secundaria-texto, #172133);
   cursor: pointer;
   white-space: nowrap;
+}
+
+.previewMobileToggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.previewMobileMenu {
+  display: none;
+  padding: 12px 16px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.previewMobileNavList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.previewMobileNavItem {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.previewMobileNavLink {
+  display: block;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+}
+
+.previewMobileActionBtn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
 }
 
 .previewHero {
@@ -965,29 +1027,6 @@
   text-align: center;
   color: rgba(255, 255, 255, 0.6);
   font-size: 12px;
-}
-
-@media (max-width: 768px) {
-  .headerRow {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .actionButtons {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .previewButton,
-  .saveButton {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .tabsBar {
-    gap: 16px;
-    overflow-x: auto;
-  }
 }
 
 /* Aba Equipe no Site */
@@ -1511,4 +1550,244 @@
 
 .deleteModalConfirmBtn:hover {
   background-color: #991b1b;
+}
+
+@media (max-width: 768px) {
+  .container {
+    gap: 16px;
+  }
+
+  .headerRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actionButtons {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .previewButton,
+  .saveButton {
+    width: 100%;
+    min-height: 42px;
+    justify-content: center;
+  }
+
+  .tabsBar {
+    gap: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabItem {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .areaHeaderRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .areaAddBtn {
+    width: 100%;
+    min-height: 42px;
+    justify-content: center;
+  }
+
+  .areaFormCard {
+    padding: 14px;
+  }
+
+  .teamList {
+    margin: 16px 0;
+  }
+
+  .teamItem {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .teamMemberLeft {
+    flex: 1 1 200px;
+    min-width: 0;
+  }
+
+  .teamInfo {
+    min-width: 0;
+  }
+
+  .teamName,
+  .teamRole {
+    overflow-wrap: anywhere;
+  }
+
+  .areaActions {
+    margin-left: auto;
+  }
+
+  .modalOverlay {
+    padding: 12px;
+  }
+
+  .modalWindow {
+    max-height: 92dvh;
+  }
+
+  .modalTitlebar {
+    gap: 8px;
+  }
+
+  .previewNavInner {
+    padding: 12px 16px;
+  }
+
+  .previewNavLinks,
+  .previewNavBtn {
+    display: none;
+  }
+
+  .previewMobileToggle {
+    display: flex;
+  }
+
+  .previewMobileMenu {
+    display: block;
+  }
+
+  .previewBrandTitle {
+    font-size: 18px;
+  }
+
+  .previewHero {
+    padding: 44px 16px;
+  }
+
+  .previewSectionContainer {
+    padding: 36px 16px;
+  }
+
+  .previewAreaCard {
+    align-items: center;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .previewFooterBrand,
+  .previewFooterContacts,
+  .previewFooterContactItem {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 640px) {
+  .modalAddressBar {
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .previewSobreWrapper {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .previewSobreText,
+  .previewSobreImageContainer {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .previewAtendimentoCard {
+    padding: 20px 16px;
+  }
+
+  .previewFooter {
+    padding: 32px 16px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modalOverlay {
+    padding: 8px;
+  }
+
+  .modalWindow {
+    max-height: 94dvh;
+  }
+
+  .previewHeroActions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .previewHeroBtn,
+  .previewHeroSecondaryBtn {
+    width: 100%;
+  }
+  .uploadOutlineBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .colorInputRow {
+    flex-wrap: wrap;
+  }
+
+  .colorHexInput {
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .navbarMockup {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .areaFormActions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .areaCancelBtn,
+  .areaSaveBtn {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .previewAreasGrid,
+  .previewTeamGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .deleteModalHeader,
+  .deleteModalBody,
+  .deleteModalFooter {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .deleteModalFooter {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .deleteModalCancelBtn,
+  .deleteModalConfirmBtn {
+    width: 100%;
+  }
 }

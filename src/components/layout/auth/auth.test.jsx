@@ -143,4 +143,42 @@ describe('Auth', () => {
       color: '#ffffff',
     });
   });
+
+  it('renderiza a logo dedicada acima do título para mobile com e sem logotipo customizado', () => {
+    const { rerender } = render(
+      <Auth title="Acesso ao Sistema" subtitle="Insira suas credenciais">
+        <div />
+      </Auth>
+    );
+
+    const mobileLogoWrapper = screen.getByTestId('auth-mobile-logo');
+    const title = screen.getByRole('heading', { name: 'Acesso ao Sistema' });
+    expect(
+      mobileLogoWrapper.compareDocumentPosition(title) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(screen.getByTestId('auth-mobile-logo-badge')).toBeInTheDocument();
+    expect(
+      screen.queryByTestId('auth-mobile-logo-img')
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <Auth
+        title="Acesso ao Sistema"
+        subtitle="Insira suas credenciais"
+        institucional={{
+          nomeEscritorio: 'Advocacia Especial',
+          logotipo: 'https://exemplo.com/logo.png',
+        }}
+      >
+        <div />
+      </Auth>
+    );
+
+    const mobileImg = screen.getByTestId('auth-mobile-logo-img');
+    expect(mobileImg).toHaveAttribute('src', 'https://exemplo.com/logo.png');
+    expect(
+      screen.queryByTestId('auth-mobile-logo-badge')
+    ).not.toBeInTheDocument();
+  });
 });

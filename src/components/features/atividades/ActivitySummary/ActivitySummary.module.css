@@ -126,4 +126,26 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
+
+  .item {
+    min-width: 0;
+    padding: 14px 10px;
+  }
+
+  .label {
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 480px) {
+  .errorState {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .retry {
+    width: 100%;
+    text-align: center;
+  }
 }

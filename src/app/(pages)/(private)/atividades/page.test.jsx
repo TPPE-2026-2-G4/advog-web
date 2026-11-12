@@ -354,17 +354,19 @@ describe('AtividadesPage e AtividadesClient', () => {
     ]);
     render(<AtividadesPage />);
 
-    const filtroSelect = screen.getByLabelText('Filtrar por responsável');
+    const filtroInput = screen.getByRole('combobox', {
+      name: 'Filtrar por responsável',
+    });
+    fireEvent.focus(filtroInput);
     await waitFor(() => {
-      const options = Array.from(filtroSelect.querySelectorAll('option')).map(
-        (o) => o.textContent
-      );
-      expect(options).toContain('Dra. Ana Paula');
-      expect(options).not.toContain('Administrador');
+      expect(screen.getByText('Dra. Ana Paula')).toBeInTheDocument();
+      expect(screen.queryByText('Administrador')).not.toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Nova Atividade/i }));
-    const respInput = screen.getByPlaceholderText(/responsáveis/i);
+    const respInput = screen.getByPlaceholderText(
+      'Selecione os responsáveis...'
+    );
     fireEvent.focus(respInput);
     expect(screen.getAllByText('Dra. Ana Paula')).toHaveLength(2);
     expect(screen.queryByText('Administrador')).not.toBeInTheDocument();

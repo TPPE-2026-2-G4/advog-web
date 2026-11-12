@@ -137,6 +137,10 @@ describe('InstitucionalContext', () => {
       '--cor-primaria: #123456 !important'
     );
     expect(styleEl?.textContent).toContain(
+      'aside, [data-testid="sidebar"] { background-color: #123456 !important; }'
+    );
+    expect(styleEl?.textContent).not.toContain('[class*="sidebar"]');
+    expect(styleEl?.textContent).toContain(
       '[data-testid="sidebar-logo-icon"] { display: none !important; }'
     );
   });

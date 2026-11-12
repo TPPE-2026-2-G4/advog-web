@@ -136,3 +136,22 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 480px) {
+  .header,
+  .body,
+  .footer {
+    padding: 16px;
+  }
+
+  .footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .cancelBtn,
+  .submitBtn {
+    width: 100%;
+    justify-content: center;
+  }
+}

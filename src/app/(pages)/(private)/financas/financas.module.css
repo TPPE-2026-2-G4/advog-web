@@ -37,14 +37,22 @@ body {
 }
 
 .actions {
-  display: flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   align-items: center;
   gap: 12px;
+}
+
+.actions > * {
+  width: 100%;
 }
 
 .reportButton {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
   gap: 8px;
   background-color: transparent;
   color: var(--cor-primaria, #172133);
@@ -54,6 +62,7 @@ body {
   border-radius: 6px;
   padding: 10px 16px;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
@@ -64,6 +73,8 @@ body {
 .addButton {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
   gap: 8px;
   background-color: var(--cor-secundaria, #c1a077);
   color: var(--cor-secundaria-texto, #172133);
@@ -73,6 +84,7 @@ body {
   border-radius: 6px;
   padding: 10px 16px;
   cursor: pointer;
+  white-space: nowrap;
   transition:
     background-color 0.2s,
     border-color 0.2s,
@@ -112,27 +124,27 @@ body {
   }
 
   .headerRow {
+    flex-direction: column;
     align-items: stretch;
   }
 
   .actions {
-    width: 100%;
-  }
-
-  .reportButton,
-  .addButton {
-    flex: 1;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .actions {
+    display: flex;
     flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 10px;
   }
 
-  .reportButton,
-  .addButton {
+  .actions > * {
     width: 100%;
+  }
+
+  .actions .reportButton,
+  .actions .addButton {
+    display: flex;
+    width: 100%;
+    min-height: 42px;
+    justify-content: center;
   }
 }

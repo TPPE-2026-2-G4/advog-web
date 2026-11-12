@@ -40,16 +40,17 @@ export default function AutocompleteResponsible({
     [responsavelId, funcionarios]
   );
 
-  const [searchTerm, setSearchTerm] = useState(() => {
-    const inicial = encontrarFuncionario(responsavelId, funcionarios);
-    return inicial ? inicial.nome : '';
-  });
+  const selecionadoNome = selecionado ? selecionado.nome : '';
+  const [searchTerm, setSearchTerm] = useState(selecionadoNome);
 
-  const [prevResponsavelId, setPrevResponsavelId] = useState(responsavelId);
+  const currentResponsavelKey = `${responsavelId ?? ''}:${selecionadoNome}`;
+  const [prevResponsavelKey, setPrevResponsavelKey] = useState(
+    currentResponsavelKey
+  );
 
-  if (prevResponsavelId !== responsavelId) {
-    setPrevResponsavelId(responsavelId);
-    setSearchTerm(selecionado ? selecionado.nome : '');
+  if (prevResponsavelKey !== currentResponsavelKey) {
+    setPrevResponsavelKey(currentResponsavelKey);
+    setSearchTerm(selecionadoNome);
   }
 
   useEffect(() => {

@@ -93,7 +93,12 @@ describe('UserMenu', () => {
   it('renderiza o usuário e mantém o menu fechado inicialmente', async () => {
     render(<UserMenu />);
 
-    expect(await screen.findByText('Alexandre C.')).toBeInTheDocument();
+    const triggerText = await screen.findByText('Alexandre C.');
+    expect(triggerText).toBeInTheDocument();
+    expect(triggerText.closest('button')).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
     expect(screen.getByText('Advogado(a)')).toBeInTheDocument();
     expect(screen.queryByText('Alexandre Carreiro')).not.toBeInTheDocument();
   });
@@ -101,8 +106,10 @@ describe('UserMenu', () => {
   it('abre o menu ao clicar no usuário', async () => {
     render(<UserMenu />);
     const triggerText = await screen.findByText('Alexandre C.');
-    fireEvent.click(triggerText.closest('button'));
+    const trigger = triggerText.closest('button');
+    fireEvent.click(trigger);
 
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('Alexandre Carreiro')).toBeInTheDocument();
     expect(screen.getByText('alexandre@carreiro.adv.br')).toBeInTheDocument();
     expect(

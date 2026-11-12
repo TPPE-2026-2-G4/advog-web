@@ -25,13 +25,13 @@ export default function ProcessosClient({
   initialError = '',
   responsaveis = EMPTY_RESPONSAVEIS,
 }) {
-  const permissionsJson = useSyncExternalStore(
+  const userJson = useSyncExternalStore(
     emptySubscribe,
-    () => JSON.stringify(getCurrentUser()?.cargo?.permissao ?? {}),
-    () => '{}'
+    () => JSON.stringify(getCurrentUser() ?? null),
+    () => 'null'
   );
-  const permissions = JSON.parse(permissionsJson);
-  const currentUser = getCurrentUser();
+  const currentUser = JSON.parse(userJson);
+  const permissions = currentUser?.cargo?.permissao ?? {};
   const isUserAdmin = isAdministratorAccount(currentUser);
   const canView =
     isUserAdmin ||
@@ -257,6 +257,7 @@ export default function ProcessosClient({
       <ProcessFilters
         filters={filters}
         responsaveis={responsaveisOptions}
+        funcionarios={funcionarios}
         dateRangeError={dateRangeError}
         onFilterChange={setFilter}
       />

@@ -181,3 +181,21 @@ export function filterNonAdministratorMembers(members = [], roles = []) {
   if (!Array.isArray(members)) return [];
   return members.filter((member) => !isAdministratorAccount(member, roles));
 }
+
+export function normalizeResponsavelItems(
+  funcionarios = [],
+  responsaveis = []
+) {
+  if (Array.isArray(funcionarios) && funcionarios.length > 0) {
+    return funcionarios;
+  }
+  if (!Array.isArray(responsaveis)) return [];
+  return responsaveis.map((item) => ({
+    ...item,
+    funcionario_id: item.funcionario_id ?? item.id ?? item.value,
+    nome: item.nome ?? item.label ?? '',
+    cargo: item.cargo ?? item.nome_cargo ?? null,
+    foto_perfil_url:
+      item.foto_perfil_url ?? item.fotoPerfilUrl ?? item.foto ?? null,
+  }));
+}

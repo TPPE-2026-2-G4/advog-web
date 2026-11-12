@@ -26,13 +26,13 @@ import styles from './dashboard.module.css';
 const emptySubscribe = () => () => {};
 
 export default function DashboardClient() {
-  const permissionsJson = useSyncExternalStore(
+  const userJson = useSyncExternalStore(
     emptySubscribe,
-    () => JSON.stringify(getCurrentUser()?.cargo?.permissao ?? {}),
-    () => '{}'
+    () => JSON.stringify(getCurrentUser() ?? null),
+    () => 'null'
   );
-  const permissions = JSON.parse(permissionsJson);
-  const currentUser = getCurrentUser();
+  const currentUser = JSON.parse(userJson);
+  const permissions = currentUser?.cargo?.permissao ?? {};
   const isUserAdmin = isAdministratorAccount(currentUser);
   const canView =
     isUserAdmin ||

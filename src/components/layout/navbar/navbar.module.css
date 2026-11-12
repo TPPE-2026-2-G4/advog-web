@@ -15,6 +15,30 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
+.mobileMenuBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: #374151;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.mobileMenuBtn:hover {
+  background-color: #f3f4f6;
+}
+
+.mobileMenuBtn:focus-visible {
+  outline: 2px solid var(--cor-primaria, #172133);
+  outline-offset: 2px;
+}
+
 .actions {
   display: flex;
   align-items: center;
@@ -64,6 +88,8 @@
 
 .userMenuContainer {
   position: relative;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .triggerBtn {
@@ -71,21 +97,31 @@
   align-items: center;
   gap: 12px;
   padding: 4px;
+  min-width: 0;
+  max-width: 100%;
   background: transparent;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
 }
 
 .triggerBtn:hover {
   background-color: #f3f4f6;
 }
 
+.triggerBtn:focus-visible {
+  outline: 2px solid var(--cor-primaria, #172133);
+  outline-offset: 2px;
+}
+
 .avatar {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   width: 36px;
   height: 36px;
   font-size: 14px;
@@ -103,44 +139,43 @@
 }
 
 .userInfo {
-  display: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
   text-align: left;
-}
-
-@media (min-width: 768px) {
-  .userInfo {
-    display: block;
-  }
-}
-
-@media (max-width: 768px) {
-  .header {
-    height: 56px;
-    padding: 0 16px;
-  }
-
-  .actions {
-    gap: 12px;
-  }
 }
 
 .userName {
   margin: 0;
   font-size: 14px;
   font-weight: 500;
-  line-height: 1;
+  line-height: 1.15;
   color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .userRole {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   font-size: 12px;
+  line-height: 1.15;
   color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chevron {
+  flex-shrink: 0;
   margin-left: 4px;
   color: #6b7280;
+  transition: transform 0.2s;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
 }
 
 .dropdown {
@@ -149,6 +184,7 @@
   top: 100%;
   margin-top: 8px;
   width: 224px;
+  max-width: calc(100vw - 24px);
   background-color: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -166,12 +202,14 @@
   font-size: 14px;
   font-weight: 600;
   color: #111827;
+  overflow-wrap: anywhere;
 }
 
 .dropdownEmail {
-  margin: 0;
+  margin: 2px 0 0;
   font-size: 12px;
   color: #6b7280;
+  overflow-wrap: anywhere;
 }
 
 .menuGroup {
@@ -207,4 +245,84 @@
 
 .logoutItem:hover {
   background-color: #fef2f2;
+}
+
+@media (max-width: 768px) {
+  .header {
+    height: 56px;
+    padding: 0 14px;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .mobileMenuBtn {
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  .actions {
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .notificationBtn {
+    flex-shrink: 0;
+  }
+
+  .divider {
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .triggerBtn {
+    gap: 8px;
+    padding: 3px 10px 3px 4px;
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 9999px;
+  }
+
+  .triggerBtn:hover {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
+  }
+
+  .avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .userInfo {
+    max-width: 150px;
+  }
+
+  .userName {
+    font-size: 13px;
+  }
+
+  .userRole {
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  .chevron {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 400px) {
+  .header {
+    padding: 0 10px;
+  }
+
+  .actions {
+    gap: 8px;
+  }
+
+  .userInfo {
+    max-width: 110px;
+  }
 }

@@ -59,6 +59,28 @@
   align-items: center;
 }
 
+.mobileLogo {
+  display: none;
+}
+
+.mobileLogoBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.mobileLogoImg {
+  max-width: 160px;
+  max-height: 64px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
 .titleAuth {
   color: var(--cor-primaria, #172133);
   font-size: 32px;
@@ -109,26 +131,21 @@
   }
 
   .brand {
-    width: 100%;
-    min-height: 35vh;
-    padding: 32px 20px;
+    display: none;
   }
 
   .auth {
     width: 100%;
-    min-height: 65vh;
+    min-height: 100vh;
+    min-height: 100dvh;
     padding: 32px 20px;
   }
 
-  .titleBrand {
-    font-size: 28px;
-    text-align: center;
-  }
-
-  .subtitleBrand {
-    font-size: 15px;
-    text-align: center;
-    margin-top: 12px;
+  .mobileLogo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
   }
 
   .titleAuth {

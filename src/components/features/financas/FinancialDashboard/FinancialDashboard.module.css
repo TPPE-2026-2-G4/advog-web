@@ -400,11 +400,34 @@
 
 @media (max-width: 1100px) {
   .kpiGrid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .chartsGrid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboardWrapper {
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .kpiGrid {
+    gap: 12px;
+  }
+
+  .kpiCard {
+    padding: 16px;
+  }
+
+  .chartsGrid {
+    gap: 16px;
+  }
+
+  .chartCard {
+    padding: 16px;
   }
 }
 
@@ -415,11 +438,43 @@
 
   .chartHeader {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
   .chartControls {
+    flex-direction: column;
+    align-items: stretch;
     width: 100%;
-    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .valueFilters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .valueInput {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .periodSelector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+  }
+
+  .periodBtn {
+    padding: 6px 8px;
+    text-align: center;
+  }
+
+  .floatingTooltip {
+    max-width: calc(100vw - 64px);
+    padding: 8px 10px;
   }
 }

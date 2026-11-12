@@ -14,6 +14,7 @@ import {
   Calendar,
   Palette,
   Settings,
+  X,
 } from 'lucide-react';
 import { useInstitucionalContext } from '@/contexts/InstitucionalContext';
 import { getCurrentUser } from '@/utils/authSession';
@@ -71,7 +72,7 @@ export function canViewMenuItem(user, path) {
 
 const emptySubscribe = () => () => {};
 
-export default function Sidebar() {
+export default function Sidebar({ isMobileOpen = false, onCloseMobile } = {}) {
   const pathname = usePathname();
   const { institucional } = useInstitucionalContext();
 
@@ -92,72 +93,97 @@ export default function Sidebar() {
   const logotipo = institucional?.logotipo;
 
   return (
-    <aside
-      className={styles.sidebar}
-      suppressHydrationWarning
-      style={{
-        backgroundColor: corPrimaria,
-        '--cor-primaria': corPrimaria,
-        '--cor-secundaria': corSecundaria,
-      }}
-      data-testid="sidebar"
-    >
-      <div className={styles.logoArea} suppressHydrationWarning>
-        {logotipo ? (
-          <div className={styles.logoImgWrapper} data-testid="sidebar-logo-img">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getImageUrl(logotipo)}
-              alt={`Logotipo ${nomeEscritorio}`}
-              className={styles.logoImg}
-            />
-          </div>
-        ) : (
-          <div
-            className={styles.logoIcon}
-            suppressHydrationWarning
-            style={{
-              backgroundColor: corSecundaria,
-              color: corPrimaria,
-            }}
-            data-testid="sidebar-logo-icon"
-          >
-            <Scale size={20} color={corPrimaria} />
-          </div>
-        )}
-        <span
-          className={styles.logoText}
-          style={{ color: corSecundaria }}
-          suppressHydrationWarning
-        >
-          {nomeEscritorio}
-        </span>
-      </div>
+    <>
+      {isMobileOpen && (
+        <div
+          className={styles.mobileBackdrop}
+          onClick={onCloseMobile}
+          aria-hidden="true"
+          data-testid="sidebar-backdrop"
+        />
+      )}
 
-      <nav className={styles.nav}>
-        {visibleMenuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.path;
-
-          return (
-            <Link
-              key={item.path}
-              href={item.path}
-              className={`${styles.navItem} ${isActive ? styles.active : ''}`}
-              style={isActive ? { color: corSecundaria } : undefined}
+      <aside
+        id="private-sidebar"
+        className={`${styles.sidebar} ${isMobileOpen ? styles.mobileOpen : ''}`}
+        suppressHydrationWarning
+        style={{
+          backgroundColor: corPrimaria,
+          '--cor-primaria': corPrimaria,
+          '--cor-secundaria': corSecundaria,
+        }}
+        data-testid="sidebar"
+      >
+        <div className={styles.logoArea} suppressHydrationWarning>
+          {logotipo ? (
+            <div
+              className={styles.logoImgWrapper}
+              data-testid="sidebar-logo-img"
             >
-              {isActive && (
-                <div
-                  className={styles.activeIndicator}
-                  style={{ backgroundColor: corSecundaria }}
-                />
-              )}
-              <Icon size={20} className={styles.icon} />
-              <span className={styles.navText}>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getImageUrl(logotipo)}
+                alt={`Logotipo ${nomeEscritorio}`}
+                className={styles.logoImg}
+              />
+            </div>
+          ) : (
+            <div
+              className={styles.logoIcon}
+              suppressHydrationWarning
+              style={{
+                backgroundColor: corSecundaria,
+                color: corPrimaria,
+              }}
+              data-testid="sidebar-logo-icon"
+            >
+              <Scale size={20} color={corPrimaria} />
+            </div>
+          )}
+          <span
+            className={styles.logoText}
+            style={{ color: corSecundaria }}
+            suppressHydrationWarning
+          >
+            {nomeEscritorio}
+          </span>
+
+          <button
+            type="button"
+            className={styles.mobileCloseBtn}
+            onClick={onCloseMobile}
+            aria-label="Fechar menu"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className={styles.nav} aria-label="Menu principal">
+          {visibleMenuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.path;
+
+            return (
+              <Link
+                key={item.path}
+                href={item.path}
+                onClick={onCloseMobile}
+                className={`${styles.navItem} ${isActive ? styles.active : ''}`}
+                style={isActive ? { color: corSecundaria } : undefined}
+              >
+                {isActive && (
+                  <div
+                    className={styles.activeIndicator}
+                    style={{ backgroundColor: corSecundaria }}
+                  />
+                )}
+                <Icon size={20} className={styles.icon} />
+                <span className={styles.navText}>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 }

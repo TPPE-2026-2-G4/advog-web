@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { usePathname } from 'next/navigation';
 import { InstitucionalContext } from '@/contexts/InstitucionalContext';
@@ -159,5 +159,25 @@ describe('Sidebar', () => {
     usePathname.mockReturnValue('/dashboard');
     const html = renderToString(<Sidebar />);
     expect(html).toContain('Início');
+  });
+
+  it('controla abertura e fechamento no modo mobile via backdrop, botão de fechar e clique em link', () => {
+    usePathname.mockReturnValue('/dashboard');
+    const onCloseMobile = vi.fn();
+    const { rerender } = render(
+      <Sidebar isMobileOpen={false} onCloseMobile={onCloseMobile} />
+    );
+
+    expect(screen.queryByTestId('sidebar-backdrop')).not.toBeInTheDocument();
+    expect(screen.getByTestId('sidebar')).not.toHaveClass(styles.mobileOpen);
+
+    rerender(<Sidebar isMobileOpen onCloseMobile={onCloseMobile} />);
+    expect(screen.getByTestId('sidebar')).toHaveClass(styles.mobileOpen);
+
+    fireEvent.click(screen.getByTestId('sidebar-backdrop'));
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar menu' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Início' }));
+
+    expect(onCloseMobile).toHaveBeenCalledTimes(3);
   });
 });

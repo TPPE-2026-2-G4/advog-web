@@ -108,8 +108,28 @@
 }
 
 @media (max-width: 768px) {
+  .header {
+    margin-bottom: 16px;
+  }
+
+  .main {
+    gap: 16px;
+  }
+
   .statsGrid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .summariesGrid,
+  .activitiesGrid {
     gap: 16px;
+  }
+
+  .errorState {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 18px 16px;
   }
 }
