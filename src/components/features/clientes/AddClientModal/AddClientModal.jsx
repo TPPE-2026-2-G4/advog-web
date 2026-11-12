@@ -10,6 +10,7 @@ import {
   formatarTelefone,
   validarDadosCliente,
 } from '@/utils/cliente';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './AddClientModal.module.css';
 
 export default function AddClientModal({
@@ -110,11 +111,7 @@ export default function AddClientModal({
         </div>
 
         <div className={styles.body}>
-          {error && (
-            <div className={styles.errorAlert} role="alert">
-              {error}
-            </div>
-          )}
+          <Toast message={error} onClose={() => setError('')} />
 
           <div className={styles.formGroup}>
             <label htmlFor="add-client-nome" className={styles.label}>

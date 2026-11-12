@@ -14,6 +14,8 @@ import {
   obterUrlDocumento,
   uploadDocumento,
 } from '@/services/processos';
+import Toast from '@/components/ui/Toast/Toast';
+import { mensagemAmigavel } from '@/utils/erros';
 import styles from './ProcessDetailsModal.module.css';
 
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
@@ -349,7 +351,10 @@ export default function ProcessDetailsModal({
           </div>
           {error && (
             <div role="alert" className={styles.refreshError}>
-              <p>{error} Os dados exibidos podem estar desatualizados.</p>
+              <p>
+                {mensagemAmigavel(error)} Os dados exibidos podem estar
+                desatualizados.
+              </p>
               <button type="button" onClick={onRetry}>
                 Tentar novamente
               </button>
@@ -451,7 +456,7 @@ export default function ProcessDetailsModal({
                   </div>
                 ) : movementsError ? (
                   <div role="alert" className={styles.refreshError}>
-                    <p>{movementsError}</p>
+                    <p>{mensagemAmigavel(movementsError)}</p>
                     <button type="button" onClick={reloadMovements}>
                       Tentar novamente
                     </button>
@@ -520,7 +525,7 @@ export default function ProcessDetailsModal({
 
                 {docsError && (
                   <div role="alert" className={styles.refreshError}>
-                    <p>{docsError}</p>
+                    <p>{mensagemAmigavel(docsError)}</p>
                     <button type="button" onClick={reloadDocuments}>
                       Tentar novamente
                     </button>
@@ -637,11 +642,10 @@ export default function ProcessDetailsModal({
               <strong>{docToDelete.nome_original}</strong>? Esta ação não poderá
               ser desfeita.
             </p>
-            {deleteModalError && (
-              <p className={styles.deleteConfirmError} role="alert">
-                {deleteModalError}
-              </p>
-            )}
+            <Toast
+              message={deleteModalError}
+              onClose={() => setDeleteModalError('')}
+            />
           </div>
 
           <div className={styles.deleteConfirmFooter}>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import { isAdministratorRole } from '@/utils/funcionario';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './AddUserModal.module.css';
 
 const emptyFormData = { nome: '', email: '', cargo_id: '' };
@@ -126,7 +127,7 @@ export default function AddUserModal({
           )}
         </div>
 
-        {error && <p className={styles.error}>{error}</p>}
+        <Toast message={error} onClose={() => setError('')} />
       </div>
 
       <div className={styles.footer}>

@@ -4,6 +4,7 @@ import { AlertTriangle } from 'lucide-react';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import { isAdministratorAccount } from '@/utils/funcionario';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './DeleteUserModal.module.css';
 
 export default function DeleteUserModal({
@@ -40,7 +41,7 @@ export default function DeleteUserModal({
           Tem certeza que deseja excluir <strong>{member.nome_func}</strong>?
           Esta ação não poderá ser desfeita.
         </p>
-        {error && <p className={styles.error}>{error}</p>}
+        <Toast message={error} />
       </div>
 
       <div className={styles.footer}>

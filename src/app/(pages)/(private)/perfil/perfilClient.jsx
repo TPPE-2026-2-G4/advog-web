@@ -33,6 +33,7 @@ import {
   getLawyerInitials,
   isAdministratorAccount,
 } from '@/utils/funcionario';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './perfil.module.css';
 
 const emptySubscribe = () => () => {};
@@ -545,16 +546,12 @@ export default function PerfilClient({ atuacoes = [] }) {
             </p>
           </section>
 
-          {(erro || sucesso) && (
-            <div
-              id={erro ? errorId : successId}
-              className={erro ? styles.alertError : styles.alertSuccess}
-              role={erro ? 'alert' : 'status'}
-            >
-              {erro ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
-              <span>{erro || sucesso}</span>
-            </div>
-          )}
+          <Toast message={erro} onClose={() => setErro('')} />
+          <Toast
+            variant="success"
+            message={sucesso}
+            onClose={() => setSucesso('')}
+          />
 
           <div className={styles.actions}>
             <button

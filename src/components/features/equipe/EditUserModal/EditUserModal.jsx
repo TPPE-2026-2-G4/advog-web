@@ -7,6 +7,7 @@ import {
   isAdministratorAccount,
   isAdministratorRole,
 } from '@/utils/funcionario';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './EditUserModal.module.css';
 
 const findMemberRoleId = (member, roles) => {
@@ -189,11 +190,7 @@ function EditUserDialog({ member, roles, isRoleLocked, onClose, onSave }) {
             )}
           </div>
 
-          {error && (
-            <p id={errorId} className={styles.error} role="alert">
-              {error}
-            </p>
-          )}
+          <Toast message={error} onClose={() => setError('')} />
         </div>
 
         <div className={styles.footer}>

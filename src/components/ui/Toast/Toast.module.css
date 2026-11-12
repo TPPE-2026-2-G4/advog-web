@@ -1,0 +1,96 @@
+.viewport {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(480px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  background-color: #fff;
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgb(15 23 42 / 18%);
+  animation: toast-in 0.2s ease-out;
+  pointer-events: auto;
+}
+
+.error {
+  color: #7f1d1d;
+  background-color: #fef2f2;
+  border-color: #dc2626;
+}
+
+.success {
+  color: #14532d;
+  background-color: #f0fdf4;
+  border-color: #16a34a;
+}
+
+.info {
+  color: #1e3a8a;
+  background-color: #eff6ff;
+  border-color: #2563eb;
+}
+
+.icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.message {
+  flex: 1;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.closeButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  opacity: 0.7;
+}
+
+.closeButton:hover,
+.closeButton:focus-visible {
+  background-color: rgb(0 0 0 / 8%);
+  opacity: 1;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}

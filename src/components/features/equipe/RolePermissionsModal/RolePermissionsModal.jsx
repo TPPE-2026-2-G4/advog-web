@@ -9,6 +9,7 @@ import {
   togglePermission,
 } from '@/constants/permissions';
 import { isAdministratorRole } from '@/utils/funcionario';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './RolePermissionsModal.module.css';
 
 export default function RolePermissionsModal({
@@ -152,11 +153,7 @@ function RolePermissionsForm({ role, onClose, onSave, readOnly = false }) {
             {readOnly ? 'ativas' : 'selecionadas'}
           </p>
 
-          {error && (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
-          )}
+          <Toast message={error} onClose={() => setError('')} />
         </div>
 
         <div className={styles.footer}>

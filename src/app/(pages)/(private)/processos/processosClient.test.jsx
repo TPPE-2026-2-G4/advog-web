@@ -59,6 +59,7 @@ const apiProcess = {
   status: 'Ativo',
   tribunal: 'TJDFT',
   area: 'Civil',
+  data_inicio: '2026-01-01T00:00:00',
   data_prazo: '2026-10-05T00:00:00',
   cliente_id: 4,
   responsavel_id: 3,

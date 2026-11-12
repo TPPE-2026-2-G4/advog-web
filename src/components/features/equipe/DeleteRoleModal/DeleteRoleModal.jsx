@@ -4,6 +4,7 @@ import { AlertTriangle, X } from 'lucide-react';
 import { useEffect, useId } from 'react';
 import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import { isAdministratorRole } from '@/utils/funcionario';
+import Toast from '@/components/ui/Toast/Toast';
 import styles from './DeleteRoleModal.module.css';
 
 export default function DeleteRoleModal({
@@ -81,11 +82,7 @@ export default function DeleteRoleModal({
           <p className={styles.hint}>
             Cargos associados a funcionários não podem ser excluídos.
           </p>
-          {error && (
-            <p className={styles.error} id={errorId} role="alert">
-              {error}
-            </p>
-          )}
+          <Toast message={error} />
         </div>
 
         <div className={styles.footer}>

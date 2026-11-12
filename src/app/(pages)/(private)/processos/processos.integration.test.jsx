@@ -730,10 +730,13 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       fireEvent.change(within(dialog).getByLabelText('Área de Atuação'), {
         target: { value: 'Civil' },
       });
+      fireEvent.change(within(dialog).getByLabelText('Próximo Prazo'), {
+        target: { value: '2026-12-31' },
+      });
 
       fireEvent.submit(dialog);
 
-      expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      expect(await screen.findByRole('alert')).toHaveTextContent(
         expectedMessage
       );
 
@@ -755,7 +758,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         cliente_id: '4',
         area: 'Civil',
       },
-      'Informe o número do processo no formato CNJ.',
+      'O número do processo deve seguir o formato CNJ: 0000000-00.0000.0.00.0000.',
     ],
     [
       'campos obrigatórios em branco',
@@ -766,7 +769,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         cliente_id: '4',
         area: 'Civil',
       },
-      'Preencha todos os campos obrigatórios.',
+      'Preencha os campos obrigatórios: Tribunal, Próximo Prazo.',
     ],
   ])(
     'bloqueia submissão no ProcessFormModal e mostra erro de validação para %s',
@@ -807,9 +810,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
       fireEvent.submit(dialog);
 
-      expect(within(dialog).getByRole('alert')).toHaveTextContent(
-        expectedAlert
-      );
+      expect(screen.getByRole('alert')).toHaveTextContent(expectedAlert);
 
       expect(
         fetchMock.mock.calls.filter(([, opts]) => opts?.method === 'POST')
@@ -869,7 +870,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       })
     );
 
-    expect(await within(deleteDialog).findByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'Processo possui movimentações vinculadas.'
     );
   });
@@ -2126,7 +2127,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         within(confirmDialog).getByRole('button', { name: 'Excluir' })
       );
 
-      expect(await within(confirmDialog).findByRole('alert')).toHaveTextContent(
+      expect(await screen.findByRole('alert')).toHaveTextContent(
         'Não é permitido remover este documento.'
       );
 
@@ -2153,9 +2154,9 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         within(confirmDialog2).getByRole('button', { name: 'Excluir' })
       );
 
-      expect(
-        await within(confirmDialog2).findByRole('alert')
-      ).toHaveTextContent('Falha ao excluir documento.');
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Falha ao excluir documento.'
+      );
 
       delSpy.mockRestore();
     });
@@ -2577,6 +2578,9 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       fireEvent.change(within(dialog).getByLabelText('Área de Atuação'), {
         target: { value: 'Civil' },
       });
+      fireEvent.change(within(dialog).getByLabelText('Próximo Prazo'), {
+        target: { value: '2026-12-31' },
+      });
     };
 
     const openNewProcess = async () => {
@@ -2622,7 +2626,7 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
 
       fireEvent.submit(dialog);
 
-      expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      expect(await screen.findByRole('alert')).toHaveTextContent(
         'Não foi possível salvar o processo.'
       );
       create.mockRestore();
@@ -3050,6 +3054,9 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
       fireEvent.change(within(formDialog).getByLabelText('Área de Atuação'), {
         target: { value: 'Cível' },
       });
+      fireEvent.change(within(formDialog).getByLabelText('Próximo Prazo'), {
+        target: { value: '2026-12-31' },
+      });
       fireEvent.change(within(formDialog).getByLabelText('Status Inicial'), {
         target: { value: 'Ativo' },
       });
@@ -3069,7 +3076,9 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         within(formDialog).getByRole('button', { name: 'Salvar Processo' })
       );
       expect(
-        await within(formDialog).findByText('Informe datas válidas.')
+        await screen.findByText(
+          'Há uma data inválida. Confira as datas informadas.'
+        )
       ).toBeInTheDocument();
 
       // Limpa data inválida
@@ -3092,8 +3101,8 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
         within(editDialog).getByRole('button', { name: 'Salvar alterações' })
       );
       expect(
-        await within(editDialog).findByText(
-          'A conta de administrador não pode ser atribuída a processos.'
+        await screen.findByText(
+          'A conta de administrador não pode ser responsável por processos. Escolha outro responsável.'
         )
       ).toBeInTheDocument();
     });

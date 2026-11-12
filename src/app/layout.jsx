@@ -30,6 +30,71 @@ const cormorant = Cormorant_Garamond({
   display: 'swap',
 });
 
+export const metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || 'https://carreiroadvocacia.vercel.app'
+  ),
+  title: {
+    default: 'Carreiro Advocacia',
+    template: '%s | Carreiro Advocacia',
+  },
+  description:
+    'Carreiro Advocacia — Escritório jurídico especializado em soluções com ética, agilidade e excelência. Assessoria jurídica personalizada em Direito Civil, Trabalhista, Previdenciário, Empresarial e do Consumidor.',
+  keywords: [
+    'Carreiro Advocacia',
+    'Advocacia',
+    'Advogado',
+    'Assessoria Jurídica',
+    'Consultoria Jurídica',
+    'Direito Civil',
+    'Direito Trabalhista',
+    'Direito Previdenciário',
+    'Direito Empresarial',
+    'Direito do Consumidor',
+  ],
+  authors: [{ name: 'Carreiro Advocacia' }],
+  creator: 'Carreiro Advocacia',
+  publisher: 'Carreiro Advocacia',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  openGraph: {
+    title: 'Carreiro Advocacia',
+    description:
+      'Soluções jurídicas com ética, agilidade e excelência. Atendimento especializado para você e sua empresa.',
+    url: 'https://carreiroadvocacia.vercel.app',
+    siteName: 'Carreiro Advocacia',
+    locale: 'pt_BR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Carreiro Advocacia',
+    description:
+      'Soluções jurídicas com ética, agilidade e excelência. Atendimento especializado para você e sua empresa.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+};
+
 export default function RootLayout({ children }) {
   return (
     <html
