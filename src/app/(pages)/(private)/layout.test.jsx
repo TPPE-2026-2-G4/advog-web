@@ -2,9 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import PrivateLayout from './layout';
 import { useSessionGuard } from '@/hooks/useSessionGuard';
+import { sincronizarConfigAlertas } from '@/services/alertas';
 
 vi.mock('@/hooks/useSessionGuard', () => ({
   useSessionGuard: vi.fn(),
+}));
+
+vi.mock('@/services/alertas', () => ({
+  sincronizarConfigAlertas: vi.fn(),
 }));
 
 vi.mock('@/components/layout/sidebar/sidebar', () => ({
@@ -25,6 +30,16 @@ describe('PrivateLayout', () => {
 
     expect(useSessionGuard).toHaveBeenCalled();
   });
+  it('busca no servidor a configuração de alertas do escritório ao abrir a área logada', () => {
+    render(
+      <PrivateLayout>
+        <div>Conteúdo protegido</div>
+      </PrivateLayout>
+    );
+
+    expect(sincronizarConfigAlertas).toHaveBeenCalled();
+  });
+
   it.each([
     ['conteúdo do dashboard', 'Dashboard'],
     ['conteúdo da equipe', 'Equipe'],

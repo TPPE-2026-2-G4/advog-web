@@ -107,6 +107,17 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
         };
       }
 
+      if (
+        urlStr.endsWith('/institucional/alertas') &&
+        options?.method === 'PATCH'
+      ) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => JSON.parse(options.body),
+        };
+      }
+
       return { ok: false, status: 404, json: async () => ({}) };
     });
 
@@ -209,6 +220,18 @@ describe('Integração: Página de Ajustes (/ajustes)', () => {
       escopoProcessos: 'meus_processos',
       diasPrazo: 30,
       diasCritico: 45,
+    });
+
+    // A antecedência de prazos e o prazo de processo crítico também vão para o servidor,
+    // porque é com eles que o backend decide quando notificar.
+    const salvouAlertas = fetch.mock.calls.find(
+      ([url, opcoes]) =>
+        String(url).endsWith('/institucional/alertas') &&
+        opcoes?.method === 'PATCH'
+    );
+    expect(JSON.parse(salvouAlertas[1].body)).toEqual({
+      dias_prazo_proximo: 30,
+      dias_processo_critico: 45,
     });
 
     // Reativa notificações por e-mail e salva novamente

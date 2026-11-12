@@ -17,6 +17,13 @@ import {
   obterResumoProcessos,
 } from './processos';
 import { enviarSolicitacaoServico, ERROS_SOLICITACAO } from './solicitacoes';
+import {
+  listarNotificacoes,
+  marcarNotificacaoComoLida,
+  marcarTodasNotificacoesComoLidas,
+  obterContagemNaoLidas,
+  NotificacoesApiError,
+} from './notificacoes';
 
 const response = (data, { status = 200, ok = status < 400, ...rest } = {}) => ({
   ok,
@@ -62,6 +69,119 @@ describe('serviços (integração com a API simulada)', () => {
       fetch.mockResolvedValue(response(body, { status }));
 
       await expect(listarProdutividadeEquipe()).rejects.toThrow(message);
+    });
+
+    describe('notificações', () => {
+      it('lista com filtros, paginação e autenticação', async () => {
+        fetch.mockResolvedValue(
+          response([{ id: '1', tipo: 'ATRASO', link_destino: '/processos/1' }])
+        );
+
+        await expect(
+          listarNotificacoes({
+            limite: 10,
+            offset: 20,
+            apenasNaoLidas: true,
+            tipo: 'ATRASO',
+          })
+        ).resolves.toMatchObject([{ id: '1', tipo: 'ATRASO' }]);
+        expect(fetch).toHaveBeenCalledWith(
+          expect.stringContaining(
+            'limite=10&offset=20&apenas_nao_lidas=true&tipo=ATRASO'
+          ),
+          expect.objectContaining({
+            cache: 'no-store',
+            headers: expect.objectContaining({
+              Authorization: 'Bearer token-jwt',
+            }),
+          })
+        );
+      });
+
+      it.each([
+        [401, 'Sessão expirada. Faça login novamente.'],
+        [403, 'Você não possui permissão para realizar esta ação.'],
+        [404, 'Notificação não encontrada.'],
+        [429, 'Muitas tentativas em pouco tempo. Aguarde e tente novamente.'],
+        [500, 'Detalhe do backend'],
+      ])('traduz status HTTP %s', async (status, message) => {
+        fetch.mockResolvedValue(
+          response({ detail: status === 500 ? message : 'técnico' }, { status })
+        );
+
+        await expect(obterContagemNaoLidas()).rejects.toMatchObject({
+          name: 'NotificacoesApiError',
+          status,
+          message,
+        });
+      });
+
+      it('cobre ausência de token, rede, JSON inválido e resposta inválida', async () => {
+        sessionStorage.clear();
+        await expect(obterContagemNaoLidas()).rejects.toThrow(
+          'Sessão expirada. Faça login novamente.'
+        );
+        expect(fetch).not.toHaveBeenCalled();
+
+        sessionStorage.setItem('access_token', 'token-jwt');
+        fetch.mockRejectedValueOnce(new Error('offline'));
+        await expect(listarNotificacoes()).rejects.toThrow(
+          'Não foi possível carregar as notificações.'
+        );
+
+        fetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockRejectedValue(new Error('JSON inválido')),
+        });
+        await expect(obterContagemNaoLidas()).rejects.toThrow(
+          'Não foi possível carregar a contagem de notificações.'
+        );
+
+        fetch.mockResolvedValueOnce(response({ items: [] }));
+        await expect(listarNotificacoes()).rejects.toMatchObject({
+          name: 'NotificacoesApiError',
+          message: 'Resposta inválida ao carregar as notificações.',
+        });
+      });
+
+      it('normaliza contagem e trata respostas 204', async () => {
+        fetch
+          .mockResolvedValueOnce(response({}))
+          .mockResolvedValueOnce({ ok: true, status: 204 });
+
+        await expect(obterContagemNaoLidas()).resolves.toBe(0);
+        await expect(
+          marcarNotificacaoComoLida('id/1')
+        ).resolves.toBeUndefined();
+      });
+
+      it('marca individual e em lote, codificando o identificador', async () => {
+        fetch.mockResolvedValueOnce(
+          response({ id: 'id/1', tipo: 'SISTEMA', lida: true })
+        );
+        await expect(marcarNotificacaoComoLida('id/1')).resolves.toMatchObject({
+          id: 'id/1',
+          lida: true,
+        });
+        expect(fetch).toHaveBeenCalledWith(
+          `${API_URL}/notificacoes/id%2F1/lida`,
+          expect.objectContaining({ method: 'PATCH' })
+        );
+
+        fetch.mockResolvedValueOnce(response({ alteradas: 3 }));
+        await expect(marcarTodasNotificacoesComoLidas()).resolves.toEqual({
+          alteradas: 3,
+        });
+      });
+
+      it('expõe a classe de erro com mensagem padrão', () => {
+        expect(new NotificacoesApiError(418)).toMatchObject({
+          name: 'NotificacoesApiError',
+          status: 418,
+          message: 'Erro HTTP 418',
+        });
+      });
     });
 
     it('produtividade: informa sessão expirada sem token e falha de rede', async () => {

@@ -45,39 +45,8 @@
   gap: 24px;
 }
 
-.notificationBtn {
+.notificationContainer {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  color: #374151;
-  background: transparent;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.notificationBtn:hover {
-  background-color: #f3f4f6;
-}
-
-.badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  font-size: 10px;
-  font-weight: bold;
-  color: white;
-  background-color: #b91c1c;
-  border: 2px solid #f9f9f8;
-  border-radius: 50%;
 }
 
 .divider {
@@ -267,7 +236,7 @@
     justify-content: flex-end;
   }
 
-  .notificationBtn {
+  .notificationContainer {
     flex-shrink: 0;
   }
 

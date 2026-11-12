@@ -2,6 +2,31 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import Navbar from './navbar';
 
+const notificationHook = vi.hoisted(() => ({
+  useNotificacoes: vi.fn(() => ({
+    naoLidasCount: 2,
+    notificacoes: [],
+    isLoading: false,
+    isLoadingMore: false,
+    hasMore: false,
+    apenasNaoLidas: false,
+    error: '',
+    alternarFiltro: vi.fn(),
+    carregarMais: vi.fn(),
+    recarregar: vi.fn(),
+    marcarComoLida: vi.fn(),
+    marcarTodasComoLidas: vi.fn(),
+  })),
+}));
+
+vi.mock('@/hooks/useNotificacoes', () => ({
+  useNotificacoes: notificationHook.useNotificacoes,
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 vi.mock('@/utils/authSession', () => ({
   getCurrentUser: vi.fn(() => ({
     nome: 'Alexandre Carreiro',

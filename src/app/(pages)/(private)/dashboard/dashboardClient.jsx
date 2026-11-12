@@ -10,6 +10,7 @@ import ProcessDetailsModal from '@/components/features/processos/ProcessDetailsM
 import ProcessSummary from '@/components/features/processos/ProcessSummary/ProcessSummary';
 import UpcomingDeadlines from '@/components/features/processos/UpcomingDeadlines/UpcomingDeadlines';
 import { useKanbanAtividades } from '@/hooks/useKanbanAtividades';
+import { subscribeAlertasConfig } from '@/constants/preferencias';
 import { getSavedDashboardPrefs } from '@/hooks/useAjustes';
 import { usePrazosProximos } from '@/hooks/usePrazosProximos';
 import { useProcessosCriticos } from '@/hooks/useProcessosCriticos';
@@ -41,7 +42,7 @@ export default function DashboardClient() {
   const canEdit = isUserAdmin || permissions.gerenciar_processos === true;
 
   const dashboardPrefsJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeAlertasConfig,
     () => {
       const prefs = getSavedDashboardPrefs();
       const user = getCurrentUser();
