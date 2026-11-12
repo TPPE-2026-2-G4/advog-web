@@ -4,6 +4,7 @@
 }
 
 .header {
+  position: relative; /* referência do painel de notificações no celular */
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -238,6 +239,8 @@
 
   .notificationContainer {
     flex-shrink: 0;
+    /* O painel de notificações se posiciona em relação à barra inteira, não ao sino. */
+    position: static;
   }
 
   .divider {

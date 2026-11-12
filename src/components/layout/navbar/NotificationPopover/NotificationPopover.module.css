@@ -92,7 +92,10 @@
 
 .content {
   max-height: 430px;
+  max-height: min(430px, calc(100vh - 210px));
+  max-height: min(430px, calc(100dvh - 210px));
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .status,
@@ -220,8 +223,56 @@
   color: #6b7280;
 }
 
-@media (max-width: 400px) {
+/* Celular e tablet pequeno: o sino fica no meio da barra, então o painel não pode ficar
+   preso à direita dele (saía da tela). Ele passa a ocupar a largura da barra superior. */
+@media (max-width: 768px) {
   .popover {
-    right: -44px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+  }
+
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  .closeButton {
+    width: 40px;
+    height: 40px;
+  }
+
+  .filterButton,
+  .markAllButton {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .itemButton {
+    padding: 14px 6px 14px 14px;
+  }
+
+  .itemTitle {
+    display: -webkit-box;
+    font-size: 14px;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .itemMessage {
+    font-size: 13px;
+    -webkit-line-clamp: 3;
+  }
+
+  .itemTime {
+    font-size: 12px;
+  }
+
+  .readButton {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    margin: 8px 6px 0 0;
   }
 }
