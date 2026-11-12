@@ -44,6 +44,23 @@ describe('serviço de notificações', () => {
     );
   });
 
+  it('inclui o tipo quando o filtro é informado', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [],
+      })
+    );
+
+    await expect(listarNotificacoes({ tipo: 'ATRASO' })).resolves.toEqual([]);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('&tipo=ATRASO'),
+      expect.any(Object)
+    );
+  });
+
   it('não requisita sem token de acesso', async () => {
     sessionStorage.clear();
 
@@ -155,6 +172,30 @@ describe('serviço de notificações', () => {
     );
 
     await expect(marcarTodasNotificacoesComoLidas()).resolves.toBeUndefined();
+  });
+
+  it('retorna indefinido quando a marcação individual responde 204', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, status: 204 })
+    );
+
+    await expect(marcarNotificacaoComoLida('1')).resolves.toBeUndefined();
+  });
+
+  it('usa a mensagem padrão quando o corpo de erro não pode ser lido', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: vi.fn().mockRejectedValue(new Error('JSON inválido')),
+      })
+    );
+
+    await expect(obterContagemNaoLidas()).rejects.toThrow(
+      'Não foi possível carregar a contagem de notificações.'
+    );
   });
 
   it('mantém a classe de erro exportada para decisões do hook', () => {

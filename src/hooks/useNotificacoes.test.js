@@ -113,4 +113,94 @@ describe('useNotificacoes', () => {
     await waitFor(() => expect(result.current.notificacoes).toEqual([]));
     expect(marcarTodasNotificacoesComoLidas).toHaveBeenCalled();
   });
+
+  it('recarrega e alterna o filtro', async () => {
+    const { result } = renderHook(() => useNotificacoes());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => result.current.recarregar());
+    await waitFor(() => expect(listarNotificacoes).toHaveBeenCalledTimes(2));
+
+    await act(async () => result.current.alternarFiltro());
+    await waitFor(() =>
+      expect(listarNotificacoes).toHaveBeenLastCalledWith({
+        apenasNaoLidas: true,
+        limite: 20,
+        offset: 0,
+      })
+    );
+    expect(result.current.apenasNaoLidas).toBe(true);
+  });
+
+  it('sincroniza a contagem quando a aba fica visível e recarrega ao aumentar', async () => {
+    const { result } = renderHook(() => useNotificacoes());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.naoLidasCount).toBe(1);
+
+    Object.defineProperty(document, 'hidden', {
+      configurable: true,
+      value: false,
+    });
+    obterContagemNaoLidas.mockResolvedValue(2);
+    await act(async () => {
+      await Promise.resolve();
+      document.dispatchEvent(new Event('visibilitychange'));
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(result.current.naoLidasCount).toBe(2));
+    await waitFor(() => expect(listarNotificacoes).toHaveBeenCalledTimes(2));
+  });
+
+  it('mantém o estado quando o polling está oculto ou falha', async () => {
+    const { result } = renderHook(() => useNotificacoes());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    Object.defineProperty(document, 'hidden', {
+      configurable: true,
+      value: true,
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await act(async () => {});
+
+    expect(result.current.naoLidasCount).toBe(1);
+    expect(obterContagemNaoLidas).toHaveBeenCalledTimes(1);
+
+    Object.defineProperty(document, 'hidden', {
+      configurable: true,
+      value: false,
+    });
+    obterContagemNaoLidas.mockRejectedValueOnce(new Error('offline'));
+    document.dispatchEvent(new Event('visibilitychange'));
+    await act(async () => {});
+    expect(result.current.naoLidasCount).toBe(1);
+  });
+
+  it('exibe erro padrão quando falha ao carregar mais', async () => {
+    listarNotificacoes
+      .mockResolvedValueOnce(
+        Array.from({ length: 20 }, (_, index) => item(String(index + 1)))
+      )
+      .mockRejectedValueOnce(new Error('Falha de paginação'));
+    const { result } = renderHook(() => useNotificacoes());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => result.current.carregarMais());
+
+    expect(result.current.error).toBe('Falha de paginação');
+    expect(result.current.isLoadingMore).toBe(false);
+  });
+
+  it('restaura a lista quando marcar todas falha', async () => {
+    marcarTodasNotificacoesComoLidas.mockRejectedValueOnce(
+      new Error('Falha em lote')
+    );
+    const { result } = renderHook(() => useNotificacoes());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => result.current.marcarTodasComoLidas());
+
+    expect(result.current.error).toBe('Falha em lote');
+    expect(result.current.notificacoes).toEqual([item('1')]);
+    expect(result.current.naoLidasCount).toBe(1);
+  });
 });

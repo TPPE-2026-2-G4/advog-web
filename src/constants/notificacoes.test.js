@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { obterConfigTipo } from './notificacoes';
+import { notificacoesKeys, obterConfigTipo } from './notificacoes';
 
 describe('configuração visual de notificações', () => {
   it('deriva a hierarquia de urgência pelos tipos de vencimento', () => {
@@ -12,5 +12,16 @@ describe('configuração visual de notificações', () => {
 
   it('faz fallback visual para tipo desconhecido', () => {
     expect(obterConfigTipo('TIPO_NOVO')).toEqual(obterConfigTipo('SISTEMA'));
+  });
+
+  it('cria as chaves estáveis para consultas de notificações', () => {
+    expect(notificacoesKeys.all).toEqual(['notificacoes']);
+    expect(notificacoesKeys.contagem()).toEqual(['notificacoes', 'contagem']);
+    expect(notificacoesKeys.listas()).toEqual(['notificacoes', 'lista']);
+    expect(notificacoesKeys.lista({ apenasNaoLidas: true })).toEqual([
+      'notificacoes',
+      'lista',
+      { apenasNaoLidas: true },
+    ]);
   });
 });

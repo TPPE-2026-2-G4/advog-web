@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import NotificationPopover from './NotificationPopover';
 
@@ -63,6 +69,17 @@ describe('NotificationPopover', () => {
     });
   });
 
+  it('permite marcar diretamente um item não lido', () => {
+    const props = createProps();
+    render(<NotificationPopover {...props} />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Marcar "Prazo próximo" como lida' })
+    );
+
+    expect(props.onMarkRead).toHaveBeenCalledWith('notification-1');
+  });
+
   it('não navega para destinos externos', async () => {
     const props = createProps({
       notifications: [{ ...notification, link_destino: 'javascript:alert(1)' }],
@@ -75,6 +92,45 @@ describe('NotificationPopover', () => {
 
     await waitFor(() => expect(props.onClose).toHaveBeenCalled());
     expect(props.onNavigate).not.toHaveBeenCalled();
+  });
+
+  it('não marca novamente uma notificação já lida', async () => {
+    const props = createProps({
+      notifications: [{ ...notification, lida: true }],
+    });
+    render(<NotificationPopover {...props} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Prazo próximo/i }));
+
+    await waitFor(() => expect(props.onClose).toHaveBeenCalled());
+    expect(props.onMarkRead).not.toHaveBeenCalled();
+    expect(props.onNavigate).toHaveBeenCalledWith('/processos/1');
+  });
+
+  it('notifica o carregamento adicional quando o sentinela fica visível', async () => {
+    let callback;
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(observerCallback) {
+          callback = observerCallback;
+        }
+
+        observe() {}
+        disconnect() {}
+      }
+    );
+    const props = createProps({ hasMore: true });
+    render(<NotificationPopover {...props} />);
+
+    await act(async () => callback([{ isIntersecting: true }]));
+    expect(props.onLoadMore).toHaveBeenCalledTimes(1);
+  });
+
+  it('mostra o indicador de carregamento da próxima página', () => {
+    render(<NotificationPopover {...createProps({ isLoadingMore: true })} />);
+
+    expect(screen.getAllByRole('status')).toHaveLength(1);
   });
 
   it('exibe loading, erro com retry e estado vazio', () => {

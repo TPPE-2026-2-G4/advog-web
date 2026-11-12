@@ -48,6 +48,16 @@ describe('normalização de notificações', () => {
     expect(formatarDataRelativa('2026-11-11T11:57:00Z', agora)).toBe(
       'há 3 minutos'
     );
+    expect(formatarDataRelativa('2026-11-12T12:00:00Z', agora)).toBe(
+      'em 1 dia'
+    );
+    expect(formatarDataRelativa('2025-11-11T12:00:00Z', agora)).toBe(
+      'há 1 ano'
+    );
+    expect(formatarDataRelativa('invalida', agora)).toBe('data desconhecida');
+    expect(formatarDataCompleta('2026-11-11T12:00:00Z')).toContain(
+      '11 de nov.'
+    );
     expect(formatarDataCompleta('invalida')).toBe('Data desconhecida');
   });
 });
