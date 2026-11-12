@@ -29,6 +29,14 @@ import {
   formatarSumarioEquipe,
   obterProgressoEquipe,
 } from './produtividadeEquipe';
+import {
+  formatarBadgeContagem,
+  formatarDataCompleta,
+  formatarDataRelativa,
+  isTipoNotificacao,
+  normalizarNotificacao,
+  resolverLinkDestino,
+} from './notificacao';
 
 const buildToken = (payload) => {
   const body = btoa(JSON.stringify(payload))
@@ -365,6 +373,80 @@ describe('utilitários (integração entre módulos)', () => {
         processo_id: 8,
         cliente: 'Cliente #4',
         responsavel: 'Responsável #3',
+      });
+    });
+
+    describe('notificações', () => {
+      it('normaliza dados incompletos e reconhece todos os tipos válidos', () => {
+        expect(
+          [
+            'ATRIBUICAO',
+            'VENCIMENTO_7D',
+            'VENCIMENTO_1D',
+            'VENCIMENTO_HOJE',
+            'ATRASO',
+            'NOVO_CLIENTE',
+            'STATUS_PROCESSO',
+            'SISTEMA',
+          ].every(isTipoNotificacao)
+        ).toBe(true);
+        expect(isTipoNotificacao()).toBe(false);
+        expect(normalizarNotificacao()).toEqual({
+          tipo: 'SISTEMA',
+          link_destino: null,
+        });
+      });
+
+      it.each([
+        ['/processos/1', '/processos/1'],
+        ['/dashboard?aba=1', '/dashboard?aba=1'],
+        ['//externo.test', null],
+        ['/\\externo.test', null],
+        ['https://externo.test', null],
+        ['javascript:alert(1)', null],
+        ['', null],
+        [null, null],
+        [42, null],
+      ])('valida destino %s', (value, expected) => {
+        expect(resolverLinkDestino(value)).toBe(expected);
+      });
+
+      it.each([
+        [undefined, ''],
+        [null, ''],
+        [-1, ''],
+        [0, ''],
+        [1.9, '1'],
+        [99, '99'],
+        [100, '99+'],
+        [Infinity, ''],
+        ['texto', ''],
+      ])('formata badge %s', (value, expected) => {
+        expect(formatarBadgeContagem(value)).toBe(expected);
+      });
+
+      it('formata todas as faixas de tempo e entradas inválidas', () => {
+        const agora = new Date('2026-11-12T12:00:00Z');
+        const valores = [
+          '2026-11-12T11:59:30Z',
+          '2026-11-12T11:55:00Z',
+          '2026-11-12T11:00:00Z',
+          '2026-11-11T12:00:00Z',
+          '2026-10-12T12:00:00Z',
+          '2025-11-12T12:00:00Z',
+          '2026-11-13T12:00:00Z',
+        ];
+
+        for (const valor of valores) {
+          expect(formatarDataRelativa(valor, agora)).not.toBe(
+            'data desconhecida'
+          );
+        }
+        expect(formatarDataRelativa('não é data', agora)).toBe(
+          'data desconhecida'
+        );
+        expect(formatarDataCompleta('não é data')).toBe('Data desconhecida');
+        expect(formatarDataCompleta('2026-11-12T12:00:00Z')).toContain('2026');
       });
     });
   });
