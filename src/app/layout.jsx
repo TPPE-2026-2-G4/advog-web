@@ -74,7 +74,7 @@ export default function RootLayout({ children }) {
                   var css = '';
                   if (cp) {
                     css += ':root, [class*="layout"] { --cor-primaria: ' + cp + ' !important; --cor-primaria-texto: ' + getContrast(cp) + ' !important; } ';
-                    css += 'aside, [class*="sidebar"] { background-color: ' + cp + ' !important; } ';
+                    css += 'aside, [data-testid="sidebar"] { background-color: ' + cp + ' !important; } ';
                   }
                   if (cs) {
                     css += ':root, [class*="layout"] { --cor-secundaria: ' + cs + ' !important; --cor-secundaria-texto: ' + getContrast(cs) + ' !important; } ';

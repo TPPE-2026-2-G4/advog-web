@@ -67,14 +67,18 @@
 @media (max-width: 768px) {
   .statsGrid {
     grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 20px;
   }
 
   .headerRow {
+    flex-direction: column;
     align-items: stretch;
   }
 
   .addButton {
     justify-content: center;
     width: 100%;
+    min-height: 42px;
   }
 }

@@ -99,8 +99,11 @@ export default function UserMenu() {
     <>
       <div className={styles.userMenuContainer} ref={menuRef}>
         <button
+          type="button"
           onClick={() => setIsOpen(!isOpen)}
           className={styles.triggerBtn}
+          aria-expanded={isOpen}
+          aria-haspopup="menu"
         >
           <div className={styles.avatar}>
             {profileImage ? (
@@ -111,9 +114,12 @@ export default function UserMenu() {
           </div>
           <div className={styles.userInfo}>
             <p className={styles.userName}>{shortName}</p>
-            <p className={styles.userRole}>{userRole}</p>
+            {userRole && <p className={styles.userRole}>{userRole}</p>}
           </div>
-          <ChevronDown size={16} className={styles.chevron} />
+          <ChevronDown
+            size={16}
+            className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}
+          />
         </button>
 
         {isOpen && (

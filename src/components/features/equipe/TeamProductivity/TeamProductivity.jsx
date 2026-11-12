@@ -50,8 +50,10 @@ export default function ProdutividadeEquipe({ canView = false }) {
 
               return (
                 <tr key={currentSummary.funcionario_id}>
-                  <th scope="row">{currentSummary.nome}</th>
-                  <td className={styles.numericColumn}>
+                  <th scope="row" data-label="Responsável">
+                    {currentSummary.nome}
+                  </th>
+                  <td className={styles.numericColumn} data-label="Finalizadas">
                     {!isLoading && currentSummary.finalizadas > 0 ? (
                       <span
                         className={`${styles.badge} ${styles.badgeSuccess}`}
@@ -62,7 +64,10 @@ export default function ProdutividadeEquipe({ canView = false }) {
                       <span className={styles.muted}>—</span>
                     )}
                   </td>
-                  <td className={styles.numericColumn}>
+                  <td
+                    className={styles.numericColumn}
+                    data-label="Em andamento"
+                  >
                     {!isLoading && currentSummary.em_andamento > 0 ? (
                       <span className={`${styles.badge} ${styles.badgeInfo}`}>
                         {currentSummary.em_andamento}
@@ -71,7 +76,7 @@ export default function ProdutividadeEquipe({ canView = false }) {
                       <span className={styles.muted}>—</span>
                     )}
                   </td>
-                  <td className={styles.numericColumn}>
+                  <td className={styles.numericColumn} data-label="A fazer">
                     {!isLoading && currentSummary.a_fazer > 0 ? (
                       <span
                         className={`${styles.badge} ${styles.badgeWarning}`}
@@ -82,7 +87,7 @@ export default function ProdutividadeEquipe({ canView = false }) {
                       <span className={styles.muted}>—</span>
                     )}
                   </td>
-                  <td className={styles.numericColumn}>
+                  <td className={styles.numericColumn} data-label="Atrasadas">
                     {!isLoading && currentSummary.atrasadas > 0 ? (
                       <span className={`${styles.badge} ${styles.badgeDanger}`}>
                         {currentSummary.atrasadas}
@@ -91,7 +96,7 @@ export default function ProdutividadeEquipe({ canView = false }) {
                       <span className={styles.muted}>—</span>
                     )}
                   </td>
-                  <td className={styles.numericColumn}>
+                  <td className={styles.numericColumn} data-label="Progresso">
                     <div className={styles.progressCell}>
                       <span className={styles.progressTrack}>
                         <span

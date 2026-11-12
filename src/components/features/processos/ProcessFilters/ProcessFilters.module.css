@@ -108,6 +108,19 @@
   white-space: nowrap;
 }
 
+.autocompleteFilterWrapper {
+  min-width: 210px;
+  max-width: 250px;
+  flex: 1 1 210px;
+}
+
+.autocompleteFilterWrapper input {
+  height: 38px;
+  padding: 8px 36px 8px 16px;
+  border-color: #d1d5db;
+  border-radius: 9999px;
+}
+
 .pillInput:focus-visible,
 .pillSelect:focus-visible {
   border-color: #c1a077;
@@ -150,7 +163,103 @@
 }
 
 @media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  }
+
   .searchContainer {
+    flex: none;
+    width: 100%;
+    min-width: 0;
     max-width: 100%;
+  }
+
+  .searchInput {
+    height: 40px;
+  }
+
+  .filtersContainer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+  }
+
+  .dateGroup {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+  }
+
+  .inlineLabel {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    min-width: 0;
+    font-size: 12px;
+  }
+
+  .pillInput,
+  .pillSelect {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 8px 12px;
+  }
+
+  .autocompleteFilterWrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .autocompleteFilterWrapper input {
+    height: 40px;
+    padding: 8px 36px 8px 12px;
+  }
+
+  .clearButton {
+    grid-column: 1 / -1;
+    justify-content: center;
+    width: 100%;
+    height: 40px;
+  }
+
+  .dateError {
+    margin-top: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .filtersContainer,
+  .dateGroup {
+    grid-template-columns: 1fr;
+  }
+
+  .inlineLabel {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .labelText {
+    min-width: 30px;
+  }
+
+  .pillInput {
+    flex: 1;
   }
 }

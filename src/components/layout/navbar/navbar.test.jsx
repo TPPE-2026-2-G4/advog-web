@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import Navbar from './navbar';
 
 vi.mock('@/utils/authSession', () => ({
@@ -41,5 +41,30 @@ describe('Navbar', () => {
 
     expect(await screen.findByText('Alexandre C.')).toBeInTheDocument();
     expect(screen.queryByText('Alexandre Carreiro')).not.toBeInTheDocument();
+  });
+
+  it('aciona o callback ao clicar no botão do menu mobile e atualiza aria-expanded', () => {
+    const onToggleMobileMenu = vi.fn();
+    const { rerender } = render(
+      <Navbar
+        isMobileMenuOpen={false}
+        onToggleMobileMenu={onToggleMobileMenu}
+      />
+    );
+
+    const openBtn = screen.getByRole('button', {
+      name: 'Abrir menu de navegação',
+    });
+    expect(openBtn).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(openBtn);
+    expect(onToggleMobileMenu).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <Navbar isMobileMenuOpen onToggleMobileMenu={onToggleMobileMenu} />
+    );
+    const closeBtn = screen.getByRole('button', {
+      name: 'Fechar menu de navegação',
+    });
+    expect(closeBtn).toHaveAttribute('aria-expanded', 'true');
   });
 });

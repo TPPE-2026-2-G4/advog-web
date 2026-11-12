@@ -435,6 +435,7 @@ export default function AtividadesClient() {
       <ActivityFilters
         filters={filters}
         responsaveis={responsaveisOptions}
+        funcionarios={funcionarios}
         onFilterChange={setFilter}
         onClear={clearFilters}
       />

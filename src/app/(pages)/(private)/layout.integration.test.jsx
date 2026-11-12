@@ -535,4 +535,43 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
       expect(getAccessToken()).toBeNull();
     });
   });
+
+  it('abre e fecha o menu lateral mobile pela Navbar (hambúrguer, Escape, backdrop e link)', () => {
+    sessionStorage.setItem('access_token', validToken());
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({ nome: 'Dra. Camila', email: 'camila@advog.com' })
+    );
+
+    render(
+      <AuthProvider>
+        <PrivateLayout>
+          <div>Conteúdo mobile</div>
+        </PrivateLayout>
+      </AuthProvider>
+    );
+
+    const toggleBtn = screen.getByRole('button', {
+      name: 'Abrir menu de navegação',
+    });
+    expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('sidebar-backdrop')).not.toBeInTheDocument();
+
+    fireEvent.click(toggleBtn);
+    expect(
+      screen.getByRole('button', { name: 'Fechar menu de navegação' })
+    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByTestId('sidebar-backdrop')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('sidebar-backdrop')).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Abrir menu de navegação' })
+    );
+    expect(screen.getByTestId('sidebar-backdrop')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Início' }));
+    expect(screen.queryByTestId('sidebar-backdrop')).not.toBeInTheDocument();
+  });
 });

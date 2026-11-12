@@ -1067,5 +1067,46 @@ describe('Componentes UI do Módulo Site', () => {
 
       expect(screen.queryByText('Nossa Equipe')).not.toBeInTheDocument();
     });
+
+    it('abre e fecha o menu hambúrguer mobile da prévia com links e botão Acessar Painel', () => {
+      render(
+        <PreviewModal
+          isOpen={true}
+          onClose={vi.fn()}
+          formData={{ nomeEscritorio: 'Escritório Teste' }}
+          areas={[
+            { atuacao_id: 1, nome: 'Civil', exibicaoInstitucional: true },
+          ]}
+          team={[
+            {
+              funcionario_id: 1,
+              nome: 'Dra. Ana',
+              exibicaoInstitucional: true,
+            },
+          ]}
+        />
+      );
+
+      expect(
+        screen.queryByTestId('preview-mobile-menu')
+      ).not.toBeInTheDocument();
+
+      const toggleBtn = screen.getByRole('button', {
+        name: 'Abrir menu da prévia',
+      });
+      fireEvent.click(toggleBtn);
+
+      const mobileMenu = screen.getByTestId('preview-mobile-menu');
+      expect(mobileMenu).toBeInTheDocument();
+      expect(mobileMenu).toHaveTextContent('Áreas de Atuação');
+      expect(mobileMenu).toHaveTextContent('Acessar Painel');
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Fechar menu da prévia' })
+      );
+      expect(
+        screen.queryByTestId('preview-mobile-menu')
+      ).not.toBeInTheDocument();
+    });
   });
 });

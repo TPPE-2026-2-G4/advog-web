@@ -89,3 +89,22 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+@media (max-width: 480px) {
+  .header,
+  .body,
+  .footer {
+    padding: 16px;
+  }
+
+  .footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .cancelBtn,
+  .deleteBtn {
+    width: 100%;
+    justify-content: center;
+  }
+}

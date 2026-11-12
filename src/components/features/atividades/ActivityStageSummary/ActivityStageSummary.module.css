@@ -79,8 +79,30 @@
 }
 
 @media (max-width: 768px) {
+  .list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
   .chip {
-    flex: 1 1 calc(50% - 12px);
+    min-width: 0;
+    padding: 10px 12px;
     justify-content: space-between;
+  }
+
+  .label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .errorState {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .retry {
+    width: 100%;
   }
 }

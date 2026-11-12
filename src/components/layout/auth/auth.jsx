@@ -22,6 +22,37 @@ export default function Auth({
   const corPrimariaTexto = getContrastTextColor(corPrimaria);
   const corSecundariaTexto = getContrastTextColor(corSecundaria);
 
+  const renderLogo = ({
+    imgClassName,
+    badgeClassName,
+    imgTestId,
+    badgeTestId,
+    iconSize,
+    decorative = false,
+  }) =>
+    logotipo ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={getImageUrl(logotipo)}
+        alt={decorative ? '' : `Logotipo ${nomeEscritorio}`}
+        aria-hidden={decorative || undefined}
+        className={imgClassName}
+        data-testid={imgTestId}
+      />
+    ) : (
+      <div
+        className={badgeClassName}
+        style={{
+          backgroundColor: corSecundaria,
+          color: corSecundariaTexto,
+        }}
+        aria-hidden={decorative || undefined}
+        data-testid={badgeTestId}
+      >
+        <Scale size={iconSize} />
+      </div>
+    );
+
   return (
     <main
       className={styles.container}
@@ -43,26 +74,13 @@ export default function Auth({
         }}
         data-testid="auth-brand"
       >
-        {logotipo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={getImageUrl(logotipo)}
-            alt={`Logotipo ${nomeEscritorio}`}
-            className={styles.brandLogo}
-            data-testid="auth-logo-img"
-          />
-        ) : (
-          <div
-            className={styles.brandBadge}
-            style={{
-              backgroundColor: corSecundaria,
-              color: corSecundariaTexto,
-            }}
-            data-testid="auth-logo-badge"
-          >
-            <Scale size={32} />
-          </div>
-        )}
+        {renderLogo({
+          imgClassName: styles.brandLogo,
+          badgeClassName: styles.brandBadge,
+          imgTestId: 'auth-logo-img',
+          badgeTestId: 'auth-logo-badge',
+          iconSize: 32,
+        })}
 
         <h1 className={styles.titleBrand} style={{ color: corPrimariaTexto }}>
           {nomeEscritorio}
@@ -73,6 +91,21 @@ export default function Auth({
       </section>
 
       <section className={styles.auth}>
+        <div
+          className={styles.mobileLogo}
+          suppressHydrationWarning
+          data-testid="auth-mobile-logo"
+        >
+          {renderLogo({
+            imgClassName: styles.mobileLogoImg,
+            badgeClassName: styles.mobileLogoBadge,
+            imgTestId: 'auth-mobile-logo-img',
+            badgeTestId: 'auth-mobile-logo-badge',
+            iconSize: 28,
+            decorative: true,
+          })}
+        </div>
+
         <h1 className={styles.titleAuth} style={{ color: corPrimaria }}>
           {title}
         </h1>

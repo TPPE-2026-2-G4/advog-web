@@ -14,9 +14,25 @@ describe('ActivityFilters', () => {
     prazoFim: '',
   };
 
-  it('renderiza os campos vazios e preenche as opções de responsáveis', () => {
+  it('renderiza os campos vazios e preenche as opções de responsáveis com avatar, cargo e nome', () => {
     render(
-      <ActivityFilters filters={emptyFilters} responsaveis={responsaveisMock} />
+      <ActivityFilters
+        filters={emptyFilters}
+        responsaveis={responsaveisMock}
+        funcionarios={[
+          {
+            funcionario_id: 1,
+            nome: 'Ana Paula',
+            cargo: { nome_cargo: 'Advogada' },
+            foto_perfil_url: 'https://exemplo.com/ana.png',
+          },
+          {
+            funcionario_id: 2,
+            nome: 'Alexandre C.',
+            cargo: 'Sócio',
+          },
+        ]}
+      />
     );
 
     const inputBusca = screen.getByPlaceholderText(
@@ -24,19 +40,25 @@ describe('ActivityFilters', () => {
     );
     expect(inputBusca).toHaveValue('');
 
-    const selectResponsavel = screen.getByRole('combobox', {
+    const inputResponsavel = screen.getByRole('combobox', {
       name: 'Filtrar por responsável',
     });
-    expect(selectResponsavel).toHaveValue('');
-    expect(
-      screen.getByRole('option', { name: 'Todos os responsáveis' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('option', { name: 'Ana Paula' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('option', { name: 'Alexandre C.' })
-    ).toBeInTheDocument();
+    expect(inputResponsavel).toHaveValue('');
+    expect(inputResponsavel).toHaveAttribute(
+      'placeholder',
+      'Todos os responsáveis'
+    );
+
+    fireEvent.focus(inputResponsavel);
+    expect(screen.getByText('Ana Paula')).toBeInTheDocument();
+    expect(screen.getByText('Advogada')).toBeInTheDocument();
+    expect(screen.getByAltText('Foto de Ana Paula')).toHaveAttribute(
+      'src',
+      'https://exemplo.com/ana.png'
+    );
+    expect(screen.getByText('Alexandre C.')).toBeInTheDocument();
+    expect(screen.getByText('Sócio')).toBeInTheDocument();
+    expect(screen.getByText('AC')).toBeInTheDocument();
 
     const inputData = screen.getByLabelText('Prazo até');
     expect(inputData).toHaveValue('');

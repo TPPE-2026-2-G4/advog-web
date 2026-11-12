@@ -1381,11 +1381,12 @@ describe('Processos Frontend Integration (ProcessosClient + useProcessos + Modal
     it('exporta em Excel os processos filtrados na tela e baixa o arquivo', async () => {
       renderIntegration();
 
+      const respCombo = screen.getByRole('combobox', {
+        name: /filtrar por responsável/i,
+      });
+      fireEvent.focus(respCombo);
       await screen.findByRole('option', { name: /Carlos Eduardo/ });
-      fireEvent.change(
-        screen.getByRole('combobox', { name: /filtrar por responsável/i }),
-        { target: { value: '5' } }
-      );
+      fireEvent.change(respCombo, { target: { value: '5' } });
       fireEvent.change(
         screen.getByRole('combobox', { name: /filtrar por status/i }),
         { target: { value: 'Arquivado' } }

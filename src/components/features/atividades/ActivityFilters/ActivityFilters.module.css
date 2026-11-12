@@ -77,6 +77,19 @@
   box-shadow: 0 0 0 2px rgba(193, 160, 119, 0.15);
 }
 
+.autocompleteFilterWrapper {
+  min-width: 220px;
+  max-width: 260px;
+  flex: 1 1 220px;
+}
+
+.autocompleteFilterWrapper input {
+  height: 38px;
+  padding: 8px 36px 8px 16px;
+  border-color: #d1d5db;
+  border-radius: 9999px;
+}
+
 .dateGroup {
   display: inline-flex;
   align-items: center;
@@ -137,13 +150,64 @@
 }
 
 @media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px;
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  }
+
   .searchContainer {
+    flex: none;
+    width: 100%;
     max-width: 100%;
-    flex: 1 1 100%;
+  }
+
+  .searchInput {
+    height: 40px;
   }
 
   .filtersGroup {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
     width: 100%;
-    justify-content: flex-start;
+  }
+
+  .autocompleteFilterWrapper {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .autocompleteFilterWrapper input {
+    height: 40px;
+    padding: 8px 36px 8px 12px;
+  }
+
+  .dateGroup {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .pillDate {
+    flex: 1;
+    min-width: 0;
+    height: 40px;
+    padding: 8px 12px;
+  }
+
+  .clearButton {
+    width: 100%;
+    height: 40px;
+    justify-content: center;
   }
 }

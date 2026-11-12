@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect } from 'react';
-import { Scale, X, Phone, Mail, MapPin } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Scale, X, Menu, Phone, Mail, MapPin } from 'lucide-react';
 import { getLawyerInitials, formatOab } from '@/utils/funcionario';
 import {
   getImageUrl,
@@ -19,9 +19,19 @@ export default function PreviewModal({
   team = [],
   areas = [],
 }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleClose = () => {
+    setIsMobileMenuOpen(false);
+    onClose?.();
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+        onClose?.();
+      }
     };
 
     if (isOpen) {
@@ -62,10 +72,18 @@ export default function PreviewModal({
     formData.sobreEquipe ||
     'Profissionais qualificados e comprometidos com a excelência jurídica.';
 
+  const navLinks = [
+    'Início',
+    ...(visibleAreas.length > 0 ? ['Áreas de Atuação'] : []),
+    'Sobre',
+    ...(visibleTeam.length > 0 ? ['Equipe'] : []),
+    'Contato',
+  ];
+
   return (
     <div
       className={styles.modalOverlay}
-      onClick={onClose}
+      onClick={handleClose}
       data-testid="preview-modal-overlay"
     >
       <div
@@ -90,7 +108,7 @@ export default function PreviewModal({
           <button
             type="button"
             className={styles.modalCloseBtn}
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Fechar prévia"
           >
             <X size={18} />
@@ -113,49 +131,96 @@ export default function PreviewModal({
             style={{ backgroundColor: corPrimaria }}
             data-testid="preview-navbar"
           >
-            <div className={styles.previewNavBrand}>
-              {formData.logotipo ? (
-                <img
-                  src={getImageUrl(formData.logotipo)}
-                  alt={nomeEscritorio}
-                  className={styles.previewLogoImg}
-                />
-              ) : (
-                <div
-                  className={styles.previewLogoBadge}
-                  style={{ backgroundColor: corSecundaria }}
-                >
-                  <Scale size={18} color={corPrimaria} />
-                </div>
-              )}
-              <span className={styles.previewBrandTitle}>{nomeEscritorio}</span>
+            <div className={styles.previewNavInner}>
+              <div className={styles.previewNavBrand}>
+                {formData.logotipo ? (
+                  <img
+                    src={getImageUrl(formData.logotipo)}
+                    alt={nomeEscritorio}
+                    className={styles.previewLogoImg}
+                  />
+                ) : (
+                  <div
+                    className={styles.previewLogoBadge}
+                    style={{ backgroundColor: corSecundaria }}
+                  >
+                    <Scale size={18} color={corPrimaria} />
+                  </div>
+                )}
+                <span className={styles.previewBrandTitle}>
+                  {nomeEscritorio}
+                </span>
+              </div>
+
+              <nav
+                className={styles.previewNavLinks}
+                aria-label="Navegação da prévia"
+              >
+                {navLinks.map((label) => (
+                  <span key={label} className={styles.previewNavLink}>
+                    {label === 'Áreas de Atuação' ? 'Áreas' : label}
+                  </span>
+                ))}
+              </nav>
+
+              <button
+                type="button"
+                className={styles.previewNavBtn}
+                style={{
+                  backgroundColor: corSecundaria,
+                  color: corSecundariaTexto,
+                }}
+              >
+                Acessar Painel
+              </button>
+
+              <button
+                type="button"
+                className={styles.previewMobileToggle}
+                onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+                aria-expanded={isMobileMenuOpen}
+                aria-label={
+                  isMobileMenuOpen
+                    ? 'Fechar menu da prévia'
+                    : 'Abrir menu da prévia'
+                }
+                style={{ color: '#ffffff' }}
+              >
+                {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+              </button>
             </div>
 
-            <nav
-              className={styles.previewNavLinks}
-              aria-label="Navegação da prévia"
-            >
-              <span className={styles.previewNavLink}>Início</span>
-              {visibleAreas.length > 0 && (
-                <span className={styles.previewNavLink}>Áreas</span>
-              )}
-              <span className={styles.previewNavLink}>Sobre</span>
-              {visibleTeam.length > 0 && (
-                <span className={styles.previewNavLink}>Equipe</span>
-              )}
-              <span className={styles.previewNavLink}>Contato</span>
-            </nav>
-
-            <button
-              type="button"
-              className={styles.previewNavBtn}
-              style={{
-                backgroundColor: corSecundaria,
-                color: corSecundariaTexto,
-              }}
-            >
-              Acessar Painel
-            </button>
+            {isMobileMenuOpen && (
+              <div
+                className={styles.previewMobileMenu}
+                style={{ backgroundColor: corPrimaria }}
+                data-testid="preview-mobile-menu"
+              >
+                <ul className={styles.previewMobileNavList}>
+                  {navLinks.map((label) => (
+                    <li key={label} className={styles.previewMobileNavItem}>
+                      <span
+                        className={styles.previewMobileNavLink}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        {label}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  className={styles.previewMobileActionBtn}
+                  style={{
+                    backgroundColor: corSecundaria,
+                    color: corSecundariaTexto,
+                  }}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Acessar Painel
+                </button>
+              </div>
+            )}
           </header>
 
           {/* Hero Section */}

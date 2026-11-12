@@ -105,7 +105,7 @@ export default function ClientTable({
                   className={styles.tr}
                   data-testid={`cliente-row-${cliente.cliente_id || cliente.id}`}
                 >
-                  <td className={styles.td}>
+                  <td className={styles.td} data-label="Cliente">
                     <div className={styles.clientCol}>
                       <div className={styles.avatar}>
                         {obterIniciais(cliente.nome)}
@@ -123,7 +123,7 @@ export default function ClientTable({
                     </div>
                   </td>
 
-                  <td className={styles.td}>
+                  <td className={styles.td} data-label="Contato">
                     <div className={styles.contactCol}>
                       {cliente.telefone && (
                         <div className={styles.contactItem}>
@@ -140,7 +140,7 @@ export default function ClientTable({
                     </div>
                   </td>
 
-                  <td className={styles.td}>
+                  <td className={styles.td} data-label="Responsável">
                     {responsavelNome && responsavelNome !== 'Não atribuído' ? (
                       <div className={styles.responsibleCell}>
                         <div className={styles.responsibleAvatar}>
@@ -177,19 +177,19 @@ export default function ClientTable({
                     )}
                   </td>
 
-                  <td className={styles.td}>
+                  <td className={styles.td} data-label="Última Interação">
                     <span className={styles.ultimaInteracao}>
                       {formatarDataInteracao(cliente.ultima_interacao)}
                     </span>
                   </td>
 
-                  <td className={styles.td}>
+                  <td className={styles.td} data-label="Status">
                     <span className={`${styles.badge} ${badgeClass}`}>
                       {etapa.label}
                     </span>
                   </td>
 
-                  <td className={styles.td}>
+                  <td className={styles.td} data-label="Ações">
                     <div className={styles.actions}>
                       <button
                         type="button"

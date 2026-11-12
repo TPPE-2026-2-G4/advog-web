@@ -77,7 +77,7 @@ function aplicarVariaveisCSS(dados) {
           getContrastTextColor(cp) +
           ' !important; } ';
         css +=
-          'aside, [class*="sidebar"] { background-color: ' +
+          'aside, [data-testid="sidebar"] { background-color: ' +
           cp +
           ' !important; } ';
       }
