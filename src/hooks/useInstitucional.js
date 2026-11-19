@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   DEFAULT_INSTITUCIONAL,
   DEFAULT_EQUIPE_SITE,
@@ -50,6 +50,9 @@ export function useInstitucional(initialData, options = {}) {
       ? options.initialAreas
       : DEFAULT_ATUACOES_SITE
   );
+  const [pendingAreas, setPendingAreas] = useState([]);
+  const [pendingDeletedAreaIds, setPendingDeletedAreaIds] = useState([]);
+  const nextDraftId = useRef(0);
 
   useEffect(() => {
     if (initialData && !initialData.nomeEscritorio) {
@@ -206,19 +209,49 @@ export function useInstitucional(initialData, options = {}) {
           : area
       )
     );
+    setPendingAreas((prevAreas) =>
+      prevAreas.map((area) =>
+        area.atuacao_id === atuacaoId
+          ? { ...area, exibicaoInstitucional: !area.exibicaoInstitucional }
+          : area
+      )
+    );
     setSaveSuccess(false);
     setSaveError('');
   };
 
   const handleCreateArea = async (dados) => {
     setSaveError('');
-    const criada = await criarAtuacao(dados);
-    setAreas((prev) => [...prev, criada]);
-    return criada;
+    const draft = {
+      ...dados,
+      atuacao_id: `draft-${nextDraftId.current++}`,
+      __draft: true,
+    };
+
+    setPendingAreas((prev) => [...prev, draft]);
+    setAreas((prev) => [...prev, draft]);
+    return draft;
   };
 
   const handleUpdateArea = async (atuacaoId, dados) => {
     setSaveError('');
+    const area = areas.find((item) => item.atuacao_id === atuacaoId);
+
+    if (area?.__draft) {
+      const updatedDraft = { ...area, ...dados };
+      setAreas((prev) =>
+        prev.map((item) =>
+          item.atuacao_id === atuacaoId ? updatedDraft : item
+        )
+      );
+      setPendingAreas((prev) =>
+        prev.map((item) =>
+          item.atuacao_id === atuacaoId ? updatedDraft : item
+        )
+      );
+      return updatedDraft;
+    }
+
     const atualizada = await atualizarAtuacao(atuacaoId, dados);
     setAreas((prev) =>
       prev.map((area) => (area.atuacao_id === atuacaoId ? atualizada : area))
@@ -228,14 +261,20 @@ export function useInstitucional(initialData, options = {}) {
 
   const handleDeleteArea = async (atuacaoId) => {
     setSaveError('');
-    try {
-      await excluirAtuacao(atuacaoId);
-      setAreas((prev) => prev.filter((area) => area.atuacao_id !== atuacaoId));
-    } catch (error) {
-      setSaveError(
-        error.message || 'Não foi possível excluir a área de atuação.'
+
+    const area = areas.find((item) => item.atuacao_id === atuacaoId);
+    if (area?.__draft) {
+      setAreas((prev) => prev.filter((item) => item.atuacao_id !== atuacaoId));
+      setPendingAreas((prev) =>
+        prev.filter((item) => item.atuacao_id !== atuacaoId)
       );
+      return;
     }
+
+    setAreas((prev) => prev.filter((area) => area.atuacao_id !== atuacaoId));
+    setPendingDeletedAreaIds((prev) =>
+      prev.includes(atuacaoId) ? prev : [...prev, atuacaoId]
+    );
   };
 
   const handleSave = async () => {
@@ -253,6 +292,41 @@ export function useInstitucional(initialData, options = {}) {
     try {
       const saved = await salvarDadosInstitucionais(formData);
       setFormData(saved);
+
+      let areasToSave = areas;
+      if (pendingAreas.length > 0) {
+        const draftsById = new Map(
+          pendingAreas.map((area) => [area.atuacao_id, area])
+        );
+        const persistedDrafts = await Promise.all(
+          pendingAreas.map(async (draft) => {
+            const { atuacao_id, __draft, ...dados } = draft;
+            const criada = await criarAtuacao(dados);
+            return {
+              ...draftsById.get(atuacao_id),
+              ...criada,
+              __draftId: atuacao_id,
+              __draft: false,
+              exibicaoInstitucional: Boolean(draft.exibicaoInstitucional),
+            };
+          })
+        );
+        const persistedByDraftId = new Map(
+          persistedDrafts.map((area) => [area.__draftId, area])
+        );
+        areasToSave = areas.map((area) =>
+          area.__draft ? persistedByDraftId.get(area.atuacao_id) : area
+        );
+        setAreas(areasToSave);
+        setPendingAreas([]);
+      }
+
+      if (pendingDeletedAreaIds.length > 0) {
+        await Promise.all(
+          pendingDeletedAreaIds.map((atuacaoId) => excluirAtuacao(atuacaoId))
+        );
+        setPendingDeletedAreaIds([]);
+      }
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
@@ -278,9 +352,9 @@ export function useInstitucional(initialData, options = {}) {
         );
       }
 
-      if (areas && areas.length > 0) {
+      if (areasToSave && areasToSave.length > 0) {
         await Promise.allSettled(
-          areas.map((area) =>
+          areasToSave.map((area) =>
             mudarExibicaoAtuacao(
               area.atuacao_id,
               Boolean(area.exibicaoInstitucional)

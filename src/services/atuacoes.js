@@ -97,5 +97,7 @@ export async function excluirAtuacao(atuacaoId) {
     );
   }
 
-  return await response.json();
+  if (response.status === 204) return undefined;
+
+  return await response.json().catch(() => undefined);
 }

@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  experimental: {
+    agentUpgrade: 'security',
+  },
   reactCompiler: true,
   async redirects() {
     return [

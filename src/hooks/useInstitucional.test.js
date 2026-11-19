@@ -456,38 +456,95 @@ describe('useInstitucional', () => {
     });
     expect(result.current.areas[0].exibicaoInstitucional).toBe(false);
 
+    let draft;
+    await act(async () => {
+      draft = await result.current.handleCreateArea({
+        nome: 'Direito Tributário',
+        descricao: 'Impostos',
+      });
+    });
+    expect(result.current.areas).toHaveLength(3);
+    expect(criarAtuacao).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.handleUpdateArea(draft.atuacao_id, {
+        nome: 'Direito Tributário e Fiscal',
+      });
+    });
+    expect(result.current.areas[2].nome).toBe('Direito Tributário e Fiscal');
+    expect(atualizarAtuacao).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.handleDeleteArea(draft.atuacao_id);
+    });
+    expect(result.current.areas).toHaveLength(2);
+    expect(excluirAtuacao).not.toHaveBeenCalled();
+    salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
+    await act(async () => {
+      await result.current.handleSave();
+    });
+    expect(criarAtuacao).not.toHaveBeenCalled();
+    expect(excluirAtuacao).not.toHaveBeenCalled();
+  });
+
+  it('edita uma área já persistida usando o ID da API', async () => {
+    const atualizada = {
+      atuacao_id: 1,
+      nome: 'Direito Civil e Família',
+      descricao: 'Contratos',
+      exibicaoInstitucional: true,
+    };
+    atualizarAtuacao.mockResolvedValueOnce(atualizada);
+    const { result } = renderHook(() => useInstitucional());
+
+    await act(async () => {
+      await result.current.handleUpdateArea(1, {
+        nome: atualizada.nome,
+      });
+    });
+
+    expect(atualizarAtuacao).toHaveBeenCalledWith(1, {
+      nome: atualizada.nome,
+    });
+    expect(result.current.areas[0]).toEqual(atualizada);
+  });
+
+  it('preserva a visibilidade alterada de uma nova área no primeiro salvamento', async () => {
+    salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
     criarAtuacao.mockResolvedValueOnce({
       atuacao_id: 3,
       nome: 'Direito Tributário',
       descricao: 'Impostos',
       exibicaoInstitucional: true,
     });
+    mudarExibicaoAtuacao.mockResolvedValue({});
+
+    const { result } = renderHook(() => useInstitucional());
+
     await act(async () => {
       await result.current.handleCreateArea({
         nome: 'Direito Tributário',
         descricao: 'Impostos',
+        exibicaoInstitucional: true,
       });
     });
-    expect(result.current.areas).toHaveLength(3);
 
-    atualizarAtuacao.mockResolvedValueOnce({
-      atuacao_id: 3,
-      nome: 'Direito Tributário e Fiscal',
+    act(() => {
+      result.current.handleToggleAreaVisibility('draft-0');
+    });
+
+    expect(result.current.areas.at(-1).exibicaoInstitucional).toBe(false);
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(criarAtuacao).toHaveBeenCalledWith({
+      nome: 'Direito Tributário',
       descricao: 'Impostos',
-      exibicaoInstitucional: true,
+      exibicaoInstitucional: false,
     });
-    await act(async () => {
-      await result.current.handleUpdateArea(3, {
-        nome: 'Direito Tributário e Fiscal',
-      });
-    });
-    expect(result.current.areas[2].nome).toBe('Direito Tributário e Fiscal');
-
-    excluirAtuacao.mockResolvedValueOnce({ atuacao_id: 3 });
-    await act(async () => {
-      await result.current.handleDeleteArea(3);
-    });
-    expect(result.current.areas).toHaveLength(2);
+    expect(mudarExibicaoAtuacao).toHaveBeenCalledWith(3, false);
   });
 
   it.each([
@@ -499,21 +556,48 @@ describe('useInstitucional', () => {
     {
       cenario: 'erro sem mensagem explícita',
       erroSimulado: {},
-      mensagemEsperada: 'Não foi possível excluir a área de atuação.',
+      mensagemEsperada: 'Erro ao salvar as configurações.',
     },
   ])(
     'trata erro ao excluir área de atuação ($cenario)',
     async ({ erroSimulado, mensagemEsperada }) => {
       excluirAtuacao.mockRejectedValueOnce(erroSimulado);
+      salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
       const { result } = renderHook(() => useInstitucional());
 
       await act(async () => {
         await result.current.handleDeleteArea(1);
       });
 
+      expect(result.current.saveError).toBe('');
+
+      await act(async () => {
+        await result.current.handleSave();
+      });
+
       expect(result.current.saveError).toBe(mensagemEsperada);
     }
   );
+
+  it('só exclui uma área persistida depois de salvar', async () => {
+    salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
+    excluirAtuacao.mockResolvedValueOnce(undefined);
+
+    const { result } = renderHook(() => useInstitucional());
+
+    await act(async () => {
+      await result.current.handleDeleteArea(1);
+    });
+
+    expect(result.current.areas).toHaveLength(1);
+    expect(excluirAtuacao).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(excluirAtuacao).toHaveBeenCalledWith(1);
+  });
 
   it('sincroniza a visibilidade da equipe e áreas no salvar', async () => {
     salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
