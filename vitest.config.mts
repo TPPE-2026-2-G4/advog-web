@@ -9,8 +9,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-  maxWorkers: 1,
   test: {
+    maxWorkers: 1,
     exclude: [...configDefaults.exclude, 'e2e/**'],
     testTimeout: 30000,
     environment: 'jsdom',

@@ -608,7 +608,7 @@ describe('Integração: Módulo de Personalização do Site', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
     expect(screen.queryByText('Nova área de atuação')).not.toBeInTheDocument();
 
-    // Criar nova área com erro da API primeiro
+    // A criação fica em rascunho até salvar as configurações.
     fireEvent.click(screen.getByRole('button', { name: /nova área/i }));
     fireEvent.change(screen.getByLabelText(/título da área/i), {
       target: { value: 'Direito Trabalhista' },
@@ -616,31 +616,50 @@ describe('Integração: Módulo de Personalização do Site', () => {
     fireEvent.change(screen.getByLabelText(/descrição da área/i), {
       target: { value: 'Defesa trabalhista empresarial' },
     });
-
-    global.fetch.mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      json: async () => ({ detail: 'Área já existe' }),
-    });
-    fireEvent.click(screen.getByRole('button', { name: /adicionar área/i }));
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('Área já existe');
-    });
-
-    // Criar nova área com sucesso
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 201,
-      json: async () => ({
-        atuacao_id: 2,
-        nome: 'Direito Trabalhista',
-        descricao: 'Defesa trabalhista empresarial',
-        exibicaoInstitucional: true,
-      }),
-    });
     fireEvent.click(screen.getByRole('button', { name: /adicionar área/i }));
     await waitFor(() => {
       expect(screen.getByText('Direito Trabalhista')).toBeInTheDocument();
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    // Roteia as respostas para não confundir o salvamento com as áreas.
+    let creationFails = true;
+    let deletionFails = true;
+    global.fetch.mockImplementation(async (url, options = {}) => {
+      if (String(url).endsWith('/atuacoes') && options.method === 'POST') {
+        return {
+          ok: !creationFails,
+          status: creationFails ? 400 : 201,
+          json: async () =>
+            creationFails
+              ? { detail: 'Área já existe' }
+              : { atuacao_id: 2, ...JSON.parse(options.body) },
+        };
+      }
+      if (options.method === 'DELETE') {
+        return {
+          ok: !deletionFails,
+          status: deletionFails ? 500 : 204,
+          json: async () => ({ detail: 'Erro ao remover área' }),
+        };
+      }
+      return { ok: true, status: 200, json: async () => mockInitialData };
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salvar', exact: true })
+    );
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Área já existe');
+    });
+    creationFails = false;
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salvar', exact: true })
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Salvar', exact: true })
+      ).toBeEnabled();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
     // Alternar exibição quando há mais de uma área na lista
@@ -695,31 +714,37 @@ describe('Integração: Módulo de Personalização do Site', () => {
       screen.queryByText('Excluir área de atuação?')
     ).not.toBeInTheDocument();
 
-    // Confirmar exclusão com falha na API (exibe saveError no topo)
+    // A exclusão só chega à API ao salvar; uma falha permite tentar novamente.
     fireEvent.click(screen.getByLabelText('Excluir Direito Trabalhista'));
-    global.fetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => ({ detail: 'Erro ao remover área' }),
-    });
+    global.fetch.mockClear();
     fireEvent.click(screen.getByRole('button', { name: 'Excluir área' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Direito Trabalhista')).not.toBeInTheDocument();
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salvar', exact: true })
+    );
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(
         'Erro ao remover área'
       );
     });
 
-    // Confirmar exclusão com sucesso
-    fireEvent.click(screen.getByLabelText('Excluir Direito Trabalhista'));
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ ok: true }),
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Excluir área' }));
+    deletionFails = false;
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salvar', exact: true })
+    );
     await waitFor(() => {
-      expect(screen.queryByText('Direito Trabalhista')).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Salvar', exact: true })
+      ).toBeEnabled();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/atuacoes\/2$/),
+      expect.objectContaining({ method: 'DELETE' })
+    );
   });
 
   it('altera cores primária e secundária via seletor nativo e input hexadecimal na aba Cores', () => {
