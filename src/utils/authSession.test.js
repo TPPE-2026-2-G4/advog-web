@@ -1,8 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  AUTH_SESSION_EVENT,
   clearAuthSession,
   getAccessToken,
   getCurrentUser,
+  syncCurrentUserMemberRole,
+  syncCurrentUserRolePermissions,
+  syncSessionWithLocalStorage,
 } from './authSession';
 
 describe('authSession', () => {
@@ -172,6 +176,279 @@ describe('authSession', () => {
       expect(() => clearAuthSession()).not.toThrow();
 
       globalThis.window = originalWindow;
+    });
+  });
+
+  describe('sessão única entre abas e validação por sub', () => {
+    const buildJwt = (payload) =>
+      `header.${btoa(JSON.stringify(payload))}.signature`;
+
+    it('descarta usuário armazenado quando sub numérico no JWT diverge de funcionario_id', () => {
+      sessionStorage.setItem(
+        'access_token',
+        buildJwt({ sub: '9', nome: 'Davi' })
+      );
+      sessionStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 1,
+          email: 'admin@advog.com',
+          nome: 'Administrador',
+        })
+      );
+
+      expect(getCurrentUser()).toBeNull();
+      expect(sessionStorage.getItem('current_user')).toBeNull();
+    });
+
+    it('descarta usuário armazenado quando sub é um e-mail diferente do usuário salvo', () => {
+      sessionStorage.setItem(
+        'access_token',
+        buildJwt({ sub: 'davi@carreiro.adv.br' })
+      );
+      sessionStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 1,
+          email: 'admin@carreiro.adv.br',
+          nome: 'Administrador',
+        })
+      );
+
+      const user = getCurrentUser();
+      expect(user.email).toBe('davi@carreiro.adv.br');
+      expect(user.funcionario_id).toBeUndefined();
+    });
+
+    it('sincroniza a aba quando auth_active_token no localStorage muda para outra conta', () => {
+      const tokenAdmin = buildJwt({ sub: '1', email: 'admin@adv.br' });
+      const tokenDavi = buildJwt({ sub: '5', email: 'davi@adv.br' });
+
+      sessionStorage.setItem('auth_active_token', tokenAdmin);
+      sessionStorage.setItem('access_token', tokenAdmin);
+      sessionStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 1,
+          email: 'admin@adv.br',
+          nome: 'Admin',
+        })
+      );
+
+      localStorage.setItem('auth_active_token', tokenDavi);
+      localStorage.setItem('access_token', tokenDavi);
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 5,
+          email: 'davi@adv.br',
+          nome: 'Davi',
+        })
+      );
+
+      expect(getAccessToken()).toBe(tokenDavi);
+      expect(getCurrentUser()).toEqual({
+        funcionario_id: 5,
+        email: 'davi@adv.br',
+        nome: 'Davi',
+      });
+    });
+
+    it('limpa o sessionStorage da aba quando a sessão ativa no localStorage é encerrada', () => {
+      sessionStorage.setItem('auth_active_token', 'tok-admin');
+      sessionStorage.setItem('access_token', 'tok-admin');
+      sessionStorage.setItem('current_user', JSON.stringify({ nome: 'Admin' }));
+
+      expect(getAccessToken()).toBeNull();
+      expect(sessionStorage.getItem('current_user')).toBeNull();
+    });
+
+    it('sincroniza sessionStorage via syncSessionWithLocalStorage para eventos StorageEvent', () => {
+      localStorage.setItem('auth_active_token', 'tok-davi');
+      localStorage.setItem('access_token', 'tok-davi');
+      localStorage.setItem('current_user', JSON.stringify({ nome: 'Davi' }));
+
+      syncSessionWithLocalStorage(
+        new StorageEvent('storage', {
+          key: 'auth_active_token',
+          newValue: 'tok-davi',
+        })
+      );
+
+      expect(sessionStorage.getItem('access_token')).toBe('tok-davi');
+      expect(JSON.parse(sessionStorage.getItem('current_user'))).toEqual({
+        nome: 'Davi',
+      });
+
+      // Ignora chaves não relacionadas
+      syncSessionWithLocalStorage(
+        new StorageEvent('storage', {
+          key: 'institucional_data',
+          newValue: '{}',
+        })
+      );
+      expect(sessionStorage.getItem('access_token')).toBe('tok-davi');
+
+      // Remove apenas current_user quando current_user é apagado
+      localStorage.removeItem('current_user');
+      syncSessionWithLocalStorage(
+        new StorageEvent('storage', { key: 'current_user', newValue: null })
+      );
+      expect(sessionStorage.getItem('current_user')).toBeNull();
+
+      // Limpa toda a aba quando access_token/auth_active_token é apagado ou localStorage é limpo
+      localStorage.clear();
+      syncSessionWithLocalStorage(
+        new StorageEvent('storage', { key: null, newValue: null })
+      );
+      expect(sessionStorage.getItem('access_token')).toBeNull();
+    });
+  });
+
+  describe('sincronização instantânea de cargos e permissões', () => {
+    it('atualiza current_user nos storages e dispara evento quando o cargo do usuário tem permissões alteradas', () => {
+      const listener = vi.fn();
+      window.addEventListener(AUTH_SESSION_EVENT, listener);
+
+      sessionStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 5,
+          email: 'davi@adv.br',
+          nome: 'Davi',
+          cargo_id: 2,
+          cargo: {
+            cargo_id: 2,
+            nome_cargo: 'Advogado',
+            permissao: {
+              visualizar_equipe: true,
+              gerenciar_equipe: true,
+              visualizar_financeiro: false,
+            },
+          },
+          permissoes: ['visualizar_equipe', 'gerenciar_equipe'],
+        })
+      );
+
+      const updatedUser = syncCurrentUserRolePermissions({
+        cargo_id: 2,
+        nome_cargo: 'Advogado',
+        permissao: {
+          visualizar_equipe: true,
+          gerenciar_equipe: false,
+          visualizar_financeiro: true,
+        },
+      });
+
+      expect(updatedUser.cargo.permissao).toEqual({
+        visualizar_equipe: true,
+        gerenciar_equipe: false,
+        visualizar_financeiro: true,
+      });
+      expect(updatedUser.permissoes).toEqual([
+        'visualizar_equipe',
+        'visualizar_financeiro',
+      ]);
+      expect(listener).toHaveBeenCalled();
+      expect(getCurrentUser().cargo.permissao.visualizar_financeiro).toBe(true);
+      expect(
+        JSON.parse(localStorage.getItem('current_user')).cargo.permissao
+          .gerenciar_equipe
+      ).toBe(false);
+
+      window.removeEventListener(AUTH_SESSION_EVENT, listener);
+    });
+
+    it('identifica o cargo do usuário via contextMembers quando cargo_id não está no current_user', () => {
+      sessionStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 5,
+          email: 'davi@adv.br',
+          nome: 'Davi',
+        })
+      );
+
+      const updatedUser = syncCurrentUserRolePermissions(
+        {
+          cargo_id: 3,
+          nome_cargo: 'Estagiário',
+          permissao: { visualizar_processos: true },
+        },
+        [{ funcionario_id: 5, email_func: 'davi@adv.br', cargo_id: 3 }]
+      );
+
+      expect(updatedUser.cargo.permissao).toEqual({
+        visualizar_processos: true,
+      });
+    });
+
+    it('não altera current_user quando o cargo editado pertence a outro perfil', () => {
+      sessionStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 1,
+          email: 'admin@adv.br',
+          cargo: { cargo_id: 1, nome_cargo: 'Administrador' },
+        })
+      );
+
+      const res = syncCurrentUserRolePermissions({
+        cargo_id: 2,
+        nome_cargo: 'Advogado',
+        permissao: { visualizar_processos: false },
+      });
+
+      expect(res).toBeNull();
+      expect(getCurrentUser().cargo.nome_cargo).toBe('Administrador');
+    });
+
+    it('atualiza cargo e permissões imediatamente quando o cargo do próprio usuário logado é alterado', () => {
+      const listener = vi.fn();
+      window.addEventListener(AUTH_SESSION_EVENT, listener);
+
+      sessionStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 5,
+          email: 'davi@adv.br',
+          nome: 'Davi',
+          cargo_id: 3,
+          cargo: {
+            cargo_id: 3,
+            nome_cargo: 'Estagiário',
+            permissao: { visualizar_processos: true },
+          },
+        })
+      );
+
+      const updatedUser = syncCurrentUserMemberRole(
+        { funcionario_id: 5, email_func: 'davi@adv.br' },
+        { funcionario_id: 5, cargo_id: 2 },
+        {
+          cargo_id: 2,
+          nome_cargo: 'Advogado',
+          permissao: {
+            visualizar_processos: true,
+            gerenciar_financeiro: true,
+          },
+        }
+      );
+
+      expect(updatedUser.cargo_id).toBe(2);
+      expect(updatedUser.cargo.nome_cargo).toBe('Advogado');
+      expect(updatedUser.cargo.permissao).toEqual({
+        visualizar_processos: true,
+        gerenciar_financeiro: true,
+      });
+      expect(listener).toHaveBeenCalled();
+
+      // Não altera se for outro funcionário
+      expect(
+        syncCurrentUserMemberRole({ funcionario_id: 99 }, { cargo_id: 3 })
+      ).toBeNull();
+
+      window.removeEventListener(AUTH_SESSION_EVENT, listener);
     });
   });
 });

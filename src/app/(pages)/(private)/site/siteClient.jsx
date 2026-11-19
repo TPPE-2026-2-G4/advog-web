@@ -16,11 +16,13 @@ import AreasTab from '@/components/ui/site/areasTab';
 import ColorsTab from '@/components/ui/site/colorsTab';
 import PreviewModal from '@/components/ui/site/previewModal';
 import { getCurrentUser } from '@/utils/authSession';
-import { isAdministratorAccount } from '@/utils/funcionario';
+import {
+  getUserPermissions,
+  isAdministratorAccount,
+  subscribeAuthSession,
+} from '@/utils/funcionario';
 import Toast from '@/components/ui/Toast/Toast';
 import styles from '@/components/ui/site/site.module.css';
-
-const emptySubscribe = () => () => {};
 
 export default function SiteClient({
   initialData,
@@ -29,13 +31,13 @@ export default function SiteClient({
   isAdmin = true,
 }) {
   const userJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeAuthSession,
     () => JSON.stringify(getCurrentUser() ?? null),
     () => 'null'
   );
   const currentUser = JSON.parse(userJson);
   const isUserAdmin = isAdministratorAccount(currentUser);
-  const perms = currentUser?.cargo?.permissao ?? {};
+  const perms = getUserPermissions(currentUser);
   const hasAccess =
     isUserAdmin ||
     perms.gerenciar_site === true ||

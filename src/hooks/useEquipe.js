@@ -7,6 +7,10 @@ import {
 } from '@/services/funcionarios';
 import { atualizarCargo, criarCargo, excluirCargo } from '@/services/cargos';
 import {
+  syncCurrentUserMemberRole,
+  syncCurrentUserRolePermissions,
+} from '@/utils/authSession';
+import {
   isAdministratorAccount,
   isAdministratorRole,
   normalizeRoleName,
@@ -147,6 +151,10 @@ export function useEquipe(initialData = [], initialRoles = []) {
       cargo
     );
     const updatedMember = toTeamMember(funcionario);
+    const matchedRole =
+      roles.find((r) => String(r.cargo_id) === String(cargo)) ||
+      initialRoles.find((r) => String(r.cargo_id) === String(cargo)) ||
+      null;
 
     setMembers((current) =>
       current.map((member) =>
@@ -155,6 +163,8 @@ export function useEquipe(initialData = [], initialRoles = []) {
           : member
       )
     );
+
+    syncCurrentUserMemberRole(editingMember, funcionario, matchedRole);
 
     return funcionario;
   };
@@ -169,13 +179,15 @@ export function useEquipe(initialData = [], initialRoles = []) {
   };
 
   const handleUpdateRolePermissions = async ({ cargo_id, permissao }) => {
+    const roleFromInitial = initialRoles.find(
+      (r) => String(r.cargo_id) === String(cargo_id)
+    );
+    const roleFromRoles = roles.find(
+      (r) => String(r.cargo_id) === String(cargo_id)
+    );
     const isTargetAdmin =
-      isAdministratorRole(
-        initialRoles.find((r) => String(r.cargo_id) === String(cargo_id))
-      ) ||
-      isAdministratorRole(
-        roles.find((r) => String(r.cargo_id) === String(cargo_id))
-      );
+      isAdministratorRole(roleFromInitial) ||
+      isAdministratorRole(roleFromRoles);
 
     if (isTargetAdmin) {
       throw new Error(
@@ -183,15 +195,42 @@ export function useEquipe(initialData = [], initialRoles = []) {
       );
     }
 
+    const existingRole = roleFromRoles || roleFromInitial;
     const updatedRole = await atualizarCargo(cargo_id, { permissao });
+    const mergedRole = {
+      ...(existingRole || {}),
+      ...(updatedRole || {}),
+      cargo_id: updatedRole?.cargo_id ?? cargo_id,
+      permissao: updatedRole?.permissao ?? permissao,
+    };
 
     setRoles((current) =>
       current.map((role) =>
-        String(role.cargo_id) === String(updatedRole.cargo_id)
-          ? updatedRole
+        String(role.cargo_id) === String(mergedRole.cargo_id)
+          ? mergedRole
           : role
       )
     );
+
+    const targetRoleName = normalizeRoleName(mergedRole.nome_cargo);
+    setMembers((current) =>
+      current.map((member) => {
+        const matchesId =
+          member.cargo_id !== undefined &&
+          member.cargo_id !== null &&
+          String(member.cargo_id) === String(mergedRole.cargo_id);
+        const matchesName =
+          Boolean(targetRoleName) &&
+          normalizeRoleName(member.cargo) === targetRoleName;
+        if (!matchesId && !matchesName) return member;
+        return {
+          ...member,
+          permissao: { ...mergedRole.permissao },
+        };
+      })
+    );
+
+    syncCurrentUserRolePermissions(mergedRole, members);
 
     return updatedRole;
   };

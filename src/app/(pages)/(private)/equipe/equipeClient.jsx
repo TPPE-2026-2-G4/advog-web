@@ -15,20 +15,22 @@ import NewRoleModal from '@/components/features/equipe/NewRoleModal/NewRoleModal
 import DeleteRoleModal from '@/components/features/equipe/DeleteRoleModal/DeleteRoleModal';
 import { useEquipe } from '@/hooks/useEquipe';
 import { getCurrentUser } from '@/utils/authSession';
-import { isAdministratorAccount } from '@/utils/funcionario';
+import {
+  getUserPermissions,
+  isAdministratorAccount,
+  subscribeAuthSession,
+} from '@/utils/funcionario';
 import styles from './equipe.module.css';
-
-const emptySubscribe = () => () => {};
 
 export default function EquipeClient({ initialData, initialRoles = [] }) {
   const userJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeAuthSession,
     () => JSON.stringify(getCurrentUser() ?? null),
     () => 'null'
   );
   const currentUser = JSON.parse(userJson);
   const isUserAdmin = isAdministratorAccount(currentUser);
-  const perms = currentUser?.cargo?.permissao ?? {};
+  const perms = getUserPermissions(currentUser);
   const canView =
     !currentUser ||
     isUserAdmin ||

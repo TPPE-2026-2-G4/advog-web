@@ -9,11 +9,13 @@ import LancamentoModal from '@/components/features/financas/LancamentoModal/Lanc
 import DeleteLancamentoModal from '@/components/features/financas/DeleteLancamentoModal/DeleteLancamentoModal';
 import { useFinancas } from '@/hooks/useFinancas';
 import { getCurrentUser } from '@/utils/authSession';
-import { isAdministratorAccount } from '@/utils/funcionario';
+import {
+  getUserPermissions,
+  isAdministratorAccount,
+  subscribeAuthSession,
+} from '@/utils/funcionario';
 import Toast from '@/components/ui/Toast/Toast';
 import styles from './financas.module.css';
-
-const emptySubscribe = () => () => {};
 
 export default function FinancasClient({
   initialData,
@@ -24,13 +26,13 @@ export default function FinancasClient({
   onToggleStatus,
 }) {
   const userJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeAuthSession,
     () => JSON.stringify(getCurrentUser() ?? null),
     () => 'null'
   );
   const currentUser = JSON.parse(userJson);
   const isUserAdmin = isAdministratorAccount(currentUser);
-  const perms = currentUser?.cargo?.permissao ?? {};
+  const perms = getUserPermissions(currentUser);
   const canView =
     !currentUser ||
     isUserAdmin ||

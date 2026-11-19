@@ -19,8 +19,10 @@ import {
 import { useInstitucionalContext } from '@/contexts/InstitucionalContext';
 import { getCurrentUser } from '@/utils/authSession';
 import {
+  getUserPermissions,
   isAdministratorAccount,
   isAdministratorRole,
+  subscribeAuthSession,
 } from '@/utils/funcionario';
 import { getImageUrl } from '@/utils/institucional';
 import styles from './sidebar.module.css';
@@ -42,11 +44,7 @@ export function canViewMenuItem(user, path) {
   if (isAdministratorAccount(user) || isAdministratorRole(user?.cargo)) {
     return true;
   }
-  const cargoPerms = user?.cargo?.permissao ?? {};
-  const arrayPerms = Array.isArray(user?.permissoes)
-    ? Object.fromEntries(user.permissoes.map((p) => [p, true]))
-    : {};
-  const perms = { ...arrayPerms, ...cargoPerms };
+  const perms = getUserPermissions(user);
   switch (path) {
     case '/dashboard':
       return true;
@@ -70,14 +68,12 @@ export function canViewMenuItem(user, path) {
   }
 }
 
-const emptySubscribe = () => () => {};
-
 export default function Sidebar({ isMobileOpen = false, onCloseMobile } = {}) {
   const pathname = usePathname();
   const { institucional } = useInstitucionalContext();
 
   const userJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeAuthSession,
     () => JSON.stringify(getCurrentUser() ?? null),
     () => 'null'
   );

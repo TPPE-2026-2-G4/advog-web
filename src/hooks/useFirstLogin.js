@@ -1,4 +1,5 @@
 import { firstLogin } from '@/services/auth';
+import { clearAuthSession } from '@/utils/authSession';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 
@@ -51,6 +52,7 @@ export function useFirstLogin() {
               numeroOab,
             }),
       });
+      clearAuthSession();
       router.push('/login?cadastro=sucesso');
     } catch (error) {
       setErro(

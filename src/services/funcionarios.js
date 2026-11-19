@@ -1,4 +1,4 @@
-import { getAccessToken } from '@/utils/authSession';
+import { getAccessToken, syncCurrentUserMemberRole } from '@/utils/authSession';
 import { isAdministratorAccount } from '@/utils/funcionario';
 import { API_URL } from './api';
 
@@ -135,7 +135,9 @@ export async function mudarCargoFuncionario(funcionarioId, cargoId) {
     );
   }
 
-  return response.json();
+  const updated = await response.json();
+  syncCurrentUserMemberRole({ funcionario_id: funcionarioId }, updated);
+  return updated;
 }
 
 export async function mudarExibicaoInstitucional(

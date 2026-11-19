@@ -1,5 +1,8 @@
 import { API_URL } from './api';
-import { getAccessToken } from '@/utils/authSession';
+import {
+  getAccessToken,
+  syncCurrentUserRolePermissions,
+} from '@/utils/authSession';
 
 const resolveToken = (options) => {
   if (typeof options === 'string') return options;
@@ -67,7 +70,13 @@ export async function atualizarCargo(cargoId, dados, options) {
     );
   }
 
-  return response.json();
+  const updatedRole = await response.json();
+  syncCurrentUserRolePermissions({
+    ...dados,
+    ...updatedRole,
+    cargo_id: updatedRole?.cargo_id ?? cargoId,
+  });
+  return updatedRole;
 }
 
 export async function excluirCargo(cargoId, options) {

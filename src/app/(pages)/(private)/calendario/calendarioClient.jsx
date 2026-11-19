@@ -19,11 +19,13 @@ import {
   obterCalendario,
 } from '@/services/financas';
 import { getCurrentUser } from '@/utils/authSession';
-import { isAdministratorAccount } from '@/utils/funcionario';
+import {
+  getUserPermissions,
+  isAdministratorAccount,
+  subscribeAuthSession,
+} from '@/utils/funcionario';
 import Toast from '@/components/ui/Toast/Toast';
 import styles from './calendario.module.css';
-
-const emptySubscribe = () => () => {};
 
 const MESES = [
   'Janeiro',
@@ -125,13 +127,13 @@ export default function CalendarioClient({
   onMonthChange,
 }) {
   const userJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeAuthSession,
     () => JSON.stringify(getCurrentUser() ?? null),
     () => 'null'
   );
   const currentUser = JSON.parse(userJson);
   const isUserAdmin = isAdministratorAccount(currentUser);
-  const perms = currentUser?.cargo?.permissao ?? {};
+  const perms = getUserPermissions(currentUser);
   const canView =
     !currentUser ||
     isUserAdmin ||

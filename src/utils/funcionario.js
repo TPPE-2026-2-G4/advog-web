@@ -199,3 +199,88 @@ export function normalizeResponsavelItems(
       item.foto_perfil_url ?? item.fotoPerfilUrl ?? item.foto ?? null,
   }));
 }
+
+export const AUTH_SESSION_EVENT = 'auth-session-changed';
+
+export function notifyAuthSessionChange() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(AUTH_SESSION_EVENT));
+}
+
+export function subscribeAuthSession(callback) {
+  if (typeof window === 'undefined') return () => {};
+
+  window.addEventListener(AUTH_SESSION_EVENT, callback);
+  window.addEventListener('storage', callback);
+
+  return () => {
+    window.removeEventListener(AUTH_SESSION_EVENT, callback);
+    window.removeEventListener('storage', callback);
+  };
+}
+
+export function getUserPermissions(user) {
+  if (!user || typeof user !== 'object') return {};
+
+  const arrayPerms = Array.isArray(user.permissoes)
+    ? Object.fromEntries(user.permissoes.map((perm) => [perm, true]))
+    : {};
+  const directPerms =
+    user.permissao && typeof user.permissao === 'object' ? user.permissao : {};
+  const cargoPerms =
+    user.cargo &&
+    typeof user.cargo === 'object' &&
+    user.cargo.permissao &&
+    typeof user.cargo.permissao === 'object'
+      ? user.cargo.permissao
+      : {};
+
+  return {
+    ...arrayPerms,
+    ...directPerms,
+    ...cargoPerms,
+  };
+}
+
+export function mergeUserCargo(prevCargo, nextCargo) {
+  if (!nextCargo) return prevCargo;
+  if (!prevCargo) return nextCargo;
+
+  if (typeof nextCargo === 'string') {
+    if (
+      typeof prevCargo === 'object' &&
+      normalizeRoleName(getCargoNome(prevCargo)) ===
+        normalizeRoleName(nextCargo)
+    ) {
+      return {
+        ...prevCargo,
+        nome_cargo: prevCargo.nome_cargo || nextCargo,
+      };
+    }
+    return nextCargo;
+  }
+
+  if (typeof prevCargo === 'object' && typeof nextCargo === 'object') {
+    const prevId = prevCargo.cargo_id;
+    const nextId = nextCargo.cargo_id;
+    const prevName = normalizeRoleName(getCargoNome(prevCargo));
+    const nextName = normalizeRoleName(getCargoNome(nextCargo));
+    const isDifferentRole =
+      (prevId != null && nextId != null && String(prevId) !== String(nextId)) ||
+      (prevName && nextName && prevName !== nextName);
+
+    if (isDifferentRole) {
+      return { ...nextCargo };
+    }
+
+    return {
+      ...prevCargo,
+      ...nextCargo,
+      ...(nextCargo.permissao || prevCargo.permissao
+        ? { permissao: nextCargo.permissao ?? prevCargo.permissao }
+        : {}),
+    };
+  }
+
+  return nextCargo;
+}

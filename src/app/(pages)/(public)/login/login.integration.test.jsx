@@ -230,4 +230,137 @@ describe('Integração: Fluxo de Login (LoginPage + useLogin + AuthProvider + se
       expect(sessionStorage.getItem('access_token')).toBeNull();
     }
   );
+
+  it('substitui sessão ativa do admin pela conta davi ao logar sem logout prévio (apenas access_token + obterMeuPerfil)', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 7200;
+    const encodePayload = (payload) =>
+      btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_');
+    const adminToken = `hdr.${encodePayload({ sub: 1, email: 'admin@carreiro.adv.br', exp: futureExp })}.sig`;
+    const daviToken = `hdr.${encodePayload({ sub: 22, email: 'davi@carreiro.adv.br', nome: 'Davi', exp: futureExp })}.sig`;
+
+    localStorage.setItem('token', adminToken);
+    localStorage.setItem('access_token', adminToken);
+    localStorage.setItem('auth_active_token', adminToken);
+    localStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 1,
+        nome: 'Admin',
+        email: 'admin@carreiro.adv.br',
+      })
+    );
+    localStorage.setItem(
+      'updated_roles_permissions',
+      JSON.stringify({
+        byId: { 1: { cargo_id: 1, permissao: { equipe: true } } },
+        byName: {},
+      })
+    );
+    sessionStorage.setItem('access_token', adminToken);
+    sessionStorage.setItem('auth_active_token', adminToken);
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 1,
+        nome: 'Admin',
+        email: 'admin@carreiro.adv.br',
+      })
+    );
+    document.cookie = `access_token=${adminToken}; path=/`;
+
+    const daviPerfil = {
+      funcionario_id: 22,
+      nome: 'Davi Rodrigues',
+      email: 'davi@carreiro.adv.br',
+      cargo: {
+        cargo_id: 3,
+        nome_cargo: 'Advogado',
+        permissao: { processo: true, cliente: true },
+      },
+    };
+
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          access_token: daviToken,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => daviPerfil,
+      });
+
+    renderLoginIntegration();
+
+    fireEvent.change(screen.getByLabelText('Email empresarial'), {
+      target: { value: 'davi@carreiro.adv.br' },
+    });
+    fireEvent.change(screen.getByLabelText('Senha'), {
+      target: { value: 'SenhaDavi@2026' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    });
+
+    expect(localStorage.getItem('access_token')).toBe(daviToken);
+    expect(localStorage.getItem('auth_active_token')).toBe(daviToken);
+    expect(sessionStorage.getItem('access_token')).toBe(daviToken);
+    expect(sessionStorage.getItem('auth_active_token')).toBe(daviToken);
+    expect(localStorage.getItem('updated_roles_permissions')).toBeNull();
+    expect(JSON.parse(sessionStorage.getItem('current_user'))).toEqual(
+      daviPerfil
+    );
+    expect(document.cookie).toContain(`access_token=${daviToken}`);
+    expect(document.cookie).not.toContain(adminToken);
+  });
+
+  it('usa fallback do token JWT quando /funcionarios/perfil falha após login com campo token', async () => {
+    const encodePayload = (payload) =>
+      btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_');
+    const fallbackJwt = `hdr.${encodePayload({
+      sub: 33,
+      email: 'fallback@carreiro.adv.br',
+      nome: 'Dra. Fallback',
+    })}.sig`;
+
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          token: fallbackJwt,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ detail: 'Erro interno' }),
+      });
+
+    renderLoginIntegration();
+
+    fireEvent.change(screen.getByLabelText('Email empresarial'), {
+      target: { value: 'fallback@carreiro.adv.br' },
+    });
+    fireEvent.change(screen.getByLabelText('Senha'), {
+      target: { value: 'Senha@123' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    });
+
+    expect(JSON.parse(localStorage.getItem('current_user'))).toEqual({
+      funcionario_id: 33,
+      email: 'fallback@carreiro.adv.br',
+      nome: 'Dra. Fallback',
+      cargo: '',
+    });
+  });
 });
