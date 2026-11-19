@@ -51,6 +51,7 @@ export function useInstitucional(initialData, options = {}) {
       : DEFAULT_ATUACOES_SITE
   );
   const [pendingAreas, setPendingAreas] = useState([]);
+  const [pendingDeletedAreaIds, setPendingDeletedAreaIds] = useState([]);
   const nextDraftId = useRef(0);
 
   useEffect(() => {
@@ -208,6 +209,13 @@ export function useInstitucional(initialData, options = {}) {
           : area
       )
     );
+    setPendingAreas((prevAreas) =>
+      prevAreas.map((area) =>
+        area.atuacao_id === atuacaoId
+          ? { ...area, exibicaoInstitucional: !area.exibicaoInstitucional }
+          : area
+      )
+    );
     setSaveSuccess(false);
     setSaveError('');
   };
@@ -263,14 +271,10 @@ export function useInstitucional(initialData, options = {}) {
       return;
     }
 
-    try {
-      await excluirAtuacao(atuacaoId);
-      setAreas((prev) => prev.filter((area) => area.atuacao_id !== atuacaoId));
-    } catch (error) {
-      setSaveError(
-        error.message || 'Não foi possível excluir a área de atuação.'
-      );
-    }
+    setAreas((prev) => prev.filter((area) => area.atuacao_id !== atuacaoId));
+    setPendingDeletedAreaIds((prev) =>
+      prev.includes(atuacaoId) ? prev : [...prev, atuacaoId]
+    );
   };
 
   const handleSave = async () => {
@@ -315,6 +319,13 @@ export function useInstitucional(initialData, options = {}) {
         );
         setAreas(areasToSave);
         setPendingAreas([]);
+      }
+
+      if (pendingDeletedAreaIds.length > 0) {
+        await Promise.all(
+          pendingDeletedAreaIds.map((atuacaoId) => excluirAtuacao(atuacaoId))
+        );
+        setPendingDeletedAreaIds([]);
       }
 
       if (typeof window !== 'undefined') {

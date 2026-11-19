@@ -490,6 +490,44 @@ describe('useInstitucional', () => {
     expect(result.current.areas).toHaveLength(2);
   });
 
+  it('preserva a visibilidade alterada de uma nova área no primeiro salvamento', async () => {
+    salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
+    criarAtuacao.mockResolvedValueOnce({
+      atuacao_id: 3,
+      nome: 'Direito Tributário',
+      descricao: 'Impostos',
+      exibicaoInstitucional: true,
+    });
+    mudarExibicaoAtuacao.mockResolvedValue({});
+
+    const { result } = renderHook(() => useInstitucional());
+
+    await act(async () => {
+      await result.current.handleCreateArea({
+        nome: 'Direito Tributário',
+        descricao: 'Impostos',
+        exibicaoInstitucional: true,
+      });
+    });
+
+    act(() => {
+      result.current.handleToggleAreaVisibility('draft-0');
+    });
+
+    expect(result.current.areas.at(-1).exibicaoInstitucional).toBe(false);
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(criarAtuacao).toHaveBeenCalledWith({
+      nome: 'Direito Tributário',
+      descricao: 'Impostos',
+      exibicaoInstitucional: false,
+    });
+    expect(mudarExibicaoAtuacao).toHaveBeenCalledWith(3, false);
+  });
+
   it.each([
     {
       cenario: 'erro com mensagem explícita',
@@ -505,15 +543,42 @@ describe('useInstitucional', () => {
     'trata erro ao excluir área de atuação ($cenario)',
     async ({ erroSimulado, mensagemEsperada }) => {
       excluirAtuacao.mockRejectedValueOnce(erroSimulado);
+      salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
       const { result } = renderHook(() => useInstitucional());
 
       await act(async () => {
         await result.current.handleDeleteArea(1);
       });
 
+      expect(result.current.saveError).toBe('');
+
+      await act(async () => {
+        await result.current.handleSave();
+      });
+
       expect(result.current.saveError).toBe(mensagemEsperada);
     }
   );
+
+  it('só exclui uma área persistida depois de salvar', async () => {
+    salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
+    excluirAtuacao.mockResolvedValueOnce(undefined);
+
+    const { result } = renderHook(() => useInstitucional());
+
+    await act(async () => {
+      await result.current.handleDeleteArea(1);
+    });
+
+    expect(result.current.areas).toHaveLength(1);
+    expect(excluirAtuacao).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(excluirAtuacao).toHaveBeenCalledWith(1);
+  });
 
   it('sincroniza a visibilidade da equipe e áreas no salvar', async () => {
     salvarDadosInstitucionais.mockResolvedValueOnce(DEFAULT_INSTITUCIONAL);
