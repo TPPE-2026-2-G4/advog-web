@@ -76,7 +76,7 @@ export default function AjustesClient({ initialTeam = [] }) {
     handleChangeEscopoProcessos,
     handleChangeDiasPrazoProximo,
     handleSaveSettings,
-  } = useAjustes(initialTeam);
+  } = useAjustes(initialTeam, { canManageSystem });
 
   const datajudBadgeClass = datajudStatus.isLoading
     ? styles.badgeNeutral
@@ -314,7 +314,8 @@ export default function AjustesClient({ initialTeam = [] }) {
 
           <p className={styles.criticalDescription}>
             Defina a antecedência para destacar prazos próximos de processos e
-            atividades no painel principal para todos os usuários.
+            atividades no painel principal para todos os usuários. É também com
+            essa antecedência que as notificações de prazo são enviadas.
           </p>
 
           <div className={styles.criticalForm}>
@@ -364,7 +365,8 @@ export default function AjustesClient({ initialTeam = [] }) {
           <p className={styles.criticalDescription}>
             Defina após quantos dias sem movimentação um processo passa a ser
             considerado <strong>crítico</strong> e destacado no painel para
-            todos os usuários.
+            todos os usuários. É também esse o prazo usado para notificar sobre
+            processos críticos.
           </p>
 
           <div className={styles.criticalForm}>

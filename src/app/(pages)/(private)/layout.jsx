@@ -5,6 +5,7 @@ import Navbar from '@/components/layout/navbar/navbar';
 import Sidebar from '@/components/layout/sidebar/sidebar';
 import { useInstitucionalContext } from '@/contexts/InstitucionalContext';
 import { useSessionGuard } from '@/hooks/useSessionGuard';
+import { sincronizarConfigAlertas } from '@/services/alertas';
 import { getContrastTextColor } from '@/utils/institucional';
 import styles from './privateLayout.module.css';
 
@@ -12,6 +13,11 @@ export default function PrivateLayout({ children }) {
   const { institucional } = useInstitucionalContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   useSessionGuard();
+
+  useEffect(() => {
+    // Antecedência de prazos e dias de processo crítico são do escritório (iguais para todos).
+    sincronizarConfigAlertas();
+  }, []);
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;

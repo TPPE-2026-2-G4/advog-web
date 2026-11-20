@@ -1,10 +1,12 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { salvarConfigAlertas } from '@/services/alertas';
 import { mudarReceberEmails } from '@/services/funcionarios';
 import {
   obterStatusDatajud,
   obterStatusInfraestrutura,
 } from '@/services/processos';
+import { ALERTAS_CONFIG_EVENT } from '@/constants/preferencias';
 import { getCurrentUser } from '@/utils/authSession';
 import {
   getSavedDashboardPrefs,
@@ -12,6 +14,10 @@ import {
   SYSTEM_PREF_KEYS,
   useAjustes,
 } from './useAjustes';
+
+vi.mock('@/services/alertas', () => ({
+  salvarConfigAlertas: vi.fn(),
+}));
 
 vi.mock('@/services/funcionarios', () => ({
   mudarReceberEmails: vi.fn(),
@@ -309,6 +315,86 @@ describe('useAjustes', () => {
     expect(
       JSON.parse(localStorage.getItem('current_user')).receber_emails
     ).toBe(false);
+  });
+
+  describe('configuração de alertas do escritório', () => {
+    const preencher = (result) =>
+      act(() => {
+        result.current.handleChangeDiasPrazoProximo('30');
+        result.current.setDiasProcessoCritico('45');
+      });
+
+    it('envia antecedência e dias de processo crítico ao servidor quando pode gerenciar o sistema', async () => {
+      salvarConfigAlertas.mockResolvedValue({});
+      const { result } = renderHook(() =>
+        useAjustes([], { canManageSystem: true })
+      );
+      await waitFor(() => {
+        expect(result.current.datajudStatus.isLoading).toBe(false);
+      });
+      preencher(result);
+
+      await act(async () => {
+        await result.current.handleSaveSettings();
+      });
+
+      expect(salvarConfigAlertas).toHaveBeenCalledWith({
+        diasPrazoProximo: 30,
+        diasProcessoCritico: 45,
+      });
+      expect(result.current.emailSuccess).toBe('Ajustes salvos com sucesso.');
+    });
+
+    it('não chama o servidor quando o usuário não gerencia o sistema', async () => {
+      const { result } = renderHook(() => useAjustes([]));
+      await waitFor(() => {
+        expect(result.current.datajudStatus.isLoading).toBe(false);
+      });
+      preencher(result);
+
+      await act(async () => {
+        await result.current.handleSaveSettings();
+      });
+
+      expect(salvarConfigAlertas).not.toHaveBeenCalled();
+    });
+
+    it('mostra o erro e não grava no navegador quando o servidor recusa', async () => {
+      salvarConfigAlertas.mockRejectedValue(new Error('Sem permissão'));
+      const { result } = renderHook(() =>
+        useAjustes([], { canManageSystem: true })
+      );
+      await waitFor(() => {
+        expect(result.current.datajudStatus.isLoading).toBe(false);
+      });
+      preencher(result);
+
+      await act(async () => {
+        await result.current.handleSaveSettings();
+      });
+
+      expect(result.current.emailError).toBe('Sem permissão');
+      expect(localStorage.getItem(SYSTEM_PREF_KEYS.DIAS_CRITICO)).toBeNull();
+    });
+
+    it('relê os valores quando o servidor atualiza a configuração', async () => {
+      const { result } = renderHook(() => useAjustes([]));
+      await waitFor(() => {
+        expect(result.current.datajudStatus.isLoading).toBe(false);
+      });
+      expect(result.current.diasProcessoCritico).toBe('15');
+
+      act(() => {
+        localStorage.setItem(SYSTEM_PREF_KEYS.DIAS_CRITICO, '40');
+        localStorage.setItem(SYSTEM_PREF_KEYS.DIAS_PRAZO, '60');
+        window.dispatchEvent(new Event(ALERTAS_CONFIG_EVENT));
+      });
+
+      await waitFor(() => {
+        expect(result.current.diasProcessoCritico).toBe('40');
+      });
+      expect(result.current.diasPrazoProximo).toBe(60);
+    });
   });
 
   it('valida quantidade inválida de dias sem movimentação antes de salvar', async () => {

@@ -5,6 +5,11 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
+import {
+  SYSTEM_PREF_KEYS,
+  subscribeAlertasConfig,
+} from '@/constants/preferencias';
+import { salvarConfigAlertas } from '@/services/alertas';
 import { mudarReceberEmails } from '@/services/funcionarios';
 import {
   obterStatusDatajud,
@@ -14,12 +19,7 @@ import { getCurrentUser } from '@/utils/authSession';
 
 const emptySubscribe = () => () => {};
 
-export const SYSTEM_PREF_KEYS = {
-  PAGINA_INICIAL: 'sistema_pagina_inicial',
-  ESCOPO_PROCESSOS: 'sistema_escopo_processos',
-  DIAS_PRAZO: 'sistema_dias_prazo_proximo',
-  DIAS_CRITICO: 'sistema_dias_processo_critico',
-};
+export { SYSTEM_PREF_KEYS };
 
 export const VALID_INITIAL_PAGES = [
   '/dashboard',
@@ -128,7 +128,7 @@ function resolveInitialReceberEmails(matchedMember, user) {
   return raw === undefined ? true : Boolean(raw);
 }
 
-export function useAjustes(initialTeam = []) {
+export function useAjustes(initialTeam = [], { canManageSystem = false } = {}) {
   const mounted = useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -175,12 +175,21 @@ export function useAjustes(initialTeam = []) {
         ? getSavedInitialPage()
         : '/dashboard';
 
+  // A configuração de alertas vem do servidor depois da montagem; isto relê o navegador.
+  const [prefsVersion, setPrefsVersion] = useState(0);
+  useEffect(
+    () =>
+      subscribeAlertasConfig(() => setPrefsVersion((version) => version + 1)),
+    []
+  );
+
   const savedDashboardPrefs = useMemo(
     () =>
       mounted
         ? getSavedDashboardPrefs()
         : { escopoProcessos: 'escritorio', diasPrazo: 15, diasCritico: 15 },
-    [mounted]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mounted, prefsVersion]
   );
 
   const [escopoOverride, setEscopoOverride] = useState(undefined);
@@ -432,6 +441,14 @@ export function useAjustes(initialTeam = []) {
             localStorage.setItem('current_user', serialized);
           }
         }
+      }
+
+      if (canManageSystem) {
+        // Vale para o escritório todo e é o que define quando as notificações são geradas.
+        await salvarConfigAlertas({
+          diasPrazoProximo,
+          diasProcessoCritico: parsedCritico,
+        });
       }
 
       setDiasCriticoInput(String(parsedCritico));
