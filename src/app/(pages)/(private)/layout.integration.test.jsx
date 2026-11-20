@@ -22,6 +22,7 @@ import {
   clearAuthSession,
   getAccessToken,
   getCurrentUser,
+  syncCurrentUserRolePermissions,
 } from '@/utils/authSession';
 
 const { mockPush, mockReplace, mockRedirect, mockPathname } = vi.hoisted(
@@ -573,5 +574,156 @@ describe('Integração: Layout Privado, Navegação, Sessão e Proxy (RootLayout
 
     fireEvent.click(screen.getByRole('link', { name: 'Início' }));
     expect(screen.queryByTestId('sidebar-backdrop')).not.toBeInTheDocument();
+  });
+
+  it('sincroniza troca de conta entre abas na Navbar e atualiza Sidebar instantaneamente ao alterar permissões e updateUser', () => {
+    const encodeJwt = (payload) =>
+      `hdr.${btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_')}.sig`;
+    const adminToken = encodeJwt({ sub: 1, email: 'admin@advog.com' });
+    const daviToken = encodeJwt({ sub: 22, email: 'davi@advog.com' });
+
+    const adminUser = {
+      funcionario_id: 1,
+      nome: 'Admin Sistema',
+      email: 'admin@advog.com',
+      cargo: {
+        cargo_id: 1,
+        nome_cargo: 'Administrador',
+        permissao: {
+          visualizar_processos: true,
+          gerenciar_equipe: true,
+        },
+      },
+    };
+    const daviUser = {
+      funcionario_id: 22,
+      nome: 'Davi Rodrigues',
+      email: 'davi@advog.com',
+      cargo: {
+        cargo_id: 3,
+        nome_cargo: 'Advogado',
+        permissao: {
+          visualizar_processos: true,
+          visualizar_clientes: true,
+          gerenciar_equipe: false,
+        },
+      },
+    };
+
+    localStorage.setItem('auth_active_token', adminToken);
+    localStorage.setItem('access_token', adminToken);
+    localStorage.setItem('current_user', JSON.stringify(adminUser));
+    sessionStorage.setItem('auth_active_token', adminToken);
+    sessionStorage.setItem('access_token', adminToken);
+    sessionStorage.setItem('current_user', JSON.stringify(adminUser));
+
+    function UpdateUserHarness() {
+      const { user, updateUser } = useAuth();
+      return (
+        <div>
+          <span data-testid="auth-active-name">{user?.nome || ''}</span>
+          <button
+            type="button"
+            onClick={() =>
+              updateUser({
+                nome: 'Davi R. Atualizado',
+                cargo: {
+                  cargo_id: 4,
+                  nome_cargo: 'Conselheiro',
+                  permissao: {
+                    visualizar_processos: true,
+                    visualizar_clientes: false,
+                    gerenciar_site: true,
+                  },
+                },
+              })
+            }
+          >
+            Atualizar com cargo
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              updateUser({
+                nome: 'Davi Sem Cargo Extra',
+              })
+            }
+          >
+            Atualizar sem cargo
+          </button>
+        </div>
+      );
+    }
+
+    render(
+      <AuthProvider>
+        <PrivateLayout>
+          <UpdateUserHarness />
+        </PrivateLayout>
+      </AuthProvider>
+    );
+
+    expect(screen.getByText('Admin S.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Equipe' })).toBeInTheDocument();
+
+    // Outra aba loga como Davi e dispara StorageEvent
+    act(() => {
+      localStorage.setItem('auth_active_token', daviToken);
+      localStorage.setItem('access_token', daviToken);
+      localStorage.setItem('current_user', JSON.stringify(daviUser));
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'auth_active_token',
+          oldValue: adminToken,
+          newValue: daviToken,
+        })
+      );
+    });
+
+    expect(screen.getByText('Davi R.')).toBeInTheDocument();
+    expect(screen.queryByText('Admin S.')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Clientes/CRM' })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Equipe' })
+    ).not.toBeInTheDocument();
+    expect(sessionStorage.getItem('access_token')).toBe(daviToken);
+
+    // Atualiza permissões do cargo do Davi instantaneamente
+    act(() => {
+      syncCurrentUserRolePermissions({
+        cargo_id: 3,
+        nome_cargo: 'Advogado',
+        permissao: {
+          visualizar_processos: true,
+          visualizar_clientes: true,
+          gerenciar_equipe: true,
+          visualizar_financeiro: true,
+        },
+      });
+    });
+
+    expect(screen.getByRole('link', { name: 'Equipe' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Finanças' })).toBeInTheDocument();
+
+    // updateUser mesclando cargo e alterando links na Sidebar
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Atualizar com cargo' })
+    );
+    expect(screen.getByTestId('auth-active-name')).toHaveTextContent(
+      'Davi R. Atualizado'
+    );
+    expect(
+      screen.queryByRole('link', { name: 'Clientes/CRM' })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Site' })).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Atualizar sem cargo' })
+    );
+    expect(screen.getByTestId('auth-active-name')).toHaveTextContent(
+      'Davi Sem Cargo Extra'
+    );
   });
 });

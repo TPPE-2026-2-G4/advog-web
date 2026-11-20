@@ -1,7 +1,7 @@
 import { CircleCheck, CircleSlash, Pencil, Trash2 } from 'lucide-react';
 import { createEmptyPermission } from '@/constants/permissions';
 import { getImageUrl } from '@/utils/institucional';
-import { isAdministratorAccount } from '@/utils/funcionario';
+import { isAdministratorAccount, normalizeRoleName } from '@/utils/funcionario';
 import styles from './TeamTable.module.css';
 
 const roleBadgePalette = [
@@ -30,8 +30,20 @@ const getStatusBadgeStyle = (status) => {
 };
 
 const getMemberPermission = (member, roles) => {
+  const memberRoleName = normalizeRoleName(
+    typeof member.cargo === 'string'
+      ? member.cargo
+      : member.cargo?.nome_cargo || member.cargo?.nome || member.nome_cargo
+  );
   const memberRole = roles.find(
-    (role) => String(role.cargo_id) === String(member.cargo_id)
+    (role) =>
+      (member.cargo_id !== undefined &&
+        member.cargo_id !== null &&
+        role.cargo_id !== undefined &&
+        role.cargo_id !== null &&
+        String(role.cargo_id) === String(member.cargo_id)) ||
+      (Boolean(memberRoleName) &&
+        normalizeRoleName(role.nome_cargo) === memberRoleName)
   );
   const permission = memberRole?.permissao ?? member.permissao;
 

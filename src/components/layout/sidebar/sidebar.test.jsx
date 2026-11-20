@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { usePathname } from 'next/navigation';
 import { InstitucionalContext } from '@/contexts/InstitucionalContext';
+import {
+  syncCurrentUserMemberRole,
+  syncCurrentUserRolePermissions,
+} from '@/utils/authSession';
 import Sidebar, { canViewMenuItem } from './sidebar';
 import styles from './sidebar.module.css';
 
@@ -179,5 +183,82 @@ describe('Sidebar', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Início' }));
 
     expect(onCloseMobile).toHaveBeenCalledTimes(3);
+  });
+
+  it('atualiza os links e ícones da sidebar instantaneamente ao alterar permissões ou cargo do usuário logado', () => {
+    usePathname.mockReturnValue('/equipe');
+    sessionStorage.setItem(
+      'current_user',
+      JSON.stringify({
+        funcionario_id: 15,
+        nome: 'Advogado Júnior',
+        email: 'junior@carreiro.adv.br',
+        cargo_id: 2,
+        cargo: {
+          cargo_id: 2,
+          nome_cargo: 'Advogado',
+          permissao: {
+            visualizar_processos: true,
+            visualizar_equipe: true,
+            visualizar_financeiro: false,
+            gerenciar_site: false,
+          },
+        },
+      })
+    );
+
+    render(<Sidebar />);
+
+    expect(
+      screen.getByRole('link', { name: 'Casos/Processos' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Equipe' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Finanças' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Calendário' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Site' })).toBeNull();
+
+    act(() => {
+      syncCurrentUserRolePermissions({
+        cargo_id: 2,
+        nome_cargo: 'Advogado',
+        permissao: {
+          visualizar_processos: false,
+          visualizar_equipe: true,
+          visualizar_financeiro: true,
+          gerenciar_site: true,
+        },
+      });
+    });
+
+    expect(screen.queryByRole('link', { name: 'Casos/Processos' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Finanças' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Calendário' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Site' })).toBeInTheDocument();
+
+    act(() => {
+      syncCurrentUserMemberRole(
+        { funcionario_id: 15, email_func: 'junior@carreiro.adv.br' },
+        { funcionario_id: 15, cargo_id: 3 },
+        {
+          cargo_id: 3,
+          nome_cargo: 'Estagiário',
+          permissao: {
+            visualizar_clientes: true,
+            visualizar_equipe: false,
+            visualizar_financeiro: false,
+            gerenciar_site: false,
+          },
+        }
+      );
+    });
+
+    expect(
+      screen.getByRole('link', { name: 'Clientes/CRM' })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Finanças' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Site' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Equipe' })).toBeNull();
   });
 });

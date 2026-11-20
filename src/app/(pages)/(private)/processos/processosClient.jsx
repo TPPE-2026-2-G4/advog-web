@@ -4,9 +4,13 @@ import { Plus, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
-import { getValidFotoUrl, isAdministratorAccount } from '@/utils/funcionario';
+import {
+  getUserPermissions,
+  getValidFotoUrl,
+  isAdministratorAccount,
+  subscribeAuthSession,
+} from '@/utils/funcionario';
 import { getCurrentUser } from '@/utils/authSession';
-const emptySubscribe = () => () => {};
 const EMPTY_RESPONSAVEIS = [];
 import ExportMenu from '@/components/ui/ExportMenu/ExportMenu';
 import DeleteProcessModal from '@/components/features/processos/DeleteProcessModal/DeleteProcessModal';
@@ -26,12 +30,12 @@ export default function ProcessosClient({
   responsaveis = EMPTY_RESPONSAVEIS,
 }) {
   const userJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeAuthSession,
     () => JSON.stringify(getCurrentUser() ?? null),
     () => 'null'
   );
   const currentUser = JSON.parse(userJson);
-  const permissions = currentUser?.cargo?.permissao ?? {};
+  const permissions = getUserPermissions(currentUser);
   const isUserAdmin = isAdministratorAccount(currentUser);
   const canView =
     isUserAdmin ||

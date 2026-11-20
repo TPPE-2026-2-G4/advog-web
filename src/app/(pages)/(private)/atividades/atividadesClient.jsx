@@ -31,7 +31,12 @@ import { listarFuncionarios } from '@/services/funcionarios';
 import { listarProcessos } from '@/services/processos';
 import { countActivitiesByStage } from '@/utils/atividade';
 import { obterIniciais } from '@/utils/cliente';
-import { getValidFotoUrl, isAdministratorAccount } from '@/utils/funcionario';
+import {
+  getUserPermissions,
+  getValidFotoUrl,
+  isAdministratorAccount,
+  subscribeAuthSession,
+} from '@/utils/funcionario';
 import { getCurrentUser } from '@/utils/authSession';
 import { getImageUrl } from '@/utils/institucional';
 import AutocompleteMultiResponsible from '@/components/features/atividades/AutocompleteMultiResponsible/AutocompleteMultiResponsible';
@@ -58,17 +63,15 @@ const isOverdue = (prazo, etapaNome) =>
 const isProtectedStage = (nome) =>
   ['backlog', 'finalizado'].includes(String(nome).trim().toLowerCase());
 
-const emptySubscribe = () => () => {};
-
 export default function AtividadesClient() {
   const userJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeAuthSession,
     () => JSON.stringify(getCurrentUser() ?? null),
     () => 'null'
   );
   const currentUser = JSON.parse(userJson);
   const isUserAdmin = isAdministratorAccount(currentUser);
-  const perms = currentUser?.cargo?.permissao ?? {};
+  const perms = getUserPermissions(currentUser);
   const canView =
     !currentUser ||
     isUserAdmin ||

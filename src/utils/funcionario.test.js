@@ -1,14 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+  AUTH_SESSION_EVENT,
   formatOab,
   getInitials,
   getLawyerInitials,
+  getUserPermissions,
   isAdministratorAccount,
   isAdministratorRole,
   filterNonAdministratorMembers,
   getCargoNome,
   getValidFotoUrl,
+  mergeUserCargo,
   normalizeRoleName,
+  notifyAuthSessionChange,
+  subscribeAuthSession,
   toTeamMember,
 } from './funcionario';
 
@@ -355,5 +360,89 @@ describe('getCargoNome', () => {
   it('retorna string vazia se nulo ou indefinido', () => {
     expect(getCargoNome(null)).toBe('');
     expect(getCargoNome(undefined)).toBe('');
+  });
+});
+
+describe('sessão e permissões de usuário', () => {
+  it('notifica e inscreve listeners de sessão e trata ambiente sem window', () => {
+    const callback = vi.fn();
+    const unsubscribe = subscribeAuthSession(callback);
+
+    notifyAuthSessionChange();
+    expect(callback).toHaveBeenCalledTimes(1);
+
+    window.dispatchEvent(new Event(AUTH_SESSION_EVENT));
+    expect(callback).toHaveBeenCalledTimes(2);
+
+    unsubscribe();
+    notifyAuthSessionChange();
+    expect(callback).toHaveBeenCalledTimes(2);
+
+    const originalWindow = globalThis.window;
+    delete globalThis.window;
+    expect(() => notifyAuthSessionChange()).not.toThrow();
+    const ssrUnsubscribe = subscribeAuthSession(callback);
+    expect(() => ssrUnsubscribe()).not.toThrow();
+    globalThis.window = originalWindow;
+  });
+
+  it.each([
+    ['usuário nulo', null, {}],
+    ['usuário primitivo', 'invalido', {}],
+    [
+      'apenas array permissoes',
+      { permissoes: ['visualizar_processos', 'gerenciar_clientes'] },
+      { visualizar_processos: true, gerenciar_clientes: true },
+    ],
+    [
+      'cargo.permissao sobrepondo permissoes em array',
+      {
+        permissoes: ['visualizar_processos', 'gerenciar_equipe'],
+        permissao: { visualizar_processos: false },
+        cargo: {
+          permissao: { gerenciar_equipe: false, visualizar_financeiro: true },
+        },
+      },
+      {
+        visualizar_processos: false,
+        gerenciar_equipe: false,
+        visualizar_financeiro: true,
+      },
+    ],
+  ])('resolve permissões para %s', (_desc, user, esperado) => {
+    expect(getUserPermissions(user)).toEqual(esperado);
+  });
+
+  it('mescla cargos preservando permissões do mesmo cargo e descartando quando o cargo muda', () => {
+    const prevObj = {
+      cargo_id: 2,
+      nome_cargo: 'Advogado',
+      permissao: { visualizar_processos: true },
+    };
+
+    expect(mergeUserCargo(prevObj, null)).toEqual(prevObj);
+    expect(mergeUserCargo(null, 'Advogado')).toBe('Advogado');
+    expect(mergeUserCargo(prevObj, 'Advogado')).toEqual(prevObj);
+    expect(mergeUserCargo(prevObj, 'Estagiário')).toBe('Estagiário');
+    expect(
+      mergeUserCargo(prevObj, { cargo_id: 2, nome_cargo: 'Advogado' })
+    ).toEqual(prevObj);
+    expect(
+      mergeUserCargo(prevObj, {
+        cargo_id: 2,
+        nome_cargo: 'Advogado',
+        permissao: { visualizar_processos: false, gerenciar_equipe: true },
+      })
+    ).toEqual({
+      cargo_id: 2,
+      nome_cargo: 'Advogado',
+      permissao: { visualizar_processos: false, gerenciar_equipe: true },
+    });
+    expect(
+      mergeUserCargo(prevObj, { cargo_id: 3, nome_cargo: 'Estagiário' })
+    ).toEqual({ cargo_id: 3, nome_cargo: 'Estagiário' });
+    expect(mergeUserCargo('Advogado', { cargo_id: 2 })).toEqual({
+      cargo_id: 2,
+    });
   });
 });

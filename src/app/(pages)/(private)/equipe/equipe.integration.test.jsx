@@ -6,6 +6,9 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
+import Sidebar from '@/components/layout/sidebar/sidebar';
+import UserMenu from '@/components/layout/navbar/userMenu';
+import { AuthProvider } from '@/contexts/AuthContext';
 import {
   createEmptyPermission,
   getPermissionLabel,
@@ -34,6 +37,18 @@ import {
 } from '@/utils/funcionario';
 import EquipeClient from './equipeClient';
 import EquipePage from './page';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  useSearchParams: () => ({
+    get: vi.fn(),
+  }),
+  usePathname: () => '/equipe',
+}));
 
 const withAllowedPermissions = (...permissionNames) => ({
   ...createEmptyPermission(),
@@ -1372,6 +1387,179 @@ describe('integração da página de equipe', () => {
       await waitFor(() =>
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
       );
+    });
+
+    it('atualiza instantaneamente a Sidebar e os botões/ícones de gestão quando as permissões do cargo do usuário logado mudam', async () => {
+      localStorage.clear();
+      sessionStorage.clear();
+      const currentUser = {
+        funcionario_id: 2,
+        nome: 'Davi Advogado',
+        email: 'davi@teste.local',
+        cargo_id: 2,
+        cargo: {
+          cargo_id: 2,
+          nome_cargo: 'Advogado',
+          permissao: withAllowedPermissions(
+            'visualizar_processos',
+            'visualizar_equipe',
+            'gerenciar_equipe'
+          ),
+        },
+      };
+      sessionStorage.setItem('access_token', 'token-jwt');
+      sessionStorage.setItem('current_user', JSON.stringify(currentUser));
+      localStorage.setItem('auth_active_token', 'token-jwt');
+      localStorage.setItem('access_token', 'token-jwt');
+      localStorage.setItem('current_user', JSON.stringify(currentUser));
+
+      const advogadoMember = createMember({
+        funcionario_id: 2,
+        nome_func: 'Davi Advogado',
+        email_func: 'davi@teste.local',
+        cargo_id: 2,
+        cargo: 'Advogado',
+        status: 'Ativo',
+      });
+      const updatedPermission = withAllowedPermissions(
+        'visualizar_processos',
+        'visualizar_financeiro',
+        'visualizar_equipe'
+      );
+
+      fetch.mockResolvedValue(
+        createApiResponse({
+          ...roles[1],
+          permissao: updatedPermission,
+        })
+      );
+
+      render(
+        <AuthProvider>
+          <Sidebar />
+          <UserMenu />
+          <EquipeClient initialData={[advogadoMember]} initialRoles={roles} />
+        </AuthProvider>
+      );
+
+      expect(screen.queryByRole('link', { name: 'Finanças' })).toBeNull();
+      expect(
+        screen.getByRole('button', { name: /Adicionar Usuário/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Novo Cargo' })
+      ).toBeInTheDocument();
+      expect(screen.getByTitle('Editar usuário')).toBeInTheDocument();
+
+      fireEvent.click(
+        screen.getAllByRole('button', { name: 'Editar permissões →' })[0]
+      );
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: 'Visualizar financeiro' })
+      );
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: 'Gerenciar equipe' })
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('link', { name: 'Finanças' })
+        ).toBeInTheDocument();
+      });
+      expect(
+        screen.getByRole('link', { name: 'Calendário' })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Adicionar Usuário/i })
+      ).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Novo Cargo' })).toBeNull();
+      expect(screen.queryByTitle('Editar usuário')).toBeNull();
+
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+
+    it('atualiza instantaneamente UserMenu, Sidebar e controles de gestão quando o cargo do próprio usuário logado é alterado', async () => {
+      localStorage.clear();
+      sessionStorage.clear();
+      const currentUser = {
+        funcionario_id: 2,
+        nome: 'Davi Advogado',
+        email: 'davi@teste.local',
+        cargo_id: 2,
+        cargo: {
+          cargo_id: 2,
+          nome_cargo: 'Advogado',
+          permissao: withAllowedPermissions(
+            'visualizar_processos',
+            'visualizar_equipe',
+            'gerenciar_equipe'
+          ),
+        },
+      };
+      sessionStorage.setItem('access_token', 'token-jwt');
+      sessionStorage.setItem('current_user', JSON.stringify(currentUser));
+      localStorage.setItem('auth_active_token', 'token-jwt');
+      localStorage.setItem('access_token', 'token-jwt');
+      localStorage.setItem('current_user', JSON.stringify(currentUser));
+
+      const selfMember = createMember({
+        funcionario_id: 2,
+        nome_func: 'Davi Advogado',
+        email_func: 'davi@teste.local',
+        cargo_id: 2,
+        cargo: 'Advogado',
+        status: 'Ativo',
+      });
+
+      fetch.mockResolvedValue(
+        createApiResponse({
+          funcionario_id: 2,
+          nome: 'Davi Advogado',
+          email: 'davi@teste.local',
+          cargo_id: 3,
+          cargo: roles[2],
+          status: 'Ativo',
+        })
+      );
+
+      render(
+        <AuthProvider>
+          <Sidebar />
+          <UserMenu />
+          <EquipeClient initialData={[selfMember]} initialRoles={roles} />
+        </AuthProvider>
+      );
+
+      expect(screen.getByText('Davi A.')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Adicionar Usuário/i })
+      ).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTitle('Editar usuário'));
+      const dialog = screen.getByRole('dialog', { name: 'Editar Usuário' });
+      fireEvent.change(within(dialog).getByLabelText('Nível de Acesso'), {
+        target: { value: '3' },
+      });
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('button', { name: /Adicionar Usuário/i })
+        ).toBeNull();
+      });
+      expect(
+        within(screen.getByRole('button', { name: /Davi A\./i })).getByText(
+          'Estagiário'
+        )
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Finanças' })
+      ).toBeInTheDocument();
+
+      localStorage.clear();
+      sessionStorage.clear();
     });
   });
 });

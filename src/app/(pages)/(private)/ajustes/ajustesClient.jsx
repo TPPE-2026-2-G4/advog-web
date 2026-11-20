@@ -17,27 +17,25 @@ import LoadingDots from '@/components/ui/LoadingDots/LoadingDots';
 import Modal, { ModalCloseButton } from '@/components/ui/Modal/Modal';
 import { useAjustes } from '@/hooks/useAjustes';
 import { getCurrentUser } from '@/utils/authSession';
-import { isAdministratorAccount } from '@/utils/funcionario';
+import {
+  getUserPermissions,
+  isAdministratorAccount,
+  subscribeAuthSession,
+} from '@/utils/funcionario';
 import Toast from '@/components/ui/Toast/Toast';
 import styles from './ajustes.module.css';
 
-const emptySubscribe = () => () => {};
-
 export default function AjustesClient({ initialTeam = [] }) {
   const userJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeAuthSession,
     () => JSON.stringify(getCurrentUser() ?? null),
     () => 'null'
   );
   const currentUser = JSON.parse(userJson);
   const isUserAdmin = isAdministratorAccount(currentUser);
-  const cargoPerms = currentUser?.cargo?.permissao ?? {};
-  const arrayPerms = Array.isArray(currentUser?.permissoes)
-    ? Object.fromEntries(currentUser.permissoes.map((p) => [p, true]))
-    : {};
-  const perms = { ...arrayPerms, ...cargoPerms };
+  const perms = getUserPermissions(currentUser);
   const hasExplicitRole = Boolean(
-    currentUser?.cargo || currentUser?.permissoes
+    currentUser?.cargo || currentUser?.permissoes || currentUser?.permissao
   );
   const canManageSystem =
     !currentUser ||

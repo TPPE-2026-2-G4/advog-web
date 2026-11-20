@@ -11,7 +11,16 @@ import {
   clearAuthSession,
   getAccessToken,
   getCurrentUser,
+  syncCurrentUserMemberRole,
+  syncCurrentUserRolePermissions,
+  syncSessionWithLocalStorage,
 } from './authSession';
+import {
+  getUserPermissions,
+  mergeUserCargo,
+  notifyAuthSessionChange,
+  subscribeAuthSession,
+} from './funcionario';
 import { toApiLancamento, toLancamento, parseApiError } from './financas';
 import {
   calculateDaysSince,
@@ -155,6 +164,340 @@ describe('utilitários (integração entre módulos)', () => {
       expect(getCurrentUser().email).toBe('ana@advog.com');
     });
 
+    it('descarta current_user antigo quando sub numérico ou email do JWT diverge', () => {
+      localStorage.setItem(
+        'access_token',
+        buildToken({
+          sub: 42,
+          email: 'davi@carreiro.adv.br',
+          nome: 'Davi',
+          permissoes: ['processo'],
+        })
+      );
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 1,
+          email: 'admin@carreiro.adv.br',
+          nome: 'Admin',
+        })
+      );
+
+      const userFromNumericSub = getCurrentUser();
+      expect(userFromNumericSub).toEqual({
+        funcionario_id: 42,
+        email: 'davi@carreiro.adv.br',
+        nome: 'Davi',
+        cargo: '',
+        permissoes: ['processo'],
+      });
+      expect(localStorage.getItem('current_user')).toBeNull();
+
+      localStorage.clear();
+      sessionStorage.clear();
+      localStorage.setItem(
+        'access_token',
+        buildToken({ sub: 'uuid-99', email: 'novo@carreiro.adv.br' })
+      );
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({ id: 7, email_func: 'novo@carreiro.adv.br' })
+      );
+      expect(getCurrentUser()).toEqual({
+        funcionario_id: 'uuid-99',
+        email: 'novo@carreiro.adv.br',
+        nome: 'novo',
+        cargo: '',
+      });
+
+      localStorage.clear();
+      sessionStorage.clear();
+      localStorage.setItem(
+        'access_token',
+        buildToken({ sub: 'davi@carreiro.adv.br' })
+      );
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({ email_func: 'admin@carreiro.adv.br', nome: 'Admin' })
+      );
+      expect(getCurrentUser()).toEqual({
+        funcionario_id: undefined,
+        email: 'davi@carreiro.adv.br',
+        nome: 'davi',
+        cargo: '',
+      });
+    });
+
+    it('sincroniza sessão entre abas via auth_active_token e StorageEvent', () => {
+      sessionStorage.setItem('auth_active_token', 'tok-a');
+      sessionStorage.setItem('access_token', 'tok-a');
+      sessionStorage.setItem(
+        'current_user',
+        JSON.stringify({ nome: 'Admin Antigo' })
+      );
+      localStorage.setItem('auth_active_token', 'tok-b');
+      localStorage.setItem('token', 'tok-b');
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({ nome: 'Davi Novo' })
+      );
+
+      expect(getAccessToken()).toBe('tok-b');
+      expect(sessionStorage.getItem('auth_active_token')).toBe('tok-b');
+      expect(getCurrentUser()).toEqual({ nome: 'Davi Novo' });
+
+      // Atualiza current_user no localStorage mantendo mesmo auth_active_token
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({ nome: 'Davi Atualizado' })
+      );
+      expect(getCurrentUser()).toEqual({ nome: 'Davi Atualizado' });
+
+      // Troca token no localStorage sem current_user remove usuário obsoleto da aba
+      localStorage.setItem('auth_active_token', 'tok-c');
+      localStorage.setItem('access_token', 'tok-c');
+      localStorage.removeItem('current_user');
+      expect(getAccessToken()).toBe('tok-c');
+      expect(sessionStorage.getItem('current_user')).toBeNull();
+
+      // Eventos StorageEvent ignorados e de limpeza
+      syncSessionWithLocalStorage({
+        key: 'institucional_data',
+        newValue: '{}',
+      });
+      expect(sessionStorage.getItem('auth_active_token')).toBe('tok-c');
+
+      localStorage.removeItem('current_user');
+      sessionStorage.setItem('current_user', '{}');
+      syncSessionWithLocalStorage({ key: 'current_user', newValue: null });
+      expect(sessionStorage.getItem('current_user')).toBeNull();
+
+      localStorage.setItem('auth_active_token', 'tok-d');
+      localStorage.setItem('access_token', 'tok-d');
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({ nome: 'Via Evento' })
+      );
+      syncSessionWithLocalStorage({
+        key: 'current_user',
+        newValue: '{"nome":"Via Evento"}',
+      });
+      expect(sessionStorage.getItem('auth_active_token')).toBe('tok-d');
+      expect(sessionStorage.getItem('access_token')).toBe('tok-d');
+
+      syncSessionWithLocalStorage(new Event('storage'));
+      expect(sessionStorage.getItem('access_token')).toBe('tok-d');
+
+      localStorage.removeItem('auth_active_token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('token');
+      syncSessionWithLocalStorage({
+        key: 'auth_active_token',
+        newValue: null,
+      });
+      expect(sessionStorage.getItem('access_token')).toBeNull();
+
+      sessionStorage.setItem('auth_active_token', 'tok-e');
+      syncSessionWithLocalStorage({ key: null });
+      expect(sessionStorage.getItem('auth_active_token')).toBeNull();
+
+      // Ausência de auth_active_token no localStorage invalida aba anterior
+      sessionStorage.setItem('auth_active_token', 'tok-expirado');
+      sessionStorage.setItem('access_token', 'tok-expirado');
+      expect(getAccessToken()).toBeNull();
+    });
+
+    it('propaga permissões de cargo atualizadas e alteração de cargo do membro', () => {
+      localStorage.setItem('updated_roles_permissions', '{invalido');
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 5,
+          email: 'davi@carreiro.adv.br',
+          nome: 'Davi',
+          cargo_id: 2,
+          cargo: {
+            cargo_id: 2,
+            nome_cargo: 'Advogado',
+            permissao: { cliente: true, equipe: false },
+          },
+          permissao: { cliente: true, equipe: false },
+          permissoes: ['cliente', 'equipe'],
+        })
+      );
+
+      expect(syncCurrentUserRolePermissions(null)).toBeNull();
+
+      const syncedById = syncCurrentUserRolePermissions({
+        cargo_id: 2,
+        nome_cargo: 'Advogado',
+        permissao: { cliente: true, equipe: true, financas: false },
+      });
+      expect(syncedById?.cargo?.permissao).toEqual({
+        cliente: true,
+        equipe: true,
+        financas: false,
+      });
+      expect(syncedById?.permissoes).toEqual(['cliente', 'equipe']);
+
+      // Regrava usuário desatualizado e garante reaplicação via cache byId e byName
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 5,
+          cargo_id: 2,
+          nome_cargo: 'Advogado',
+        })
+      );
+      sessionStorage.removeItem('current_user');
+      expect(getCurrentUser()?.cargo?.permissao?.equipe).toBe(true);
+
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 5,
+          cargo: 'Advogado',
+        })
+      );
+      sessionStorage.removeItem('current_user');
+      expect(getCurrentUser()?.cargo?.permissao?.equipe).toBe(true);
+
+      // Correspondência por contextMembers quando current_user não possui cargo
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 9,
+          email: 'estagiario@carreiro.adv.br',
+        })
+      );
+      sessionStorage.removeItem('current_user');
+      const syncedViaMember = syncCurrentUserRolePermissions(
+        {
+          cargo_id: 8,
+          nome_cargo: 'Estagiário',
+          permissao: { calendario: true },
+        },
+        [
+          {
+            id: 9,
+            email_func: 'estagiario@carreiro.adv.br',
+            cargo: { nome_cargo: 'Estagiário' },
+          },
+        ]
+      );
+      expect(syncedViaMember?.cargo?.permissao).toEqual({ calendario: true });
+
+      const nonMatching = syncCurrentUserRolePermissions({
+        cargo_id: 99,
+        nome_cargo: 'Sócio',
+        permissao: { admin: true },
+      });
+      expect(nonMatching).toBeNull();
+
+      // Sem current_user retorna null em syncCurrentUserMemberRole
+      localStorage.removeItem('current_user');
+      sessionStorage.removeItem('current_user');
+      expect(syncCurrentUserMemberRole({ id: 9 }, { cargo_id: 2 })).toBeNull();
+
+      // Atualização direta do cargo do funcionário logado (com fallback de cache e sem permissão explícita)
+      localStorage.setItem(
+        'current_user',
+        JSON.stringify({
+          funcionario_id: 9,
+          email: 'estagiario@carreiro.adv.br',
+          cargo: 'Estagiário',
+        })
+      );
+      expect(
+        syncCurrentUserMemberRole(
+          { funcionario_id: 999 },
+          { funcionario_id: 888 }
+        )
+      ).toBeNull();
+
+      const updatedMemberRole = syncCurrentUserMemberRole(
+        { id: 9 },
+        { id: 9, cargo_id: 2, cargo: { cargo_id: 2, nome_cargo: 'Advogado' } }
+      );
+      expect(updatedMemberRole?.cargo?.permissao?.equipe).toBe(true);
+
+      const updatedWithMatchedRole = syncCurrentUserMemberRole(
+        { email_func: 'estagiario@carreiro.adv.br' },
+        { cargo: 'Estagiário' },
+        {
+          cargo_id: 8,
+          nome_cargo: 'Estagiário',
+          permissao: { calendario: true },
+        }
+      );
+      expect(updatedWithMatchedRole?.cargo?.permissao).toEqual({
+        calendario: true,
+      });
+    });
+
+    it('extrai permissões, mescla cargos e notifica assinantes de sessão', () => {
+      expect(getUserPermissions(null)).toEqual({});
+      expect(
+        getUserPermissions({
+          permissoes: ['processo', 'equipe'],
+          permissao: { equipe: false, cliente: true },
+          cargo: { permissao: { cliente: false, site: true } },
+        })
+      ).toEqual({ processo: true, equipe: false, cliente: false, site: true });
+
+      expect(mergeUserCargo({ nome_cargo: 'Advogado' }, null)).toEqual({
+        nome_cargo: 'Advogado',
+      });
+      expect(mergeUserCargo(null, 'Advogado')).toBe('Advogado');
+      expect(
+        mergeUserCargo(
+          { cargo_id: 2, nome_cargo: 'Advogado', permissao: { equipe: true } },
+          'advogado'
+        )
+      ).toEqual({
+        cargo_id: 2,
+        nome_cargo: 'Advogado',
+        permissao: { equipe: true },
+      });
+      expect(mergeUserCargo({ nome_cargo: 'Advogado' }, 'Estagiário')).toBe(
+        'Estagiário'
+      );
+      expect(
+        mergeUserCargo(
+          { cargo_id: 1, nome_cargo: 'Admin', permissao: { equipe: true } },
+          { cargo_id: 2, nome_cargo: 'Advogado', permissao: { cliente: true } }
+        )
+      ).toEqual({
+        cargo_id: 2,
+        nome_cargo: 'Advogado',
+        permissao: { cliente: true },
+      });
+      expect(
+        mergeUserCargo(
+          { cargo_id: 2, nome_cargo: 'Advogado', permissao: { equipe: true } },
+          { cargo_id: 2, nome_cargo: 'Advogado' }
+        )
+      ).toEqual({
+        cargo_id: 2,
+        nome_cargo: 'Advogado',
+        permissao: { equipe: true },
+      });
+      expect(
+        mergeUserCargo('Admin', { nome_cargo: 'Admin', cargo_id: 1 })
+      ).toEqual({
+        nome_cargo: 'Admin',
+        cargo_id: 1,
+      });
+
+      const listener = vi.fn();
+      const unsubscribe = subscribeAuthSession(listener);
+      notifyAuthSessionChange();
+      expect(listener).toHaveBeenCalledTimes(1);
+      unsubscribe();
+      notifyAuthSessionChange();
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
     it('limpa toda a sessão', () => {
       sessionStorage.setItem('access_token', 'x');
       localStorage.setItem('token', 'y');
@@ -172,6 +515,11 @@ describe('utilitários (integração entre módulos)', () => {
       expect(getAccessToken()).toBeNull();
       expect(getCurrentUser()).toBeNull();
       expect(() => clearAuthSession()).not.toThrow();
+      expect(() => syncSessionWithLocalStorage()).not.toThrow();
+      expect(syncCurrentUserRolePermissions({})).toBeNull();
+      expect(syncCurrentUserMemberRole({}, {})).toBeNull();
+      expect(() => notifyAuthSessionChange()).not.toThrow();
+      expect(subscribeAuthSession(() => {})()).toBeUndefined();
     });
   });
 

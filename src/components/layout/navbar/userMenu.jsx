@@ -13,7 +13,7 @@ import styles from './navbar.module.css';
 import LogoutConfirmModal from './LogoutConfirmModal/LogoutConfirmModal';
 import { AuthContext } from '@/contexts/AuthContext';
 import { clearAuthSession, getCurrentUser } from '@/utils/authSession';
-import { getInitials } from '@/utils/funcionario';
+import { getInitials, subscribeAuthSession } from '@/utils/funcionario';
 import { getImageUrl } from '@/utils/institucional';
 
 const emptySubscribe = () => () => {};
@@ -21,7 +21,7 @@ const emptySubscribe = () => () => {};
 export default function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [isLoggedOut, setIsLoggedOut] = useState(false);
+  const [loggedOutUser, setLoggedOutUser] = useState(null);
   const menuRef = useRef(null);
   const router = useRouter();
   const auth = useContext(AuthContext);
@@ -31,6 +31,12 @@ export default function UserMenu() {
     () => true,
     () => false
   );
+  const storedUserJson = useSyncExternalStore(
+    subscribeAuthSession,
+    () => JSON.stringify(getCurrentUser() ?? null),
+    () => 'null'
+  );
+  const storedUser = JSON.parse(storedUserJson);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -58,9 +64,13 @@ export default function UserMenu() {
     setIsLogoutModalOpen(false);
   };
 
+  const resolvedUser = auth?.user || (mounted ? storedUser : null);
+
   const handleConfirmLogout = () => {
     setIsLogoutModalOpen(false);
-    setIsLoggedOut(true);
+    setLoggedOutUser(
+      resolvedUser ? JSON.stringify(resolvedUser) : '__logged_out__'
+    );
     if (auth?.logout) {
       auth.logout();
     } else if (typeof clearAuthSession === 'function') {
@@ -69,9 +79,10 @@ export default function UserMenu() {
     router.push('/login');
   };
 
-  const activeUser = isLoggedOut
-    ? null
-    : auth?.user || (mounted ? getCurrentUser() : null);
+  const activeUser =
+    resolvedUser && JSON.stringify(resolvedUser) === loggedOutUser
+      ? null
+      : resolvedUser;
 
   if (!mounted || !activeUser) return null;
 

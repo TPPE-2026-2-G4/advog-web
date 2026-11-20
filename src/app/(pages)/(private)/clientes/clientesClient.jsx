@@ -21,13 +21,13 @@ import AutocompleteResponsible from '@/components/features/clientes/Autocomplete
 import { ETAPAS } from '@/utils/cliente';
 import { getCurrentUser } from '@/utils/authSession';
 import {
+  getUserPermissions,
   isAdministratorAccount,
   isAdministratorRole,
+  subscribeAuthSession,
 } from '@/utils/funcionario';
 import Toast from '@/components/ui/Toast/Toast';
 import styles from './clientesClient.module.css';
-
-const emptySubscribe = () => () => {};
 
 export default function ClientesClient({
   initialPage,
@@ -35,7 +35,7 @@ export default function ClientesClient({
   initialFuncionarios = [],
 }) {
   const userJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeAuthSession,
     () => JSON.stringify(getCurrentUser() ?? null),
     () => 'null'
   );
@@ -43,15 +43,12 @@ export default function ClientesClient({
   const isUserAdmin =
     isAdministratorAccount(currentUser) ||
     isAdministratorRole(currentUser?.cargo);
-  const cargoPerms = currentUser?.cargo?.permissao ?? {};
-  const arrayPerms = Array.isArray(currentUser?.permissoes)
-    ? Object.fromEntries(currentUser.permissoes.map((p) => [p, true]))
-    : {};
-  const perms = { ...arrayPerms, ...cargoPerms };
+  const perms = getUserPermissions(currentUser);
 
   const hasPermissionsDefined =
     currentUser &&
     (currentUser?.cargo?.permissao != null ||
+      currentUser?.permissao != null ||
       Array.isArray(currentUser?.permissoes));
 
   const canView =

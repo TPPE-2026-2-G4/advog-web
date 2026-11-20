@@ -1,4 +1,5 @@
 import { requestPasswordReset, resetPassword } from '@/services/auth';
+import { clearAuthSession } from '@/utils/authSession';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 
@@ -42,6 +43,7 @@ export function useForgotPassword({ resetMode = false } = {}) {
     try {
       if (token) {
         await resetPassword({ token, senha });
+        clearAuthSession();
         router.push('/login?senha=sucesso');
       } else {
         await requestPasswordReset(email);

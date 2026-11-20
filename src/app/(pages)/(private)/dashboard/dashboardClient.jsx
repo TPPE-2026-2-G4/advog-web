@@ -20,20 +20,31 @@ import { listarClientes } from '@/services/clientes';
 import { listarFuncionarios } from '@/services/funcionarios';
 import { getRecentActivities } from '@/utils/atividade';
 import { getCurrentUser } from '@/utils/authSession';
-import { isAdministratorAccount } from '@/utils/funcionario';
+import {
+  getUserPermissions,
+  isAdministratorAccount,
+  subscribeAuthSession,
+} from '@/utils/funcionario';
 import { enrichProcess } from '@/utils/processo';
 import styles from './dashboard.module.css';
 
-const emptySubscribe = () => () => {};
+const subscribeDashboardPrefs = (callback) => {
+  const unsubscribeAuth = subscribeAuthSession(callback);
+  const unsubscribeAlertas = subscribeAlertasConfig(callback);
+  return () => {
+    unsubscribeAuth();
+    unsubscribeAlertas();
+  };
+};
 
 export default function DashboardClient() {
   const userJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeAuthSession,
     () => JSON.stringify(getCurrentUser() ?? null),
     () => 'null'
   );
   const currentUser = JSON.parse(userJson);
-  const permissions = currentUser?.cargo?.permissao ?? {};
+  const permissions = getUserPermissions(currentUser);
   const isUserAdmin = isAdministratorAccount(currentUser);
   const canView =
     isUserAdmin ||
@@ -42,7 +53,7 @@ export default function DashboardClient() {
   const canEdit = isUserAdmin || permissions.gerenciar_processos === true;
 
   const dashboardPrefsJson = useSyncExternalStore(
-    subscribeAlertasConfig,
+    subscribeDashboardPrefs,
     () => {
       const prefs = getSavedDashboardPrefs();
       const user = getCurrentUser();
