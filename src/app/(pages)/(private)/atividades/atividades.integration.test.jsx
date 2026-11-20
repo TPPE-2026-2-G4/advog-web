@@ -1136,6 +1136,11 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
       // Fecha o modal de detalhes pelo botão Fechar do footer
       const fecharBtn = screen.getAllByRole('button', { name: 'Fechar' })[0];
       fireEvent.click(fecharBtn);
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('dialog', { name: 'Detalhes da Atividade' })
+        ).not.toBeInTheDocument();
+      });
 
       // Reabre detalhes e fecha pelo botão Fechar (X)
       fireEvent.click(screen.getByText('Audiência com Foto'));
@@ -1144,19 +1149,23 @@ describe('US08 e US10 - Kanban e Gerenciamento de Atividades (Integração)', ()
       ).toBeInTheDocument();
       const fecharXBtn = screen.getAllByRole('button', { name: 'Fechar' })[0];
       fireEvent.click(fecharXBtn);
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('dialog', { name: 'Detalhes da Atividade' })
+        ).not.toBeInTheDocument();
+      });
 
       // Reabre detalhes e fecha pressionando Escape (cobrindo onClose do Modal de detalhes)
       fireEvent.click(screen.getByText('Audiência com Foto'));
       expect(
         await screen.findByRole('dialog', { name: 'Detalhes da Atividade' })
       ).toBeInTheDocument();
-      fireEvent.keyDown(
-        screen.getByRole('dialog', { name: 'Detalhes da Atividade' }),
-        { key: 'Escape' }
-      );
-      expect(
-        screen.queryByRole('dialog', { name: 'Detalhes da Atividade' })
-      ).not.toBeInTheDocument();
+      fireEvent.keyDown(document, { key: 'Escape' });
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('dialog', { name: 'Detalhes da Atividade' })
+        ).not.toBeInTheDocument();
+      });
     });
   });
 });

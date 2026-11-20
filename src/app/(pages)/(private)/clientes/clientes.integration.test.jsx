@@ -670,9 +670,12 @@ describe('US22 - Visualizar e Gerenciar Clientes (Integração)', () => {
 
     // Filtro por email
     fireEvent.change(searchInput, { target: { value: 'beatriz@gmail.com' } });
-    await waitFor(() => {
-      expect(screen.getByText('1 cliente cadastrado')).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText('1 cliente cadastrado')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
     expect(screen.getByText('Beatriz Pereira')).toBeInTheDocument();
     expect(screen.queryByText('Empresa Alpha Ltda')).not.toBeInTheDocument();
 

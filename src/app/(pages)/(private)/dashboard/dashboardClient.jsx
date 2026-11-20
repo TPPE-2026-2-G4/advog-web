@@ -28,6 +28,15 @@ import {
 import { enrichProcess } from '@/utils/processo';
 import styles from './dashboard.module.css';
 
+const subscribeDashboardPrefs = (callback) => {
+  const unsubscribeAuth = subscribeAuthSession(callback);
+  const unsubscribeAlertas = subscribeAlertasConfig(callback);
+  return () => {
+    unsubscribeAuth();
+    unsubscribeAlertas();
+  };
+};
+
 export default function DashboardClient() {
   const userJson = useSyncExternalStore(
     subscribeAuthSession,
@@ -44,8 +53,7 @@ export default function DashboardClient() {
   const canEdit = isUserAdmin || permissions.gerenciar_processos === true;
 
   const dashboardPrefsJson = useSyncExternalStore(
-    subscribeAuthSession,
-    subscribeAlertasConfig,
+    subscribeDashboardPrefs,
     () => {
       const prefs = getSavedDashboardPrefs();
       const user = getCurrentUser();
